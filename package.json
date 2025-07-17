@@ -1,0 +1,35 @@
+{
+  "name": "jest-parallel-worker",
+  "version": "1.0.0",
+  "description": "Run Jest tests in parallel at the it() level",
+  "main": "src/index.js",
+  "bin": {
+    "jest-parallel-worker": "bin/cli.js",
+    "browserstack-jest-parallel": "bin/browserstack.js"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "jest",
+    "parallel",
+    "testing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@babel/parser": "^7.22.5",
+    "@babel/traverse": "^7.22.5",
+    "chalk": "^4.1.2",
+    "execa": "^5.1.1",
+    "glob": "^10.2.7",
+    "jest-worker": "^29.5.0"
+  },
+  "peerDependencies": {
+    "jest": ">=27.0.0",
+    "commander": "^10.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0"
+  }
+}

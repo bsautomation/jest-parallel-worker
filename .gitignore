@@ -1,0 +1,5 @@
+#file to ignore during commit
+.DS_Store
+.idea/
+node_modules
+

@@ -1,0 +1,676 @@
+
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Jest Parallel Worker - Test Report</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          h1, h2 {
+            color: #333;
+          }
+          .summary {
+            display: flex;
+            justify-content: space-between;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+          }
+          .summary-item {
+            text-align: center;
+          }
+          .summary-item .count {
+            font-size: 32px;
+            font-weight: bold;
+          }
+          .summary-item.passed .count {
+            color: #28a745;
+          }
+          .summary-item.failed .count {
+            color: #dc3545;
+          }
+          .summary-item.skipped .count {
+            color: #6c757d;
+          }
+          .summary-item.total .count {
+            color: #007bff;
+          }
+          .progress-bar {
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            margin-bottom: 20px;
+          }
+          .progress {
+            height: 100%;
+            background-color: #28a745;
+            border-radius: 5px;
+            width: 26.32%;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+          }
+          th {
+            background-color: #f8f9fa;
+            position: sticky;
+            top: 0;
+          }
+          tr.success {
+            background-color: #f1f9f1;
+          }
+          tr.failure {
+            background-color: #fdf1f1;
+          }
+          .error-details {
+            margin-top: 5px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow: auto;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 12px;
+          }
+          .error-context {
+            font-weight: bold;
+            margin-top: 8px;
+            margin-bottom: 8px;
+          }
+          .error-stack {
+            font-size: 11px;
+            color: #666;
+            margin-top: 8px;
+            border-top: 1px solid #ddd;
+            padding-top: 8px;
+          }
+          .execution-info {
+            margin-bottom: 20px;
+            color: #6c757d;
+          }
+          .filter-controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+          }
+          .filter-controls button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+          }
+          .filter-controls button.active {
+            background-color: #007bff;
+            color: white;
+          }
+          .toggle-details {
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: #007bff;
+            text-decoration: underline;
+          }
+        </style>
+        <script>
+          window.addEventListener('DOMContentLoaded', () => {
+            // Add filtering functionality
+            const allRows = document.querySelectorAll('tbody tr');
+            
+            document.getElementById('show-all').addEventListener('click', () => {
+              setActiveButton('show-all');
+              allRows.forEach(row => row.style.display = '');
+            });
+            
+            document.getElementById('show-passed').addEventListener('click', () => {
+              setActiveButton('show-passed');
+              allRows.forEach(row => {
+                row.style.display = row.classList.contains('success') ? '' : 'none';
+              });
+            });
+            
+            document.getElementById('show-failed').addEventListener('click', () => {
+              setActiveButton('show-failed');
+              allRows.forEach(row => {
+                row.style.display = row.classList.contains('failure') ? '' : 'none';
+              });
+            });
+            
+            function setActiveButton(id) {
+              document.querySelectorAll('.filter-controls button').forEach(btn => {
+                btn.classList.remove('active');
+              });
+              document.getElementById(id).classList.add('active');
+            }
+            
+            // Initialize with "all" active
+            setActiveButton('show-all');
+            
+            // Add toggle for error details
+            const toggleDetails = document.getElementById('toggle-details');
+            const errorDetails = document.querySelectorAll('.error-details');
+            let detailsVisible = true;
+            
+            if (toggleDetails) {
+              toggleDetails.addEventListener('click', () => {
+                detailsVisible = !detailsVisible;
+                errorDetails.forEach(detail => {
+                  detail.style.display = detailsVisible ? 'block' : 'none';
+                });
+                toggleDetails.textContent = detailsVisible ? 'Hide Error Details' : 'Show Error Details';
+              });
+            }
+          });
+        </script>
+      </head>
+      <body>
+        <h1>Jest Parallel Worker - Test Report</h1>
+        
+        <div class="execution-info">
+          <p>Execution time: 30.82 seconds</p>
+          <p>Report generated: 16/07/2025, 8:05:18 pm</p>
+        </div>
+        
+        <div class="summary">
+          <div class="summary-item total">
+            <div class="count">19</div>
+            <div class="label">Total</div>
+          </div>
+          <div class="summary-item passed">
+            <div class="count">5</div>
+            <div class="label">Passed</div>
+          </div>
+          <div class="summary-item failed">
+            <div class="count">14</div>
+            <div class="label">Failed</div>
+          </div>
+          <div class="summary-item skipped">
+            <div class="count">0</div>
+            <div class="label">Skipped</div>
+          </div>
+        </div>
+        
+        <div class="progress-bar">
+          <div class="progress"></div>
+        </div>
+        
+        <div class="filter-controls">
+          <button id="show-all">All Tests</button>
+          <button id="show-passed">Passed</button>
+          <button id="show-failed">Failed</button>
+          <button id="toggle-details">Hide Error Details</button>
+        </div>
+        
+        <h2>Test Results</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Test Name</th>
+              <th>File Path</th>
+              <th>Status</th>
+              <th>Duration</th>
+              <th>Worker PID</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+        <tr class="failure">
+          <td>Tests with cleanup should fail but still clean up @p0</td>
+          <td>example/__tests__/long-running.test.js</td>
+          <td>Failed</td>
+          <td>8.38s</td>
+          <td>85882</td>
+          <td><div class="error-details">
+           <pre>Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+Expected: [32mtrue[39m
+Received: [31mfalse[39m</pre>
+           <p class="error-context">Failed test: &quot;Tests with cleanup should fail but still clean up @p0&quot;</p>
+           <pre class="error-stack">
+    at Object.toBe (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:69:19)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Performance Tests should handle failures in long running tests @slow @p0</td>
+          <td>example/__tests__/long-running.test.js</td>
+          <td>Failed</td>
+          <td>8.92s</td>
+          <td>85880</td>
+          <td><div class="error-details">
+           <pre>Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+Expected: [32m2[39m
+Received: [31m1[39m</pre>
+           <p class="error-context">Failed test: &quot;Performance Tests should handle failures in long running tests @slow @p0&quot;</p>
+           <pre class="error-stack">
+    at Object.toBe (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:18:15)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="success">
+          <td>Example test suite should pass a simple test @p0</td>
+          <td>example/__tests__/example.test.js</td>
+          <td>Passed</td>
+          <td>3.24s</td>
+          <td>85882</td>
+          <td></td>
+        </tr>
+      
+        <tr class="success">
+          <td>Example test suite should pass an async test</td>
+          <td>example/__tests__/example.test.js</td>
+          <td>Passed</td>
+          <td>3.08s</td>
+          <td>85880</td>
+          <td></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Performance Tests should handle long running tests @slow</td>
+          <td>example/__tests__/long-running.test.js</td>
+          <td>Failed</td>
+          <td>12.63s</td>
+          <td>85879</td>
+          <td><div class="error-details">
+           <pre>Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+Expected: [32m2[39m
+Received: [31m1[39m</pre>
+           <p class="error-context">Failed test: &quot;Performance Tests should handle failures in long running tests @slow @p0&quot;
+Requested test: &quot;Performance Tests should handle long running tests @slow&quot;</p>
+           <pre class="error-stack">
+    at Object.toBe (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:18:15)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Example test suite should fail with assertion error @p0 @kush</td>
+          <td>example/__tests__/example.test.js</td>
+          <td>Failed</td>
+          <td>3.41s</td>
+          <td>85880</td>
+          <td><div class="error-details">
+           <pre>Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+[32m- Expected  - 1[39m
+[31m+ Received  + 1[39m
+
+[2m  Object {[22m
+[2m    &quot;name&quot;: &quot;test&quot;,[22m
+[32m-   &quot;value&quot;: 43,[39m
+[31m+   &quot;value&quot;: 42,[39m
+[2m  }[22m</pre>
+           <p class="error-context">Failed test: &quot;Example test suite should fail with assertion error @p0 @kush&quot;</p>
+           <pre class="error-stack">
+    at Object.toEqual (/Users/kush/jest-parallel-worker/example/__tests__/example.test.js:28:41)
+    at Promise.then.completed (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/testWorker.js:106:12)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Performance Tests should respect custom timeouts @timeout</td>
+          <td>example/__tests__/long-running.test.js</td>
+          <td>Failed</td>
+          <td>15.56s</td>
+          <td>85881</td>
+          <td><div class="error-details">
+           <pre>Error: thrown: &quot;Exceeded timeout of 5000 ms for a test.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;</pre>
+           <p class="error-context">Failed test: &quot;Tests with cleanup should time out but still clean up @timeout&quot;
+Requested test: &quot;Performance Tests should respect custom timeouts @timeout&quot;</p>
+           <pre class="error-stack">
+    at it (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:72:3)
+    at _dispatchDescribe (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/index.js:91:26)
+    at describe (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/index.js:55:5)
+    at Object.describe (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:51:1)
+    at Runtime._execModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:1439:24)
+    at Runtime._loadModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:1022:12)
+    at Runtime.requireModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:882:12)
+    at jestAdapter (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:77:13)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at runTestInternal (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/testWorker.js:106:12)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Example test suite should fail with runtime error @p0</td>
+          <td>example/__tests__/example.test.js</td>
+          <td>Failed</td>
+          <td>1.56s</td>
+          <td>85880</td>
+          <td><div class="error-details">
+           <pre>TypeError: Cannot read properties of null (reading &#039;property&#039;)</pre>
+           <p class="error-context">Failed test: &quot;Example test suite should fail with runtime error @p0&quot;</p>
+           <pre class="error-stack">
+    at Object.property (/Users/kush/jest-parallel-worker/example/__tests__/example.test.js:42:16)
+    at Promise.then.completed (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/testWorker.js:106:12)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="success">
+          <td>Another test suite should also run in parallel</td>
+          <td>example/__tests__/example.test.js</td>
+          <td>Passed</td>
+          <td>1.59s</td>
+          <td>85880</td>
+          <td></td>
+        </tr>
+      
+        <tr class="success">
+          <td>Example test suite should skip this test</td>
+          <td>example/__tests__/example.test.js</td>
+          <td>Passed</td>
+          <td>2.98s</td>
+          <td>85881</td>
+          <td></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Tests with cleanup should time out but still clean up @timeout</td>
+          <td>example/__tests__/long-running.test.js</td>
+          <td>Failed</td>
+          <td>19.70s</td>
+          <td>85883</td>
+          <td><div class="error-details">
+           <pre>Error: thrown: &quot;Exceeded timeout of 5000 ms for a test.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;</pre>
+           <p class="error-context">Failed test: &quot;Tests with cleanup should time out but still clean up @timeout&quot;</p>
+           <pre class="error-stack">
+    at it (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:72:3)
+    at _dispatchDescribe (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/index.js:91:26)
+    at describe (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/index.js:55:5)
+    at Object.describe (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:51:1)
+    at Runtime._execModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:1439:24)
+    at Runtime._loadModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:1022:12)
+    at Runtime.requireModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:882:12)
+    at jestAdapter (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:77:13)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at runTestInternal (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/testWorker.js:106:12)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Example test suite should work with a timeout</td>
+          <td>example/__tests__/example.test.js</td>
+          <td>Failed</td>
+          <td>8.08s</td>
+          <td>85882</td>
+          <td><div class="error-details">
+           <pre>Error: thrown: &quot;Exceeded timeout of 5000 ms for a test.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;</pre>
+           <p class="error-context">Failed test: &quot;Tests with cleanup should time out but still clean up @timeout&quot;
+Requested test: &quot;Example test suite should work with a timeout&quot;</p>
+           <pre class="error-stack">
+    at it (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:72:3)
+    at _dispatchDescribe (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/index.js:91:26)
+    at describe (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/index.js:55:5)
+    at Object.describe (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:51:1)
+    at Runtime._execModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:1439:24)
+    at Runtime._loadModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:1022:12)
+    at Runtime.requireModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:882:12)
+    at jestAdapter (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:77:13)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at runTestInternal (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/testWorker.js:106:12)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Example test suite should timeout if timeout is set too low @timeout</td>
+          <td>example/__tests__/example.test.js</td>
+          <td>Failed</td>
+          <td>8.94s</td>
+          <td>85879</td>
+          <td><div class="error-details">
+           <pre>Error: thrown: &quot;Exceeded timeout of 5000 ms for a test.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;</pre>
+           <p class="error-context">Failed test: &quot;Tests with cleanup should time out but still clean up @timeout&quot;
+Requested test: &quot;Example test suite should timeout if timeout is set too low @timeout&quot;</p>
+           <pre class="error-stack">
+    at it (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:72:3)
+    at _dispatchDescribe (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/index.js:91:26)
+    at describe (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/index.js:55:5)
+    at Object.describe (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:51:1)
+    at Runtime._execModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:1439:24)
+    at Runtime._loadModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:1022:12)
+    at Runtime.requireModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:882:12)
+    at jestAdapter (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:77:13)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at runTestInternal (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/testWorker.js:106:12)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="success">
+          <td>Another test suite should fail with a detailed comparison @p0</td>
+          <td>example/__tests__/example.test.js</td>
+          <td>Passed</td>
+          <td>2.65s</td>
+          <td>85880</td>
+          <td></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Complex Failure Scenarios should show detailed snapshot failures @p0</td>
+          <td>example/__tests__/complex-failures.test.js</td>
+          <td>Failed</td>
+          <td>2.92s</td>
+          <td>85883</td>
+          <td><div class="error-details">
+           <pre>Error: [2mexpect([22m[38;2;0;95;95m[48;2;215;255;255mreceived[49m[39m[2m).[22mtoMatchInlineSnapshot[2m([22m[38;2;128;0;128m[48;2;255;215;255msnapshot[49m[39m[2m)[22m
+
+Snapshot name: `Complex Failure Scenarios should show detailed snapshot failures @p0 1`
+
+[38;2;128;0;128m[48;2;255;215;255m- Snapshot  - 7[49m[39m
+[38;2;0;95;95m[48;2;215;255;255m+ Received  + 9[49m[39m
+
+[33m@@ -1,15 +1,17 @@[39m
+[38;2;128;0;128m[48;2;255;215;255m- Object {[49m[39m
+[38;2;128;0;128m[48;2;255;215;255m-   &quot;complex&quot;: Object {[49m[39m
+[38;2;128;0;128m[48;2;255;215;255m-     &quot;nested&quot;: Object {[49m[39m
+[38;2;128;0;128m[48;2;255;215;255m-       &quot;object&quot;: Object {[49m[39m
+[38;2;128;0;128m[48;2;255;215;255m-         &quot;with&quot;: Object {[49m[39m
+[38;2;128;0;128m[48;2;255;215;255m-           &quot;deep&quot;: Object {[49m[39m
+[38;2;128;0;128m[48;2;255;215;255m-             &quot;properties&quot;: Array [[49m[39m
+[38;2;0;95;95m[48;2;215;255;255m+ {[49m[39m
+[38;2;0;95;95m[48;2;215;255;255m+   &quot;complex&quot;: {[49m[39m
+[38;2;0;95;95m[48;2;215;255;255m+     &quot;nested&quot;: {[49m[39m
+[38;2;0;95;95m[48;2;215;255;255m+       &quot;object&quot;: {[49m[39m
+[38;2;0;95;95m[48;2;215;255;255m+         &quot;with&quot;: {[49m[39m
+[38;2;0;95;95m[48;2;215;255;255m+           &quot;deep&quot;: {[49m[39m
+[38;2;0;95;95m[48;2;215;255;255m+             &quot;properties&quot;: [[49m[39m
+[2m                1,[22m
+[2m                2,[22m
+[2m                3,[22m
+[38;2;0;95;95m[48;2;215;255;255m+               4,[49m[39m
+[38;2;0;95;95m[48;2;215;255;255m+               5,[49m[39m
+[2m              ],[22m
+[2m            },[22m
+[2m          },[22m
+[2m        },[22m
+[2m      },[22m</pre>
+           <p class="error-context">Failed test: &quot;Complex Failure Scenarios should show detailed snapshot failures @p0&quot;</p>
+           <pre class="error-stack">
+    at Object.toMatchInlineSnapshot (/Users/kush/jest-parallel-worker/example/__tests__/complex-failures.test.js:25:8)
+    at Promise.then.completed (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/testWorker.js:106:12)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>HTTP Response Testing should report mock function call issues @p0</td>
+          <td>example/__tests__/complex-failures.test.js</td>
+          <td>Failed</td>
+          <td>3.28s</td>
+          <td>85880</td>
+          <td><div class="error-details">
+           <pre>Error: [2mexpect([22m[31mjest.fn()[39m[2m).[22mtoHaveBeenCalledWith[2m([22m[32m...expected[39m[2m)[22m
+
+Expected: [32m&quot;expected arg&quot;[39m
+Received: [31m&quot;wrong arg&quot;[39m
+
+Number of calls: [31m1[39m</pre>
+           <p class="error-context">Failed test: &quot;HTTP Response Testing should report mock function call issues @p0&quot;</p>
+           <pre class="error-stack">
+    at Object.toHaveBeenCalledWith (/Users/kush/jest-parallel-worker/example/__tests__/complex-failures.test.js:90:20)
+    at Promise.then.completed (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/testWorker.js:106:12)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Complex Failure Scenarios should handle rejected promises @p0</td>
+          <td>example/__tests__/complex-failures.test.js</td>
+          <td>Failed</td>
+          <td>5.99s</td>
+          <td>85881</td>
+          <td><div class="error-details">
+           <pre>Error: [2mexpect([22m[31mreceived[39m[2m).[22mresolves[2m.[22mtoBe[2m()[22m
+
+Received promise rejected instead of resolved
+Rejected to value: [31m[Error: Async operation failed][39m</pre>
+           <p class="error-context">Failed test: &quot;Complex Failure Scenarios should handle rejected promises @p0&quot;</p>
+           <pre class="error-stack">
+    at expect (/Users/kush/jest-parallel-worker/node_modules/expect/build/index.js:113:15)
+    at Object.expect (/Users/kush/jest-parallel-worker/example/__tests__/complex-failures.test.js:8:11)
+    at Promise.then.completed (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusTest (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:316:40)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at _runTest (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:252:3)
+    at _runTestsForDescribeBlock (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:126:9)
+    at _runTestsForDescribeBlock (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:121:9)
+    at run (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/testWorker.js:106:12)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Complex Failure Scenarios should handle async matchers @p0</td>
+          <td>example/__tests__/complex-failures.test.js</td>
+          <td>Failed</td>
+          <td>3.87s</td>
+          <td>85879</td>
+          <td><div class="error-details">
+           <pre>Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+Expected: [32m200[39m
+Received: [31m404[39m</pre>
+           <p class="error-context">Failed test: &quot;Complex Failure Scenarios should handle async matchers @p0&quot;</p>
+           <pre class="error-stack">
+    at Object.toBe (/Users/kush/jest-parallel-worker/example/__tests__/complex-failures.test.js:65:29)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)</pre>
+         </div></td>
+        </tr>
+      
+        <tr class="failure">
+          <td>Complex Failure Scenarios should timeout in setup @timeout</td>
+          <td>example/__tests__/complex-failures.test.js</td>
+          <td>Failed</td>
+          <td>10.05s</td>
+          <td>85882</td>
+          <td><div class="error-details">
+           <pre>Error: thrown: &quot;Exceeded timeout of 5000 ms for a test.
+Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout.&quot;</pre>
+           <p class="error-context">Failed test: &quot;Tests with cleanup should time out but still clean up @timeout&quot;
+Requested test: &quot;Complex Failure Scenarios should timeout in setup @timeout&quot;</p>
+           <pre class="error-stack">
+    at it (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:72:3)
+    at _dispatchDescribe (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/index.js:91:26)
+    at describe (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/index.js:55:5)
+    at Object.describe (/Users/kush/jest-parallel-worker/example/__tests__/long-running.test.js:51:1)
+    at Runtime._execModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:1439:24)
+    at Runtime._loadModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:1022:12)
+    at Runtime.requireModule (/Users/kush/jest-parallel-worker/node_modules/jest-runtime/build/index.js:882:12)
+    at jestAdapter (/Users/kush/jest-parallel-worker/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:77:13)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at runTestInternal (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/kush/jest-parallel-worker/node_modules/jest-runner/build/testWorker.js:106:12)</pre>
+         </div></td>
+        </tr>
+      
+          </tbody>
+        </table>
+      </body>
+      </html>
+    

@@ -1,0 +1,106 @@
+[2025-07-16T14:34:47.617Z] [34m🔍 Discovering Jest tests matching pattern: example/__tests__/**/*.test.js[39m
+[2025-07-16T14:34:47.618Z] 🔍 Discovering Jest tests matching pattern: example/__tests__/**/*.test.js
+[2025-07-16T14:34:47.628Z] [34mFound 3 files initially with pattern: example/__tests__/**/*.test.js[39m
+[2025-07-16T14:34:47.629Z] Found 3 files initially with pattern: example/__tests__/**/*.test.js
+[2025-07-16T14:34:47.629Z] [34m📁 Found 3 test files[39m
+[2025-07-16T14:34:47.629Z] 📁 Found 3 test files
+[2025-07-16T14:34:47.673Z] [34m🧪 Found 19 individual test cases[39m
+[2025-07-16T14:34:47.673Z] 🧪 Found 19 individual test cases
+[2025-07-16T14:34:47.674Z] [34m👷 Creating worker pool with 5 workers (requested: 5)[39m
+[2025-07-16T14:34:47.674Z] 👷 Creating worker pool with 5 workers (requested: 5)
+[2025-07-16T14:34:47.756Z] [34m✅ Worker pool initialized in 0.08s[39m
+[2025-07-16T14:34:47.756Z] ✅ Worker pool initialized in 0.08s
+[2025-07-16T14:34:47.756Z] [34m▶️  Running tests in parallel...[39m
+[2025-07-16T14:34:47.757Z] ▶️  Running tests in parallel...
+[2025-07-16T14:34:47.934Z] [34m🚀 Starting: example/__tests__/long-running.test.js - Performance Tests should handle long running tests @slow [PID: 85879] [Memory: 45.13MB RSS, 6.39MB Heap] (Active workers: 1/5)[39m
+[2025-07-16T14:34:47.934Z] 🚀 Starting: example/__tests__/long-running.test.js - Performance Tests should handle long running tests @slow [PID: 85879] [Memory: 45.13MB RSS, 6.39MB Heap] (Active workers: 1/5)
+[2025-07-16T14:34:48.248Z] [34m🚀 Starting: example/__tests__/long-running.test.js - Tests with cleanup should time out but still clean up @timeout [PID: 85883] [Memory: 45.97MB RSS, 6.40MB Heap] (Active workers: 2/5)[39m
+[2025-07-16T14:34:48.249Z] 🚀 Starting: example/__tests__/long-running.test.js - Tests with cleanup should time out but still clean up @timeout [PID: 85883] [Memory: 45.97MB RSS, 6.40MB Heap] (Active workers: 2/5)
+[2025-07-16T14:34:48.330Z] [34m🚀 Starting: example/__tests__/long-running.test.js - Performance Tests should handle failures in long running tests @slow @p0 [PID: 85880] [Memory: 46.19MB RSS, 6.41MB Heap] (Active workers: 3/5)[39m
+[2025-07-16T14:34:48.330Z] 🚀 Starting: example/__tests__/long-running.test.js - Performance Tests should handle failures in long running tests @slow @p0 [PID: 85880] [Memory: 46.19MB RSS, 6.41MB Heap] (Active workers: 3/5)
+[2025-07-16T14:34:48.488Z] [34m🚀 Starting: example/__tests__/long-running.test.js - Performance Tests should respect custom timeouts @timeout [PID: 85881] [Memory: 45.20MB RSS, 6.38MB Heap] (Active workers: 4/5)[39m
+[2025-07-16T14:34:48.488Z] 🚀 Starting: example/__tests__/long-running.test.js - Performance Tests should respect custom timeouts @timeout [PID: 85881] [Memory: 45.20MB RSS, 6.38MB Heap] (Active workers: 4/5)
+[2025-07-16T14:34:48.638Z] [34m🚀 Starting: example/__tests__/long-running.test.js - Tests with cleanup should fail but still clean up @p0 [PID: 85882] [Memory: 46.11MB RSS, 6.39MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:34:48.638Z] 🚀 Starting: example/__tests__/long-running.test.js - Tests with cleanup should fail but still clean up @p0 [PID: 85882] [Memory: 46.11MB RSS, 6.39MB Heap] (Active workers: 5/5)
+[2025-07-16T14:34:57.014Z] [31m✗ [1/19] Failed (9.26s): example/__tests__/long-running.test.js - Tests with cleanup should fail but still clean up @p0 [PID: 85882] [Memory: 47.70MB RSS, 18.37MB Heap][39m
+[2025-07-16T14:34:57.019Z] ✗ [1/19] Failed (9.26s): example/__tests__/long-running.test.js - Tests with cleanup should fail but still clean up @p0 [PID: 85882] [Memory: 47.70MB RSS, 18.37MB Heap]
+[2025-07-16T14:34:57.020Z] [34m🚀 Starting: example/__tests__/example.test.js - Example test suite should pass a simple test @p0 [PID: 85882] [Memory: 47.92MB RSS, 18.40MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:34:57.020Z] 🚀 Starting: example/__tests__/example.test.js - Example test suite should pass a simple test @p0 [PID: 85882] [Memory: 47.92MB RSS, 18.40MB Heap] (Active workers: 5/5)
+[2025-07-16T14:34:57.250Z] [31m✗ [2/19] Failed (9.49s): example/__tests__/long-running.test.js - Performance Tests should handle failures in long running tests @slow @p0 [PID: 85880] [Memory: 47.72MB RSS, 15.01MB Heap][39m
+[2025-07-16T14:34:57.250Z] ✗ [2/19] Failed (9.49s): example/__tests__/long-running.test.js - Performance Tests should handle failures in long running tests @slow @p0 [PID: 85880] [Memory: 47.72MB RSS, 15.01MB Heap]
+[2025-07-16T14:34:57.251Z] [34m🚀 Starting: example/__tests__/example.test.js - Example test suite should pass an async test [PID: 85880] [Memory: 47.81MB RSS, 15.04MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:34:57.251Z] 🚀 Starting: example/__tests__/example.test.js - Example test suite should pass an async test [PID: 85880] [Memory: 47.81MB RSS, 15.04MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:00.254Z] [32m✓ [3/19] Completed (12.49s): example/__tests__/example.test.js - Example test suite should pass a simple test @p0 [PID: 85882] [Memory: 48.05MB RSS, 14.84MB Heap][39m
+[2025-07-16T14:35:00.254Z] ✓ [3/19] Completed (12.49s): example/__tests__/example.test.js - Example test suite should pass a simple test @p0 [PID: 85882] [Memory: 48.05MB RSS, 14.84MB Heap]
+[2025-07-16T14:35:00.255Z] [34m🚀 Starting: example/__tests__/example.test.js - Example test suite should work with a timeout [PID: 85882] [Memory: 48.08MB RSS, 14.85MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:00.255Z] 🚀 Starting: example/__tests__/example.test.js - Example test suite should work with a timeout [PID: 85882] [Memory: 48.08MB RSS, 14.85MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:00.332Z] [32m✓ [4/19] Completed (12.57s): example/__tests__/example.test.js - Example test suite should pass an async test [PID: 85880] [Memory: 42.09MB RSS, 15.53MB Heap][39m
+[2025-07-16T14:35:00.332Z] ✓ [4/19] Completed (12.57s): example/__tests__/example.test.js - Example test suite should pass an async test [PID: 85880] [Memory: 42.09MB RSS, 15.53MB Heap]
+[2025-07-16T14:35:00.332Z] [34m🚀 Starting: example/__tests__/example.test.js - Example test suite should fail with assertion error @p0 @kush [PID: 85880] [Memory: 42.16MB RSS, 15.55MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:00.332Z] 🚀 Starting: example/__tests__/example.test.js - Example test suite should fail with assertion error @p0 @kush [PID: 85880] [Memory: 42.16MB RSS, 15.55MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:00.564Z] [31m✗ [5/19] Failed (12.81s): example/__tests__/long-running.test.js - Performance Tests should handle long running tests @slow [PID: 85879] [Memory: 41.88MB RSS, 15.36MB Heap][39m
+[2025-07-16T14:35:00.564Z] ✗ [5/19] Failed (12.81s): example/__tests__/long-running.test.js - Performance Tests should handle long running tests @slow [PID: 85879] [Memory: 41.88MB RSS, 15.36MB Heap]
+[2025-07-16T14:35:00.565Z] [34m🚀 Starting: example/__tests__/example.test.js - Example test suite should timeout if timeout is set too low @timeout [PID: 85879] [Memory: 42.34MB RSS, 15.38MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:00.565Z] 🚀 Starting: example/__tests__/example.test.js - Example test suite should timeout if timeout is set too low @timeout [PID: 85879] [Memory: 42.34MB RSS, 15.38MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:03.746Z] [31m✗ [6/19] Failed (15.99s): example/__tests__/example.test.js - Example test suite should fail with assertion error @p0 @kush [PID: 85880] [Memory: 40.13MB RSS, 16.16MB Heap][39m
+[2025-07-16T14:35:03.746Z] ✗ [6/19] Failed (15.99s): example/__tests__/example.test.js - Example test suite should fail with assertion error @p0 @kush [PID: 85880] [Memory: 40.13MB RSS, 16.16MB Heap]
+[2025-07-16T14:35:03.747Z] [34m🚀 Starting: example/__tests__/example.test.js - Example test suite should fail with runtime error @p0 [PID: 85880] [Memory: 40.39MB RSS, 16.17MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:03.747Z] 🚀 Starting: example/__tests__/example.test.js - Example test suite should fail with runtime error @p0 [PID: 85880] [Memory: 40.39MB RSS, 16.17MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:04.050Z] [31m✗ [7/19] Failed (16.29s): example/__tests__/long-running.test.js - Performance Tests should respect custom timeouts @timeout [PID: 85881] [Memory: 41.55MB RSS, 15.62MB Heap][39m
+[2025-07-16T14:35:04.052Z] ✗ [7/19] Failed (16.29s): example/__tests__/long-running.test.js - Performance Tests should respect custom timeouts @timeout [PID: 85881] [Memory: 41.55MB RSS, 15.62MB Heap]
+[2025-07-16T14:35:04.052Z] [34m🚀 Starting: example/__tests__/example.test.js - Example test suite should skip this test [PID: 85881] [Memory: 41.91MB RSS, 15.63MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:04.053Z] 🚀 Starting: example/__tests__/example.test.js - Example test suite should skip this test [PID: 85881] [Memory: 41.91MB RSS, 15.63MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:05.308Z] [31m✗ [8/19] Failed (17.55s): example/__tests__/example.test.js - Example test suite should fail with runtime error @p0 [PID: 85880] [Memory: 45.39MB RSS, 16.44MB Heap][39m
+[2025-07-16T14:35:05.309Z] ✗ [8/19] Failed (17.55s): example/__tests__/example.test.js - Example test suite should fail with runtime error @p0 [PID: 85880] [Memory: 45.39MB RSS, 16.44MB Heap]
+[2025-07-16T14:35:05.309Z] [34m🚀 Starting: example/__tests__/example.test.js - Another test suite should also run in parallel [PID: 85880] [Memory: 45.39MB RSS, 16.44MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:05.310Z] 🚀 Starting: example/__tests__/example.test.js - Another test suite should also run in parallel [PID: 85880] [Memory: 45.39MB RSS, 16.44MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:06.902Z] [32m✓ [9/19] Completed (19.14s): example/__tests__/example.test.js - Another test suite should also run in parallel [PID: 85880] [Memory: 48.50MB RSS, 16.73MB Heap][39m
+[2025-07-16T14:35:06.902Z] ✓ [9/19] Completed (19.14s): example/__tests__/example.test.js - Another test suite should also run in parallel [PID: 85880] [Memory: 48.50MB RSS, 16.73MB Heap]
+[2025-07-16T14:35:06.902Z] [34m🚀 Starting: example/__tests__/example.test.js - Another test suite should fail with a detailed comparison @p0 [PID: 85880] [Memory: 48.55MB RSS, 16.74MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:06.902Z] 🚀 Starting: example/__tests__/example.test.js - Another test suite should fail with a detailed comparison @p0 [PID: 85880] [Memory: 48.55MB RSS, 16.74MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:07.030Z] [32m✓ [10/19] Completed (19.27s): example/__tests__/example.test.js - Example test suite should skip this test [PID: 85881] [Memory: 44.13MB RSS, 15.92MB Heap][39m
+[2025-07-16T14:35:07.030Z] ✓ [10/19] Completed (19.27s): example/__tests__/example.test.js - Example test suite should skip this test [PID: 85881] [Memory: 44.13MB RSS, 15.92MB Heap]
+[2025-07-16T14:35:07.031Z] [34m🚀 Starting: example/__tests__/complex-failures.test.js - Complex Failure Scenarios should handle rejected promises @p0 [PID: 85881] [Memory: 44.17MB RSS, 15.93MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:07.031Z] 🚀 Starting: example/__tests__/complex-failures.test.js - Complex Failure Scenarios should handle rejected promises @p0 [PID: 85881] [Memory: 44.17MB RSS, 15.93MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:07.944Z] [31m✗ [11/19] Failed (20.19s): example/__tests__/long-running.test.js - Tests with cleanup should time out but still clean up @timeout [PID: 85883] [Memory: 41.14MB RSS, 15.61MB Heap][39m
+[2025-07-16T14:35:07.945Z] ✗ [11/19] Failed (20.19s): example/__tests__/long-running.test.js - Tests with cleanup should time out but still clean up @timeout [PID: 85883] [Memory: 41.14MB RSS, 15.61MB Heap]
+[2025-07-16T14:35:07.945Z] [34m🚀 Starting: example/__tests__/complex-failures.test.js - Complex Failure Scenarios should show detailed snapshot failures @p0 [PID: 85883] [Memory: 41.55MB RSS, 15.63MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:07.945Z] 🚀 Starting: example/__tests__/complex-failures.test.js - Complex Failure Scenarios should show detailed snapshot failures @p0 [PID: 85883] [Memory: 41.55MB RSS, 15.63MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:08.335Z] [31m✗ [12/19] Failed (20.58s): example/__tests__/example.test.js - Example test suite should work with a timeout [PID: 85882] [Memory: 40.56MB RSS, 15.66MB Heap][39m
+[2025-07-16T14:35:08.336Z] ✗ [12/19] Failed (20.58s): example/__tests__/example.test.js - Example test suite should work with a timeout [PID: 85882] [Memory: 40.56MB RSS, 15.66MB Heap]
+[2025-07-16T14:35:08.336Z] [34m🚀 Starting: example/__tests__/complex-failures.test.js - Complex Failure Scenarios should timeout in setup @timeout [PID: 85882] [Memory: 40.81MB RSS, 15.68MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:08.336Z] 🚀 Starting: example/__tests__/complex-failures.test.js - Complex Failure Scenarios should timeout in setup @timeout [PID: 85882] [Memory: 40.81MB RSS, 15.68MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:09.502Z] [31m✗ [13/19] Failed (21.74s): example/__tests__/example.test.js - Example test suite should timeout if timeout is set too low @timeout [PID: 85879] [Memory: 40.81MB RSS, 16.24MB Heap][39m
+[2025-07-16T14:35:09.503Z] ✗ [13/19] Failed (21.74s): example/__tests__/example.test.js - Example test suite should timeout if timeout is set too low @timeout [PID: 85879] [Memory: 40.81MB RSS, 16.24MB Heap]
+[2025-07-16T14:35:09.504Z] [34m🚀 Starting: example/__tests__/complex-failures.test.js - Complex Failure Scenarios should handle async matchers @p0 [PID: 85879] [Memory: 41.41MB RSS, 15.51MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:09.504Z] 🚀 Starting: example/__tests__/complex-failures.test.js - Complex Failure Scenarios should handle async matchers @p0 [PID: 85879] [Memory: 41.41MB RSS, 15.51MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:09.548Z] [32m✓ [14/19] Completed (21.79s): example/__tests__/example.test.js - Another test suite should fail with a detailed comparison @p0 [PID: 85880] [Memory: 51.75MB RSS, 17.13MB Heap][39m
+[2025-07-16T14:35:09.548Z] ✓ [14/19] Completed (21.79s): example/__tests__/example.test.js - Another test suite should fail with a detailed comparison @p0 [PID: 85880] [Memory: 51.75MB RSS, 17.13MB Heap]
+[2025-07-16T14:35:09.549Z] [34m🚀 Starting: example/__tests__/complex-failures.test.js - HTTP Response Testing should report mock function call issues @p0 [PID: 85880] [Memory: 51.75MB RSS, 17.14MB Heap] (Active workers: 5/5)[39m
+[2025-07-16T14:35:09.549Z] 🚀 Starting: example/__tests__/complex-failures.test.js - HTTP Response Testing should report mock function call issues @p0 [PID: 85880] [Memory: 51.75MB RSS, 17.14MB Heap] (Active workers: 5/5)
+[2025-07-16T14:35:10.867Z] [31m✗ [15/19] Failed (23.11s): example/__tests__/complex-failures.test.js - Complex Failure Scenarios should show detailed snapshot failures @p0 [PID: 85883] [Memory: 44.83MB RSS, 15.59MB Heap][39m
+[2025-07-16T14:35:10.867Z] ✗ [15/19] Failed (23.11s): example/__tests__/complex-failures.test.js - Complex Failure Scenarios should show detailed snapshot failures @p0 [PID: 85883] [Memory: 44.83MB RSS, 15.59MB Heap]
+[2025-07-16T14:35:12.832Z] [31m✗ [16/19] Failed (25.07s): example/__tests__/complex-failures.test.js - HTTP Response Testing should report mock function call issues @p0 [PID: 85880] [Memory: 40.47MB RSS, 18.18MB Heap][39m
+[2025-07-16T14:35:12.833Z] ✗ [16/19] Failed (25.07s): example/__tests__/complex-failures.test.js - HTTP Response Testing should report mock function call issues @p0 [PID: 85880] [Memory: 40.47MB RSS, 18.18MB Heap]
+[2025-07-16T14:35:13.022Z] [31m✗ [17/19] Failed (25.26s): example/__tests__/complex-failures.test.js - Complex Failure Scenarios should handle rejected promises @p0 [PID: 85881] [Memory: 39.58MB RSS, 16.46MB Heap][39m
+[2025-07-16T14:35:13.022Z] ✗ [17/19] Failed (25.26s): example/__tests__/complex-failures.test.js - Complex Failure Scenarios should handle rejected promises @p0 [PID: 85881] [Memory: 39.58MB RSS, 16.46MB Heap]
+[2025-07-16T14:35:13.369Z] [31m✗ [18/19] Failed (25.61s): example/__tests__/complex-failures.test.js - Complex Failure Scenarios should handle async matchers @p0 [PID: 85879] [Memory: 40.64MB RSS, 16.10MB Heap][39m
+[2025-07-16T14:35:13.370Z] ✗ [18/19] Failed (25.61s): example/__tests__/complex-failures.test.js - Complex Failure Scenarios should handle async matchers @p0 [PID: 85879] [Memory: 40.64MB RSS, 16.10MB Heap]
+[2025-07-16T14:35:18.383Z] [31m✗ [19/19] Failed (30.63s): example/__tests__/complex-failures.test.js - Complex Failure Scenarios should timeout in setup @timeout [PID: 85882] [Memory: 44.05MB RSS, 15.32MB Heap][39m
+[2025-07-16T14:35:18.384Z] ✗ [19/19] Failed (30.63s): example/__tests__/complex-failures.test.js - Complex Failure Scenarios should timeout in setup @timeout [PID: 85882] [Memory: 44.05MB RSS, 15.32MB Heap]
+[2025-07-16T14:35:18.385Z] [34m🔄 Shutting down worker pool...[39m
+[2025-07-16T14:35:18.385Z] 🔄 Shutting down worker pool...
+[2025-07-16T14:35:18.430Z] [34m✅ Worker pool shutdown completed in 0.04s[39m
+[2025-07-16T14:35:18.430Z] ✅ Worker pool shutdown completed in 0.04s
+[2025-07-16T14:35:18.430Z] [34m[39m
+[34m📊 Test Summary:[39m
+[2025-07-16T14:35:18.431Z] 
+📊 Test Summary:
+[2025-07-16T14:35:18.431Z] [34m  Total Tests: 19[39m
+[2025-07-16T14:35:18.431Z]   Total Tests: 19
+[2025-07-16T14:35:18.431Z] [32m  Passed: 5[39m
+[2025-07-16T14:35:18.431Z]   Passed: 5
+[2025-07-16T14:35:18.431Z] [31m  Failed: 14[39m
+[2025-07-16T14:35:18.431Z]   Failed: 14
+[2025-07-16T14:35:18.432Z] [34m  Time: 30.63s[39m
+[2025-07-16T14:35:18.432Z]   Time: 30.63s
