@@ -1,0 +1,2153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jest Parallel Worker - Test Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+        
+        .metadata {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .meta-item .label {
+            font-weight: 600;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .meta-item .value {
+            font-size: 1.2em;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .card.success { border-left: 5px solid #27ae60; }
+        .card.error { border-left: 5px solid #e74c3c; }
+        
+        .card h3 {
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-size: 1em;
+            font-weight: 600;
+        }
+        
+        .big-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .detail {
+            color: #95a5a6;
+            font-size: 0.9em;
+        }
+        
+        section {
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        section h2 {
+            background: #34495e;
+            color: white;
+            padding: 20px 30px;
+            margin: 0;
+            font-size: 1.5em;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .chart-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .chart-container.timeline {
+            grid-column: 1 / -1;
+        }
+        
+        .chart-container h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .results-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .results-table tr.success { background: rgba(39, 174, 96, 0.05); }
+        .results-table tr.failure { background: rgba(231, 76, 60, 0.05); }
+        
+        .test-tabs {
+            display: flex;
+            background: #ecf0f1;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .tab-button.active {
+            background: white;
+            border-bottom: 3px solid #3498db;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        
+        .tab-content.active { display: block; }
+        
+        .no-results {
+            text-align: center;
+            padding: 50px;
+            color: #95a5a6;
+            font-size: 1.2em;
+        }
+        
+        .test-name {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.9em;
+            font-style: italic;
+            margin-top: 5px;
+        }
+        
+        .status-icon {
+            font-size: 1.2em;
+        }
+        
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+        
+        .usage-bar {
+            width: 100px;
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .usage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            transition: width 0.5s ease;
+        }
+        
+        .memory-delta {
+            color: #e67e22;
+            font-weight: 500;
+        }
+        
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .file-card {
+            border: 1px solid #ecf0f1;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .file-card.all-passed { border-left: 4px solid #27ae60; }
+        .file-card.has-failures { border-left: 4px solid #e74c3c; }
+        
+        .file-header {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .file-header h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .file-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9em;
+        }
+        
+        .file-stats .passed { color: #27ae60; }
+        .file-stats .failed { color: #e74c3c; }
+        .file-stats .duration { color: #7f8c8d; }
+        
+        .file-path {
+            padding: 0 20px 10px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .test-summary {
+            padding: 20px;
+        }
+        
+        .test-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f2f6;
+        }
+        
+        .test-item:last-child { border-bottom: none; }
+        
+        .test-item .name {
+            flex: 1;
+            font-size: 0.9em;
+        }
+        
+        .test-item .duration,
+        .test-item .memory {
+            font-size: 0.8em;
+            color: #7f8c8d;
+        }
+        
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .summary-cards { grid-template-columns: 1fr; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .file-grid { grid-template-columns: 1fr; }
+        }
+    
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🧪 Jest Parallel Worker - Test Report</h1>
+            <div class="metadata">
+                <div class="meta-item">
+                    <span class="label">Generated:</span>
+                    <span class="value">7/18/2025, 1:35:39 AM</span>
+                </div>
+                <div class="meta-item">
+                    <span class="label">Workers:</span>
+                    <span class="value">2</span>
+                </div>
+                <div class="meta-item">
+                    <span class="label">Duration:</span>
+                    <span class="value">9512ms</span>
+                </div>
+                <div class="meta-item">
+                    <span class="label">Version:</span>
+                    <span class="value">1.0.0</span>
+                </div>
+            </div>
+        </header>
+
+        <section class="summary-cards">
+            <div class="card error">
+                <h3>Overall Result</h3>
+                <div class="big-number">❌ FAILED</div>
+                <div class="detail">0.0% Success Rate</div>
+            </div>
+            <div class="card">
+                <h3>Tests</h3>
+                <div class="big-number">16</div>
+                <div class="detail">0 passed, 16 failed</div>
+            </div>
+            <div class="card">
+                <h3>Performance</h3>
+                <div class="big-number">0x</div>
+                <div class="detail">Speedup (0.0% efficiency)</div>
+            </div>
+            <div class="card">
+                <h3>Time Saved</h3>
+                <div class="big-number">0ms</div>
+                <div class="detail">vs Sequential (0ms)</div>
+            </div>
+        </section>
+
+        
+        
+        <section class="process-section">
+            <h2>🔀 Process Isolation</h2>
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>Unique PIDs</h3>
+                    <div class="big-number">16</div>
+                    <div class="detail">Worker processes used</div>
+                </div>
+                <div class="card">
+                    <h3>PID Coverage</h3>
+                    <div class="big-number">16/16</div>
+                    <div class="detail">Tests with PID data</div>
+                </div>
+                <div class="card">
+                    <h3>Isolation Status</h3>
+                    <div class="big-number">✅</div>
+                    <div class="detail">Working</div>
+                </div>
+            </div>
+            
+            <div class="pid-distribution">
+                <h3>Test Distribution by PID</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>Tests Count</th>
+                            <th>Percentage</th>
+                            <th>Usage Bar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                            <tr>
+                                <td><code>4794</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>4807</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>5077</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>5107</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>5347</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>5397</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>5587</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>5601</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>5852</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>5877</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>6152</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>6179</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>6344</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>6403</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>6586</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                            <tr>
+                                <td><code>6663</code></td>
+                                <td>1</td>
+                                <td>6.3%</td>
+                                <td>
+                                    <div class="usage-bar">
+                                        <div class="usage-fill" style="width: 6.3%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        
+        <section class="charts-section">
+            <h2>📊 Performance Charts</h2>
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>Test Duration Distribution</h3>
+                    <canvas id="durationChart"></canvas>
+                </div>
+                
+                <div class="chart-container timeline">
+                    <h3>Test Timeline</h3>
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </section>
+        
+        <section class="tests-section">
+            <h2>🧪 Test Results</h2>
+            
+            <div class="test-tabs">
+                <button class="tab-button active" onclick="showTab('all')">All Tests (16)</button>
+                <button class="tab-button" onclick="showTab('failed')">Failed (16)</button>
+                <button class="tab-button" onclick="showTab('slowest')">Slowest (10)</button>
+                <button class="tab-button" onclick="showTab('fastest')">Fastest (10)</button>
+            </div>
+
+            <div id="tab-all" class="tab-content active">
+                
+        <div class="test-results">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Test Name</th>
+                        <th>File</th>
+                        <th>Duration</th>
+                        <th>PID</th>
+                        <th>Memory</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p0 @api_job Test: Verify proxy map is getting captured for the newly created automated scans</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>4794</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p1 Test: Verify proxy map is null for the advance off scans</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>4807</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p1 Test: Verify Snapshot supported details in user profile</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5077</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Get a list of Projects @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5107</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Test Runs List @p0 @kush</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5347</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Metadata for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5397</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Overview for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5587</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Test Cases for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5601</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify the filters used in filter modal for Builds - All Issues Tab @p1</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5852</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify the filters used in filter modal for Test Cases - All Issues Tab @p1</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5877</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Rules API for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6152</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Rules API for Test Cases @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6179</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Overview for Test Cases @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6344</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Metadata for Test Cases @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6403</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Guidelines API for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6586</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">advance rule validation for automated tests</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6663</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+            </div>
+
+            <div id="tab-failed" class="tab-content">
+                
+        <div class="test-results">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Test Name</th>
+                        <th>File</th>
+                        <th>Duration</th>
+                        <th>PID</th>
+                        <th>Memory</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p0 @api_job Test: Verify proxy map is getting captured for the newly created automated scans</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>4794</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p1 Test: Verify proxy map is null for the advance off scans</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>4807</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p1 Test: Verify Snapshot supported details in user profile</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5077</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Get a list of Projects @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5107</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Test Runs List @p0 @kush</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5347</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Metadata for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5397</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Overview for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5587</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Test Cases for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5601</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify the filters used in filter modal for Builds - All Issues Tab @p1</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5852</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify the filters used in filter modal for Test Cases - All Issues Tab @p1</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5877</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Rules API for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6152</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Rules API for Test Cases @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6179</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Overview for Test Cases @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6344</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Metadata for Test Cases @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6403</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Guidelines API for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6586</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">advance rule validation for automated tests</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>6663</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+            </div>
+
+            <div id="tab-slowest" class="tab-content">
+                
+        <div class="test-results">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Test Name</th>
+                        <th>File</th>
+                        <th>Duration</th>
+                        <th>PID</th>
+                        <th>Memory</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p0 @api_job Test: Verify proxy map is getting captured for the newly created automated scans</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>4794</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p1 Test: Verify proxy map is null for the advance off scans</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>4807</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p1 Test: Verify Snapshot supported details in user profile</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5077</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Get a list of Projects @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5107</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Test Runs List @p0 @kush</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5347</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Metadata for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5397</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Overview for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5587</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Test Cases for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5601</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify the filters used in filter modal for Builds - All Issues Tab @p1</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5852</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify the filters used in filter modal for Test Cases - All Issues Tab @p1</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5877</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+            </div>
+
+            <div id="tab-fastest" class="tab-content">
+                
+        <div class="test-results">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Test Name</th>
+                        <th>File</th>
+                        <th>Duration</th>
+                        <th>PID</th>
+                        <th>Memory</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p0 @api_job Test: Verify proxy map is getting captured for the newly created automated scans</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>4794</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p1 Test: Verify proxy map is null for the advance off scans</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>4807</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Issue screenshots, @p1 Test: Verify Snapshot supported details in user profile</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>issueScreenShots.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5077</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Get a list of Projects @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5107</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Test Runs List @p0 @kush</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5347</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Metadata for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5397</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Overview for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at Socket.<anonymous> (node:internal/child_process:450:11)
+    at Socket.emit (node:events:517:28)
+    at Pipe.<anonymous> (node:net:350:12)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5587</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify Test Cases for Builds @p0</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5601</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify the filters used in filter modal for Builds - All Issues Tab @p1</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5852</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                        <tr class="failure">
+                            <td><span class="status-icon">❌</span></td>
+                            <td>
+                                <div class="test-name">Verify the filters used in filter modal for Test Cases - All Issues Tab @p1</div>
+                                <div class="error-message">Process exited with code 1: /Users/kush/jest-paarallel-worker-local/src/worker.js:112
+    process.send(result);
+            ^
+
+TypeError: process.send is not a function
+    at ChildProcess.<anonymous> (/Users/kush/jest-paarallel-worker-local/src/worker.js:112:13)
+    at ChildProcess.emit (node:events:517:28)
+    at maybeClose (node:internal/child_process:1098:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:303:5)
+
+Node.js v18.20.4
+</div>
+                            </td>
+                            <td><code>automatedTests.test.js</code></td>
+                            <td>0ms</td>
+                            <td><code>5877</code></td>
+                            <td>N/A</td>
+                        </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+            </div>
+        </section>
+        
+        <section class="files-section">
+            <h2>📁 Results by File</h2>
+            <div class="file-grid">
+                
+                    <div class="file-card has-failures">
+                        <div class="file-header">
+                            <h3>issueScreenShots.test.js</h3>
+                            <div class="file-stats">
+                                <span class="passed">0 passed</span>
+                                <span class="failed">3 failed</span>
+                                <span class="duration">0ms total</span>
+                            </div>
+                        </div>
+                        <div class="file-path"><code>/Users/kush/BStackAutomation/a11y/api/src/__tests__/automatedTests/issueScreenShots.test.js</code></div>
+                        <div class="test-summary">
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Issue screenshots, @p0 @api_job Test: Verify proxy map is getting captured for the newly created automated scans</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Issue screenshots, @p1 Test: Verify proxy map is null for the advance off scans</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Issue screenshots, @p1 Test: Verify Snapshot supported details in user profile</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                        </div>
+                    </div>
+                
+                    <div class="file-card has-failures">
+                        <div class="file-header">
+                            <h3>automatedTests.test.js</h3>
+                            <div class="file-stats">
+                                <span class="passed">0 passed</span>
+                                <span class="failed">13 failed</span>
+                                <span class="duration">0ms total</span>
+                            </div>
+                        </div>
+                        <div class="file-path"><code>/Users/kush/BStackAutomation/a11y/api/src/__tests__/automatedTests/automatedTests.test.js</code></div>
+                        <div class="test-summary">
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Get a list of Projects @p0</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify Test Runs List @p0 @kush</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify Metadata for Builds @p0</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify Overview for Builds @p0</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify Test Cases for Builds @p0</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify the filters used in filter modal for Builds - All Issues Tab @p1</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify the filters used in filter modal for Test Cases - All Issues Tab @p1</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify Rules API for Builds @p0</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify Rules API for Test Cases @p0</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify Overview for Test Cases @p0</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify Metadata for Test Cases @p0</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">Verify Guidelines API for Builds @p0</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                                <div class="test-item failed">
+                                    <span class="status">❌</span>
+                                    <span class="name">advance rule validation for automated tests</span>
+                                    <span class="duration">0ms</span>
+                                    
+                                </div>
+                            
+                        </div>
+                    </div>
+                
+            </div>
+        </section>
+    </div>
+
+    <script>
+        
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById('tab-' + tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Chart configurations
+        const chartData = {"durationDistribution":[{"label":"0-100ms","count":16,"percentage":"100.0"},{"label":"100-500ms","count":0,"percentage":"0.0"},{"label":"500-1000ms","count":0,"percentage":"0.0"},{"label":"1000-2000ms","count":0,"percentage":"0.0"},{"label":"2000ms+","count":0,"percentage":"0.0"}],"memoryDistribution":[],"timeline":[{"testIndex":1,"name":"Issue screenshots, @p0 @api_jo...","duration":0,"success":false,"pid":4794},{"testIndex":2,"name":"Issue screenshots, @p1 Test: V...","duration":0,"success":false,"pid":4807},{"testIndex":3,"name":"Issue screenshots, @p1 Test: V...","duration":0,"success":false,"pid":5077},{"testIndex":4,"name":"Get a list of Projects @p0","duration":0,"success":false,"pid":5107},{"testIndex":5,"name":"Verify Test Runs List @p0 @kus...","duration":0,"success":false,"pid":5347},{"testIndex":6,"name":"Verify Metadata for Builds @p0","duration":0,"success":false,"pid":5397},{"testIndex":7,"name":"Verify Overview for Builds @p0","duration":0,"success":false,"pid":5587},{"testIndex":8,"name":"Verify Test Cases for Builds @...","duration":0,"success":false,"pid":5601},{"testIndex":9,"name":"Verify the filters used in fil...","duration":0,"success":false,"pid":5852},{"testIndex":10,"name":"Verify the filters used in fil...","duration":0,"success":false,"pid":5877},{"testIndex":11,"name":"Verify Rules API for Builds @p...","duration":0,"success":false,"pid":6152},{"testIndex":12,"name":"Verify Rules API for Test Case...","duration":0,"success":false,"pid":6179},{"testIndex":13,"name":"Verify Overview for Test Cases...","duration":0,"success":false,"pid":6344},{"testIndex":14,"name":"Verify Metadata for Test Cases...","duration":0,"success":false,"pid":6403},{"testIndex":15,"name":"Verify Guidelines API for Buil...","duration":0,"success":false,"pid":6586},{"testIndex":16,"name":"advance rule validation for au...","duration":0,"success":false,"pid":6663}],"summary":{"totalTests":16,"totalDuration":9512,"avgDuration":"0.00"}};
+
+        // Duration Distribution Chart
+        new Chart(document.getElementById('durationChart'), {
+            type: 'doughnut',
+            data: {
+                labels: chartData.durationDistribution.map(d => d.label),
+                datasets: [{
+                    data: chartData.durationDistribution.map(d => d.count),
+                    backgroundColor: [
+                        '#27ae60', '#f39c12', '#e67e22', '#e74c3c', '#9b59b6'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        
+
+        // Timeline Chart
+        new Chart(document.getElementById('timelineChart'), {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Passed Tests',
+                    data: chartData.timeline.filter(t => t.success).map(t => ({
+                        x: t.testIndex,
+                        y: t.duration
+                    })),
+                    backgroundColor: '#27ae60'
+                }, {
+                    label: 'Failed Tests',
+                    data: chartData.timeline.filter(t => !t.success).map(t => ({
+                        x: t.testIndex,
+                        y: t.duration
+                    })),
+                    backgroundColor: '#e74c3c'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Test Index'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Duration (ms)'
+                        }
+                    }
+                }
+            }
+        });
+    
+    </script>
+</body>
+</html>
