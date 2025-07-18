@@ -541,7 +541,7 @@ class TestDiscovery {
 }
 
 class ProcessPool {
-  constructor(workerCount, jestConfig, jestArgs = [], logFilePath = 'logs/jest-parallel-runner.log') {
+  constructor(workerCount, jestConfig, jestArgs = [], logFilePath = 'logs/jest-parallel-runner.log', options = {}) {
     this.workerCount = workerCount;
     this.jestConfig = jestConfig;
     this.jestArgs = jestArgs;
@@ -550,10 +550,18 @@ class ProcessPool {
     this.activeCount = 0;
     this.logger = new Logger(logFilePath);
     
+    // Set timeout values, using CLI options or defaults
+    this.timeouts = {
+      jest: options.jestTimeout || 300000,      // Jest's own timeout (default: 120s)
+      worker: options.workerTimeout || 300000,  // Graceful shutdown timeout (default: 125s)
+      force: options.forceTimeout || 300000     // Force kill timeout (default: 130s)
+    };
+    
     this.logger.info('ProcessPool initialized', {
       workerCount,
       jestConfig,
-      jestArgs: jestArgs.length
+      jestArgs: jestArgs.length,
+      timeouts: this.timeouts
     });
   }
 
@@ -755,37 +763,37 @@ class ProcessPool {
         });
       });
 
-      // Timeout handling - Multiple timeouts for different scenarios
+      // Timeout handling - Using configurable timeouts
       const jestTimeout = setTimeout(() => {
         if (completed) return;
-        console.error(`[${new Date().toISOString()}] [Main] ⏰ Jest timeout (120s) reached for test: ${testCase.fullName}, PID: ${childPID}`);
+        console.error(`[${new Date().toISOString()}] [Main] ⏰ Jest timeout (${this.timeouts.jest/1000}s) reached for test: ${testCase.fullName}, PID: ${childPID}`);
         // Don't kill yet, give Jest a chance to timeout internally
-      }, 120000); // 120 seconds - Jest's own timeout
+      }, this.timeouts.jest); // Jest's own timeout
       
       const workerTimeout = setTimeout(() => {
         if (completed) return;
-        console.error(`[${new Date().toISOString()}] [Main] ⏰ Worker timeout (125s) reached for test: ${testCase.fullName}, sending SIGTERM to PID: ${childPID}`);
+        console.error(`[${new Date().toISOString()}] [Main] ⏰ Worker timeout (${this.timeouts.worker/1000}s) reached for test: ${testCase.fullName}, sending SIGTERM to PID: ${childPID}`);
         child.kill('SIGTERM'); // Try graceful shutdown first
-      }, 125000); // 125 seconds - graceful shutdown
+      }, this.timeouts.worker); // Graceful shutdown timeout
       
       const forceTimeout = setTimeout(() => {
         if (completed) return;
         completed = true;
         
-        console.error(`[${new Date().toISOString()}] [Main] ⏰ Force timeout (130s) reached for test: ${testCase.fullName}, killing PID: ${childPID}`);
+        console.error(`[${new Date().toISOString()}] [Main] ⏰ Force timeout (${this.timeouts.force/1000}s) reached for test: ${testCase.fullName}, killing PID: ${childPID}`);
         child.kill('SIGKILL'); // Force kill
         resolve({
           testCase,
           success: false,
-          duration: 130000,
+          duration: this.timeouts.force,
           pid: childPID,
           childProcessPID: childPID,
-          error: new Error('Test process timeout - killed by main process after 130s'),
+          error: new Error(`Test process timeout - killed by main process after ${this.timeouts.force/1000}s`),
           output: stdout,
           stderr: stderr + '\nProcess killed due to timeout',
           exitCode: 1
         });
-      }, 130000); // 130 second timeout - force kill
+      }, this.timeouts.force); // Force kill timeout
 
       child.on('close', () => {
         clearTimeout(jestTimeout);
@@ -907,4 +915,3 @@ module.exports = {
   generateSummaryReport,
   formatBytes 
 };
-module.exports = { TestDiscovery, ProcessPool };

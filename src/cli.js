@@ -69,7 +69,18 @@ function parseArguments() {
     })
     .option('testTimeout', {
       type: 'number',
-      description: 'Default timeout interval for tests in milliseconds'
+      description: 'Default timeout interval for tests in milliseconds',
+      default: 300000
+    })
+    .option('workerTimeout', {
+      type: 'number',
+      description: 'Timeout before gracefully shutting down a worker (SIGTERM)',
+      default: 300000
+    })
+    .option('forceTimeout', {
+      type: 'number',
+      description: 'Timeout before forcefully killing a worker (SIGKILL)',
+      default: 300000
     })
     .option('maxWorkers', {
       type: 'number',
@@ -101,6 +112,11 @@ async function main() {
   const options = {
     ...argv,
     workers: argv.workers || os.cpus().length,
+    // Timeout settings
+    testTimeout: argv.testTimeout,
+    jestTimeout: argv.testTimeout || 300000, // Use testTimeout for Jest's timeout
+    workerTimeout: argv.workerTimeout || 300000,
+    forceTimeout: argv.forceTimeout || 300000,
     // HTML report configuration
     htmlReport: argv.htmlReport || false,
     htmlReportPath: argv.htmlReportPath || 'reports/jest-parallel-report.html',
