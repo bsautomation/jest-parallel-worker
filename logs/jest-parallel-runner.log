@@ -1,0 +1,19 @@
+{"timestamp":"2025-07-18T09:43:04.900Z","level":"info","message":"ProcessPool initialized","data":{"workerCount":5,"jestArgs":0}}
+{"timestamp":"2025-07-18T09:43:04.901Z","level":"info","message":"Test queued","data":{"testName":"Basic Tests should work with normal test"}}
+{"timestamp":"2025-07-18T09:43:04.903Z","level":"info","message":"Test queued","data":{"testName":"Basic Tests should work with number test"}}
+{"timestamp":"2025-07-18T09:43:04.904Z","level":"info","message":"Test queued","data":{"testName":"String Tests should handle string operations"}}
+{"timestamp":"2025-07-18T09:43:04.906Z","level":"info","message":"Test queued","data":{"testName":"String Tests should concatenate strings"}}
+{"timestamp":"2025-07-18T09:43:04.908Z","level":"info","message":"Test queued","data":{"testName":"Simple Test Suite should pass - basic assertion"}}
+{"timestamp":"2025-07-18T09:43:04.909Z","level":"info","message":"Test queued","data":{"testName":"Simple Test Suite should pass - string assertion"}}
+{"timestamp":"2025-07-18T09:43:04.909Z","level":"info","message":"Test queued","data":{"testName":"Simple Test Suite should fail - intentional failure"}}
+{"timestamp":"2025-07-18T09:43:04.909Z","level":"info","message":"Test queued","data":{"testName":"Simple Test Suite should pass - array assertion"}}
+{"timestamp":"2025-07-18T09:43:04.910Z","level":"info","message":"Test queued","data":{"testName":"Simple Test Suite should pass - object assertion"}}
+{"timestamp":"2025-07-18T09:43:05.445Z","level":"info","message":"Test completed","data":{"testName":"Basic Tests should work with normal test","success":true,"duration":399,"pid":14133}}
+{"timestamp":"2025-07-18T09:43:05.562Z","level":"info","message":"Test completed","data":{"testName":"Basic Tests should work with number test","success":true,"duration":410,"pid":14141}}
+{"timestamp":"2025-07-18T09:43:05.707Z","level":"info","message":"Test completed","data":{"testName":"String Tests should handle string operations","success":true,"duration":436,"pid":14149}}
+{"timestamp":"2025-07-18T09:43:05.839Z","level":"info","message":"Test completed","data":{"testName":"String Tests should concatenate strings","success":true,"duration":446,"pid":14157}}
+{"timestamp":"2025-07-18T09:43:05.966Z","level":"info","message":"Test completed","data":{"testName":"Simple Test Suite should pass - basic assertion","success":true,"duration":457,"pid":14165}}
+{"timestamp":"2025-07-18T09:43:06.043Z","level":"info","message":"Test completed","data":{"testName":"Simple Test Suite should pass - string assertion","success":true,"duration":428,"pid":14177}}
+{"timestamp":"2025-07-18T09:43:06.139Z","level":"info","message":"Test completed","data":{"testName":"Simple Test Suite should fail - intentional failure","success":false,"duration":414,"pid":14186}}
+{"timestamp":"2025-07-18T09:43:06.244Z","level":"info","message":"Test completed","data":{"testName":"Simple Test Suite should pass - array assertion","success":true,"duration":375,"pid":14197}}
+{"timestamp":"2025-07-18T09:43:06.317Z","level":"info","message":"Test completed","data":{"testName":"Simple Test Suite should pass - object assertion","success":true,"duration":323,"pid":14206}}
