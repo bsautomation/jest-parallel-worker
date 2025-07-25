@@ -243,7 +243,7 @@ class ReportGenerator {
 
   generateHtmlContent(reportData) {
     const { summary, fileResults, testResults, metadata } = reportData;
-    
+    // ...existing code...
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -252,155 +252,285 @@ class ReportGenerator {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jest Parallel Worker - Test Report</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .header { border-bottom: 3px solid #007acc; padding-bottom: 20px; margin-bottom: 30px; }
-        .header h1 { color: #007acc; margin: 0; font-size: 2.5em; }
-        .header .subtitle { color: #666; font-size: 1.1em; margin-top: 5px; }
-        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .summary-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }
-        .summary-card.success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-        .summary-card.danger { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); }
-        .summary-card.info { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .summary-card h3 { margin: 0 0 10px 0; font-size: 2em; }
-        .summary-card p { margin: 0; opacity: 0.9; }
-        .section { margin-bottom: 30px; }
-        .section h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .test-list, .file-list { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
-        .test-item, .file-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .test-item:last-child, .file-item:last-child { border-bottom: none; }
-        .test-item.passed { background: #f8fff8; border-left: 4px solid #28a745; }
-        .test-item.failed { background: #fff8f8; border-left: 4px solid #dc3545; }
-        .file-item.passed { background: #f8fff8; border-left: 4px solid #28a745; }
-        .file-item.failed { background: #fff8f8; border-left: 4px solid #dc3545; }
-        .file-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee; font-weight: bold; }
-        .file-tests { margin: 0; }
-        .nested-test { padding: 10px 15px 10px 30px; border-bottom: 1px solid #f0f0f0; font-size: 0.9em; display: flex; justify-content: space-between; align-items: center; }
-        .nested-test:last-child { border-bottom: none; }
-        .nested-test.passed { background: #f8fff8; border-left: 3px solid #28a745; margin-left: 15px; }
-        .nested-test.failed { background: #fff8f8; border-left: 3px solid #dc3545; margin-left: 15px; }
-        .suite-name { color: #666; font-size: 0.8em; font-style: italic; }
-        .test-name { font-weight: 500; }
-        .test-meta { color: #666; font-size: 0.9em; }
-        .error { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 4px; padding: 10px; margin-top: 10px; color: #e53e3e; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; overflow-x: auto; }
-        .duration { background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500; }
-        .worker-id { background: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500; }
-        .performance { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #007acc; }
-        .performance h3 { margin-top: 0; color: #007acc; }
-        .metadata { background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 0.9em; color: #666; }
-        .metadata strong { color: #333; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .header h1 { color: #2c3e50; margin-bottom: 20px; font-size: 2.5em; }
+        .metadata { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-item .label { font-weight: 600; color: #7f8c8d; font-size: 0.9em; }
+        .meta-item .value { font-size: 1.2em; color: #2c3e50; font-weight: 500; }
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+        .card.success { border-left: 5px solid #27ae60; }
+        .card.error { border-left: 5px solid #e74c3c; }
+        .card h3 { color: #7f8c8d; margin-bottom: 15px; font-size: 1em; font-weight: 600; }
+        .big-number { font-size: 2.5em; font-weight: bold; color: #2c3e50; margin-bottom: 10px; }
+        .detail { color: #95a5a6; font-size: 0.9em; }
+        section { background: white; margin-bottom: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        section h2 { background: #34495e; color: white; padding: 20px 30px; margin: 0; font-size: 1.5em; }
+        .results-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .results-table th, .results-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ecf0f1; }
+        .results-table th { background: #f8f9fa; font-weight: 600; color: #2c3e50; }
+        .results-table tr.success { background: rgba(39, 174, 96, 0.05); }
+        .results-table tr.failure { background: rgba(231, 76, 60, 0.05); }
+        .test-tabs { display: flex; background: #ecf0f1; }
+        .tab-button { flex: 1; padding: 15px; border: none; background: transparent; cursor: pointer; font-weight: 500; transition: background 0.3s; }
+        .tab-button.active { background: white; border-bottom: 3px solid #3498db; }
+        .tab-content { display: none; padding: 30px; }
+        .tab-content.active { display: block; }
+        .no-results { text-align: center; padding: 50px; color: #95a5a6; font-size: 1.2em; }
+        .test-name { font-weight: 500; color: #2c3e50; }
+        .error-message { color: #e74c3c; font-size: 0.9em; font-style: italic; margin-top: 5px; }
+        .status-icon { font-size: 1.2em; }
+        code { background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-family: 'Monaco', 'Consolas', monospace; font-size: 0.9em; }
+        .usage-bar { width: 100px; height: 8px; background: #ecf0f1; border-radius: 4px; overflow: hidden; }
+        .usage-fill { height: 100%; background: linear-gradient(90deg, #3498db, #2980b9); transition: width 0.5s ease; }
+        .memory-delta { color: #e67e22; font-weight: 500; }
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; padding: 30px; }
+        .file-card { border: 1px solid #ecf0f1; border-radius: 8px; overflow: hidden; }
+        .file-card.all-passed { border-left: 4px solid #27ae60; }
+        .file-card.has-failures { border-left: 4px solid #e74c3c; }
+        .file-header { padding: 20px; background: #f8f9fa; }
+        .file-header h3 { margin-bottom: 10px; color: #2c3e50; }
+        .file-stats { display: flex; gap: 15px; font-size: 0.9em; }
+        .file-stats .passed { color: #27ae60; }
+        .file-stats .failed { color: #e74c3c; }
+        .file-stats .duration { color: #7f8c8d; }
+        .file-path { padding: 0 20px 10px; color: #7f8c8d; font-size: 0.9em; }
+        .test-summary { padding: 20px; }
+        .test-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f1f2f6; }
+        .test-item:last-child { border-bottom: none; }
+        .test-item .name { flex: 1; font-size: 0.9em; }
+        .test-item .duration, .test-item .memory { font-size: 0.8em; color: #7f8c8d; }
+        @media (max-width: 768px) { .container { padding: 10px; } .summary-cards { grid-template-columns: 1fr; } .file-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Jest Parallel Worker</h1>
-            <div class="subtitle">Test Execution Report - ${new Date(metadata.timestamp).toLocaleString()}</div>
-        </div>
+        <header class="header">
+            <h1>🧪 Jest Parallel Worker - Test Report</h1>
+            <div class="metadata">
+                <div class="meta-item">
+                    <span class="label">Generated:</span>
+                    <span class="value">${new Date(metadata.timestamp).toLocaleString()}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="label">Workers:</span>
+                    <span class="value">2</span>
+                </div>
+                <div class="meta-item">
+                    <span class="label">Duration:</span>
+                    <span class="value">${this.formatDuration(summary.totalDuration)}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="label">Version:</span>
+                    <span class="value">1.0.0</span>
+                </div>
+            </div>
+        </header>
+        <section class="summary-cards">
+            <div class="card ${summary.failed > 0 ? 'error' : 'success'}">
+                <h3>Overall Result</h3>
+                <div class="big-number">${summary.failed > 0 ? '❌ FAILED' : '✅ PASSED'}</div>
+                <div class="detail">${summary.totalTests ? ((summary.passed / summary.totalTests) * 100).toFixed(1) : '0.0'}% Success Rate</div>
+            </div>
+            <div class="card">
+                <h3>Tests</h3>
+                <div class="big-number">${summary.totalTests}</div>
+                <div class="detail">${summary.passed} passed, ${summary.failed} failed</div>
+            </div>
+            <div class="card">
+                <h3>Performance</h3>
+                <div class="big-number">${summary.estimatedSequentialTime && summary.totalDuration ? (summary.estimatedSequentialTime / summary.totalDuration).toFixed(1) : '0x'}</div>
+                <div class="detail">Speedup (${summary.timeSavedPercentage ? summary.timeSavedPercentage.toFixed(1) : '0.0'}% efficiency)</div>
+            </div>
+            <div class="card">
+                <h3>Time Saved</h3>
+                <div class="big-number">${this.formatDuration(summary.timeSaved)}</div>
+                <div class="detail">vs Sequential (${this.formatDuration(summary.estimatedSequentialTime)})</div>
+            </div>
+        </section>
 
-        <div class="summary">
-            <div class="summary-card info">
-                <h3>${summary.totalTests}</h3>
-                <p>Total Tests</p>
+        <section class="tests-section">
+            <h2>🧪 Test Results</h2>
+            <div class="test-tabs">
+                <button class="tab-button active" onclick="showTab('all')">All Tests (${summary.totalTests})</button>
+                <button class="tab-button" onclick="showTab('failed')">Failed (${summary.failed})</button>
+                <button class="tab-button" onclick="showTab('slowest')">Slowest (10)</button>
+                <button class="tab-button" onclick="showTab('fastest')">Fastest (10)</button>
             </div>
-            <div class="summary-card success">
-                <h3>${summary.passed}</h3>
-                <p>Passed</p>
+            <div id="tab-all" class="tab-content active">
+                <div class="test-results">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Test Name</th>
+                                <th>File</th>
+                                <th>Duration</th>
+                                <th>PID</th>
+                                <th>Memory</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        ${testResults.map(test => `
+                            <tr class="${test.status === 'passed' ? 'success' : 'failure'}">
+                                <td><span class="status-icon">${test.status === 'passed' ? '✅' : '❌'}</span></td>
+                                <td>
+                                    <div class="test-name">${test.testName}</div>
+                                    ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
+                                </td>
+                                <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
+                                <td>${this.formatDuration(test.duration)}</td>
+                                <td><code>${test.pid || ''}</code></td>
+                                <td>${test.memory || 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="summary-card ${summary.failed > 0 ? 'danger' : 'success'}">
-                <h3>${summary.failed}</h3>
-                <p>Failed</p>
+            <div id="tab-failed" class="tab-content">
+                <div class="test-results">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Test Name</th>
+                                <th>File</th>
+                                <th>Duration</th>
+                                <th>PID</th>
+                                <th>Memory</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        ${testResults.filter(test => test.status === 'failed').map(test => `
+                            <tr class="failure">
+                                <td><span class="status-icon">❌</span></td>
+                                <td>
+                                    <div class="test-name">${test.testName}</div>
+                                    ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
+                                </td>
+                                <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
+                                <td>${this.formatDuration(test.duration)}</td>
+                                <td><code>${test.pid || ''}</code></td>
+                                <td>${test.memory || 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="summary-card info">
-                <h3>${summary.files}</h3>
-                <p>Files</p>
+            <div id="tab-slowest" class="tab-content">
+                <div class="test-results">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Test Name</th>
+                                <th>File</th>
+                                <th>Duration</th>
+                                <th>PID</th>
+                                <th>Memory</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        ${testResults.slice().sort((a, b) => b.duration - a.duration).slice(0, 10).map(test => `
+                            <tr class="${test.status === 'passed' ? 'success' : 'failure'}">
+                                <td><span class="status-icon">${test.status === 'passed' ? '✅' : '❌'}</span></td>
+                                <td>
+                                    <div class="test-name">${test.testName}</div>
+                                    ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
+                                </td>
+                                <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
+                                <td>${this.formatDuration(test.duration)}</td>
+                                <td><code>${test.pid || ''}</code></td>
+                                <td>${test.memory || 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-
-        <div class="performance">
-            <h3>Performance Metrics</h3>
-            <p><strong>Execution Mode:</strong> ${summary.mode === 'parallel-file-concurrent' ? 'parallel-file (forced concurrent)' : summary.mode}</p>
-            <p><strong>Total Duration:</strong> ${this.formatDuration(summary.totalDuration)}</p>
-            <p><strong>Estimated Sequential Time:</strong> ${this.formatDuration(summary.estimatedSequentialTime)}</p>
-            <p><strong>Time Saved:</strong> ${this.formatDuration(summary.timeSaved)} (${summary.timeSavedPercentage.toFixed(1)}%)</p>
-        </div>
-
-        ${testResults.length > 0 ? `
-        <div class="section">
-            <h2>Test Results</h2>
-            <div class="test-list">
-                ${testResults.map(test => `
-                    <div class="test-item ${test.status}">
-                        <div>
-                            <div class="test-name">${test.testName}</div>
-                            <div class="test-meta">${path.basename(test.filePath)}</div>
-                            ${test.error ? `<div class="error">${this.escapeHtml(test.error)}</div>` : ''}
-                        </div>
-                        <div>
-                            <span class="duration">${this.formatDuration(test.duration)}</span>
-                            <span class="worker-id">Worker ${test.workerId}</span>
-                        </div>
-                    </div>
-                `).join('')}
+            <div id="tab-fastest" class="tab-content">
+                <div class="test-results">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Test Name</th>
+                                <th>File</th>
+                                <th>Duration</th>
+                                <th>PID</th>
+                                <th>Memory</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        ${testResults.slice().sort((a, b) => a.duration - b.duration).slice(0, 10).map(test => `
+                            <tr class="${test.status === 'passed' ? 'success' : 'failure'}">
+                                <td><span class="status-icon">${test.status === 'passed' ? '✅' : '❌'}</span></td>
+                                <td>
+                                    <div class="test-name">${test.testName}</div>
+                                    ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
+                                </td>
+                                <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
+                                <td>${this.formatDuration(test.duration)}</td>
+                                <td><code>${test.pid || ''}</code></td>
+                                <td>${test.memory || 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-        ` : ''}
-
-        ${Object.keys(fileResults).length > 0 ? `
-        <div class="section">
-            <h2>File Results with Test Details</h2>
-            <div class="file-list">
+        </section>
+        <section class="files-section">
+            <h2>📁 Results by File</h2>
+            <div class="file-grid">
                 ${Object.entries(fileResults).map(([fileName, fileResult]) => {
-                  // Check if this file has individual test results
-                  const fileTestResults = testResults.filter(test => path.basename(test.filePath) === fileName);
-                  
-                  return `
-                    <div class="file-item ${fileResult.status || (fileResult.failed > 0 ? 'failed' : 'passed')}">
+                    const fileTestResults = testResults.filter(test => test.filePath && path.basename(test.filePath) === fileName);
+                    const allPassed = fileResult.failed === 0;
+                    return `
+                    <div class="file-card ${allPassed ? 'all-passed' : 'has-failures'}">
                         <div class="file-header">
-                            <div>
-                                <div class="test-name">${fileName}</div>
-                                <div class="test-meta">
-                                    ${fileResult.tests ? 
-                                        `${fileResult.passed} passed, ${fileResult.failed} failed` : 
-                                        `${fileResult.testCount} tests`
-                                    }
-                                </div>
-                            </div>
-                            <div>
-                                <span class="duration">${this.formatDuration(fileResult.duration || 0)}</span>
-                                ${fileResult.workerId !== undefined ? `<span class="worker-id">Worker ${fileResult.workerId}</span>` : ''}
+                            <h3>${fileName}</h3>
+                            <div class="file-stats">
+                                <span class="passed">${fileResult.passed || 0} passed</span>
+                                <span class="failed">${fileResult.failed || 0} failed</span>
+                                <span class="duration">${this.formatDuration(fileResult.duration || 0)} total</span>
                             </div>
                         </div>
-                        ${fileTestResults.length > 0 ? `
-                            <div class="file-tests">
-                                ${fileTestResults.map(test => `
-                                    <div class="nested-test ${test.status}">
-                                        <div>
-                                            <div class="test-name">${test.testName}</div>
-                                            ${test.suite ? `<div class="suite-name">${test.suite}</div>` : ''}
-                                            ${test.error ? `<div class="error">${this.escapeHtml(test.error)}</div>` : ''}
-                                        </div>
-                                        <div>
-                                            <span class="duration">${this.formatDuration(test.duration)}</span>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
+                        <div class="file-path"><code>${fileResult.filePath || ''}</code></div>
+                        <div class="test-summary">
+                            ${fileTestResults.map(test => `
+                                <div class="test-item ${test.status === 'passed' ? 'passed' : 'failed'}">
+                                    <span class="status">${test.status === 'passed' ? '✅' : '❌'}</span>
+                                    <span class="name">${test.testName}</span>
+                                    <span class="duration">${this.formatDuration(test.duration)}</span>
+                                    ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
-                  `;
+                    `;
                 }).join('')}
             </div>
-        </div>
-        ` : ''}
-
-        <div class="metadata">
-            <strong>Report Metadata:</strong><br>
-            Generated: ${new Date(metadata.timestamp).toLocaleString()}<br>
-            Process ID: ${metadata.pid}<br>
-            Memory Usage: RSS ${metadata.memoryUsage.rss}MB, Heap ${metadata.memoryUsage.heapUsed}/${metadata.memoryUsage.heapTotal}MB, External ${metadata.memoryUsage.external}MB
-        </div>
+        </section>
     </div>
+    <script>
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById('tab-' + tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
 </body>
 </html>`;
   }

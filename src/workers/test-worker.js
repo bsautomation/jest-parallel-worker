@@ -4,78 +4,68 @@ const { execSync } = require('child_process');
 
 function extractCleanErrorMessage(jestOutput) {
   if (!jestOutput) return 'Test failed with no error details';
-  
+
   const lines = jestOutput.split('\n');
   const errorLines = [];
-  let inErrorSection = false;
-  let collectingAssertion = false;
-  
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    
-    // Start collecting when we find the actual error description
-    if (trimmedLine.includes('expect(') && (trimmedLine.includes('toBe') || trimmedLine.includes('toEqual') || trimmedLine.includes('toContain'))) {
-      inErrorSection = true;
-      collectingAssertion = true;
-      errorLines.push(trimmedLine);
-      continue;
-    }
-    
-    // Look for the main error message lines
-    if (trimmedLine.startsWith('Expected:') || trimmedLine.startsWith('Received:')) {
-      errorLines.push(trimmedLine);
-      continue;
-    }
-    
-    // Handle diff format lines
-    if (trimmedLine.includes('- Expected') || trimmedLine.includes('+ Received')) {
-      errorLines.push(trimmedLine);
-      continue;
-    }
-    
-    // Handle object diff lines
-    if (inErrorSection && (trimmedLine.startsWith('Object {') || 
-        trimmedLine.match(/^\s*[-+]\s*"/) || 
-        trimmedLine.match(/^\s*[-+]\s*}/))) {
-      errorLines.push(trimmedLine);
-      continue;
-    }
-    
-    // Collect useful assertion error details
-    if (collectingAssertion && (
-        trimmedLine.includes('equality') ||
-        trimmedLine.includes('indexOf') ||
-        trimmedLine.startsWith('>')
-    )) {
-      errorLines.push(trimmedLine);
-      continue;
-    }
-    
-    // Stop collecting when we hit code location or stack trace
-    if (trimmedLine.includes('at Object.') || trimmedLine.includes('at ') || 
-        trimmedLine.includes(') {') || trimmedLine.includes('Test Suites:')) {
+  let foundError = false;
+  let errorStartIdx = -1;
+
+  // 1. Find the first error-like line and its index
+  for (let i = 0; i < lines.length; i++) {
+    const trimmedLine = lines[i].trim();
+    if (
+      trimmedLine.startsWith('Error:') ||
+      trimmedLine.includes('AssertionError') ||
+      /timed out|timeout|Timeout/i.test(trimmedLine) ||
+      trimmedLine.startsWith('expect(') ||
+      trimmedLine.startsWith('Expected:') ||
+      trimmedLine.startsWith('Received:') ||
+      trimmedLine.includes('- Expected') ||
+      trimmedLine.includes('+ Received') ||
+      /threw|thrown|Exception|ReferenceError|TypeError|RangeError|SyntaxError/i.test(trimmedLine)
+    ) {
+      errorStartIdx = i;
+      foundError = true;
       break;
     }
   }
-  
-  // If we didn't find specific assertion errors, look for general error patterns
-  if (errorLines.length === 0) {
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      if (trimmedLine.includes('Error:') || trimmedLine.includes('AssertionError') ||
-          trimmedLine.includes('ReferenceError') || trimmedLine.includes('TypeError')) {
+
+  // 2. If found, collect a few lines of context after the error line
+  if (foundError && errorStartIdx !== -1) {
+    for (let j = errorStartIdx; j < Math.min(lines.length, errorStartIdx + 6); j++) {
+      const l = lines[j].trim();
+      if (l && !errorLines.includes(l)) errorLines.push(l);
+      // Stop at stack trace or next test
+      if (l.startsWith('at ') || l.startsWith('Test Suites:')) break;
+    }
+  }
+
+  // 3. If nothing found, fallback to first non-empty error-like line
+  if (!foundError) {
+    for (let i = 0; i < lines.length; i++) {
+      const trimmedLine = lines[i].trim();
+      if (trimmedLine && (trimmedLine.toLowerCase().includes('error') || trimmedLine.toLowerCase().includes('fail') || trimmedLine.toLowerCase().includes('timeout'))) {
+        errorLines.push(trimmedLine);
+        foundError = true;
+        break;
+      }
+    }
+  }
+
+  // 4. If still nothing, fallback to first non-empty line
+  if (!foundError) {
+    for (let i = 0; i < lines.length; i++) {
+      const trimmedLine = lines[i].trim();
+      if (trimmedLine) {
         errorLines.push(trimmedLine);
         break;
       }
     }
   }
-  
-  // Fall back to a simple error message if nothing specific was found
-  if (errorLines.length === 0) {
-    return 'Test assertion failed';
-  }
-  
-  return errorLines.join('\n').trim();
+
+  // Remove duplicate lines
+  const uniqueLines = [...new Set(errorLines)];
+  return uniqueLines.join('\n').trim() || 'Test assertion failed';
 }
 
 async function runSingleTest(config) {
