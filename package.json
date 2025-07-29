@@ -1,56 +1,38 @@
 {
   "name": "jest-parallel-worker",
   "version": "1.0.0",
-  "description": "Run Jest tests in parallel at the test level (it() blocks) using child processes with separate PIDs",
+  "description": "A Jest wrapper for parallel test execution at test level",
   "main": "src/index.js",
   "bin": {
-    "jest-parallel": "src/cli.js"
+    "jest-parallel": "./bin/jest-parallel.js"
   },
   "scripts": {
-    "test": "jest",
-    "test:examples": "node examples/usage-example.js",
-    "test:discovery": "node examples/test-discovery.js",
-    "demo": "node examples/demo.js",
-    "test:cli": "chmod +x examples/test-cli.sh && examples/test-cli.sh",
-    "lint": "echo 'Add ESLint configuration for linting'",
-    "start": "node src/cli.js",
-    "cleanup-ts": "chmod +x cleanup-ts.sh && ./cleanup-ts.sh"
+    "test": "node bin/jest-parallel.js --testMatch 'tests/**/*.test.js' --mode native-parallel",
+    "test:examples": "node bin/jest-parallel.js --testMatch 'examples/**/*.test.js' --mode parallel-test",
+    "test:file-level": "node bin/jest-parallel.js --testMatch 'examples/**/*.test.js' --mode parallel-file --forceConcurrent",
+    "test:jest-parallel": "node bin/jest-parallel.js --testMatch 'examples/**/*.test.js' --mode jest-parallel --forceConcurrent",
+    "test:native-parallel": "node bin/jest-parallel.js --testMatch 'examples/**/*.test.js' --mode native-parallel"
   },
   "keywords": [
     "jest",
     "parallel",
     "testing",
     "worker",
-    "fork",
-    "performance",
-    "child-process",
-    "pid",
-    "cukeforker"
+    "performance"
   ],
-  "author": "Jest Parallel Worker Team",
+  "author": "Jest Parallel Worker",
   "license": "MIT",
   "dependencies": {
-    "jest": "^29.0.0",
-    "yargs": "^17.0.0",
-    "fs-extra": "^11.0.0",
     "chalk": "^4.1.2",
-    "glob": "^10.0.0",
-    "@babel/core": "^7.22.0",
-    "@babel/parser": "^7.22.0",
-    "@babel/traverse": "^7.22.0"
+    "commander": "^11.0.0",
+    "expect": "^30.0.5",
+    "glob": "^10.3.3",
+    "jest": "^29.6.2"
   },
   "devDependencies": {
-    "jest": "^29.0.0"
+    "jest": "^29.6.2"
   },
   "engines": {
-    "node": ">=16.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-org/jest-parallel-worker.git"
-  },
-  "bugs": {
-    "url": "https://github.com/your-org/jest-parallel-worker/issues"
-  },
-  "homepage": "https://github.com/your-org/jest-parallel-worker#readme"
+    "node": ">=14.0.0"
+  }
 }
