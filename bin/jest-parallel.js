@@ -116,7 +116,7 @@ program
     
     try {
       // If specific test files are provided, use them instead of the pattern
-      const testMatch = testFiles.length > 0 ? `${options.testMatch},${testFiles}` : options.testMatch;
+      const testMatch = testFiles.length > 0 ? testFiles : options.testMatch;
       
       // Debug the options to see what's being passed
       if (options.verbose) {
