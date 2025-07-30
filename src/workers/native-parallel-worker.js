@@ -516,6 +516,13 @@ function parseJestOutput(output, config, specificTestName = null) {
   if (collectingError && currentFailedTest) {
     currentFailedTest.error = errorLines.join('\n').trim();
   }
+
+  // For each failed test, set error field to full Jest output
+  testResults.forEach(tr => {
+    if (tr.status === 'failed') {
+      tr.error = output.trim();
+    }
+  });
   
   return testResults;
 }
