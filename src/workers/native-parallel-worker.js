@@ -400,20 +400,8 @@ function parseJestOutput(output, config, specificTestName = null) {
         collectingError = false;
         errorLines = [];
       } else {
-        // Collect meaningful error lines
-        if (trimmedLine.length > 0 && 
-            !trimmedLine.includes('at Object.') && 
-            !trimmedLine.includes('at TestScheduler.') &&
-            !trimmedLine.includes('at ') &&
-            !trimmedLine.includes('node_modules') &&
-            !trimmedLine.includes('node:internal') &&
-            !trimmedLine.includes('Error:') &&
-            !trimmedLine.match(/^\d+\s*\|\s*/) &&
-            !trimmedLine.startsWith('●') &&
-            !trimmedLine.includes('FAIL') &&
-            !trimmedLine.includes('PASS')) {
-          errorLines.push(trimmedLine);
-        }
+        // Collect all error lines without filtering to match full Jest output
+        errorLines.push(line);
       }
     }
     
@@ -477,29 +465,29 @@ function parseJestOutput(output, config, specificTestName = null) {
     }
     
     // Pattern 3: ✗ or ✕ failed test
-    const failedTestMatch = line.match(/^\s*[✗✕]\s+(.+?)(?:\s*\((\d+(?:\.\d+)?)\s*m?s\))?$/);
+    const failedTestMatch = line.match(/^\s*[✗✕]\s+([^\(\n]{2,}?)(?:\s*\((\d+(?:\.\d+)?)\s*m?s\))?$/);
     if (failedTestMatch) {
-      const [, testName, duration] = failedTestMatch;
-      const cleanTestName = testName.trim();
-      
-      if (!specificTestName || cleanTestName === specificTestName) {
-        const failedTest = {
-          testId: `${config.filePath}:${cleanTestName}`,
-          testName: cleanTestName,
-          suite: currentSuite,
-          status: 'failed',
-          duration: duration ? parseFloat(duration) : 0,
-          error: null,
-          workerId: config.workerId,
-          filePath: config.filePath
-        };
-        
-        testResults.push(failedTest);
-        
-        // Start collecting error messages for this failed test
-        currentFailedTest = failedTest;
-        collectingError = true;
-        errorLines = [];
+      const [, testNameRaw, duration] = failedTestMatch;
+      // Remove leading/trailing non-alphanumeric symbols and trim
+      const cleanTestName = testNameRaw.trim().replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '');
+      // Only add if testName is not empty, not just symbols, and longer than 1 character
+      if (cleanTestName.length > 1 && !/^[✗✕]+$/.test(cleanTestName)) {
+        if (!specificTestName || cleanTestName === specificTestName) {
+          const failedTest = {
+            testId: `${config.filePath}:${cleanTestName}`,
+            testName: cleanTestName,
+            suite: currentSuite,
+            status: 'failed',
+            duration: duration ? parseFloat(duration) : 0,
+            error: '', // Always set error field, will be filled after collecting
+            workerId: config.workerId,
+            filePath: config.filePath
+          };
+          testResults.push(failedTest);
+          currentFailedTest = failedTest;
+          collectingError = true;
+          errorLines = [];
+        }
       }
     }
     
@@ -524,8 +512,8 @@ function parseJestOutput(output, config, specificTestName = null) {
     }
   }
   
-  // Handle case where we were collecting error for the last failed test
-  if (collectingError && currentFailedTest && errorLines.length > 0) {
+  // Always assign error lines to last failed test, even if empty
+  if (collectingError && currentFailedTest) {
     currentFailedTest.error = errorLines.join('\n').trim();
   }
   
