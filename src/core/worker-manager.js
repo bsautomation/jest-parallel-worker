@@ -666,6 +666,8 @@ class WorkerManager {
       })
     ];
 
+    console.log(`Spawning native parallel worker ${workerId} with args:`, args);
+
     const worker = spawn('node', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=4096' }
