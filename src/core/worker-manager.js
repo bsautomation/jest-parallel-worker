@@ -923,12 +923,85 @@ class WorkerManager {
   checkCompletion() {
     if (this.activeWorkers === 0 && this.workQueue.length === 0) {
       this.logger.success(`All workers completed. Total results: ${this.results.length}`);
-      
       // Log final test status
       this.logFinalTestStatus().catch(err => 
         console.error('Error logging final test status:', err.message)
       );
-      
+
+      // Write enhanced JSON reporter output
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const reportDir = path.join(process.cwd(), 'reports');
+        if (!fs.existsSync(reportDir)) {
+          fs.mkdirSync(reportDir, { recursive: true });
+        }
+
+        // Group results by file
+        const fileMap = {};
+        for (const result of this.results) {
+          const file = result.filePath || result.file || 'unknown';
+          if (!fileMap[file]) {
+            fileMap[file] = {
+              filePath: file,
+              status: 'passed',
+              testCount: 0,
+              passed: 0,
+              failed: 0,
+              skipped: 0,
+              tests: []
+            };
+          }
+          // File-level status
+          if (result.status === 'failed') fileMap[file].status = 'failed';
+          if (result.testCount) fileMap[file].testCount += result.testCount;
+          // Individual test results
+          if (Array.isArray(result.testResults)) {
+            for (const t of result.testResults) {
+              fileMap[file].tests.push(t);
+              if (t.status === 'passed') fileMap[file].passed++;
+              if (t.status === 'failed') fileMap[file].failed++;
+              if (t.status === 'skipped') fileMap[file].skipped++;
+            }
+          } else if (result.status) {
+            // Fallback for single test
+            fileMap[file].tests.push(result);
+            if (result.status === 'passed') fileMap[file].passed++;
+            if (result.status === 'failed') fileMap[file].failed++;
+            if (result.status === 'skipped') fileMap[file].skipped++;
+          }
+        }
+
+        // Build file summary array
+        const fileSummaries = Object.values(fileMap).map(f => ({
+          filePath: f.filePath,
+          status: f.status,
+          testCount: f.testCount || f.tests.length,
+          passed: f.passed,
+          failed: f.failed,
+          skipped: f.skipped
+        }));
+
+        const jsonReport = {
+          summary: {
+            total: this.testStatus.total,
+            passed: this.testStatus.passed,
+            failed: this.testStatus.failed,
+            skipped: this.testStatus.skipped,
+            completed: this.testStatus.completed,
+            running: this.testStatus.running,
+            successRate: this.testStatus.total > 0 ? ((this.testStatus.passed / this.testStatus.total) * 100).toFixed(1) : '0.0'
+          },
+          fileSummary: fileSummaries,
+          fileDetails: fileMap,
+          results: this.results
+        };
+        fs.writeFileSync(path.join(reportDir, 'test-status.json'), JSON.stringify(jsonReport, null, 2), 'utf8');
+        this.logger.info('JSON test status report written to reports/test-status.json');
+      } catch (err) {
+        this.logger.error('Failed to write JSON test status report:', err.message);
+      }
+
       this.onComplete(this.results);
     }
   }
