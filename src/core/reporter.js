@@ -92,15 +92,27 @@ class ReportGenerator {
         // If this file result has parsed test results, add them
         if (result.testResults && Array.isArray(result.testResults)) {
           result.testResults.forEach(testResult => {
+            // Clean and validate test name
+            let cleanTestName = testResult.testName || testResult.name || 'Unknown Test';
+            if (cleanTestName === '\n' || cleanTestName.trim() === '' || cleanTestName === 'undefined') {
+              cleanTestName = testResult.suite ? `${testResult.suite} - Test` : 'Unknown Test';
+            }
+            
+            // Clean and format error message for Jest-style output
+            let formattedError = null;
+            if (testResult.error) {
+              formattedError = this.formatJestError(testResult.error);
+            }
+            
             const individualTest = {
-              testId: testResult.testId || `${result.filePath}:${testResult.testName || testResult.name}`,
-              testName: testResult.testName || testResult.name,
+              testId: testResult.testId || `${result.filePath}:${cleanTestName}`,
+              testName: cleanTestName,
               filePath: result.filePath,
               status: testResult.status,
               duration: testResult.duration || 0,
               workerId: result.workerId,
               mode: result.mode,
-              error: testResult.error,
+              error: formattedError,
               suite: testResult.suite
             };
             
@@ -166,6 +178,45 @@ class ReportGenerator {
     return results.reduce((total, result) => {
       return total + (result.duration || 0);
     }, 0);
+  }
+
+  formatJestError(error) {
+    if (!error) return null;
+    
+    // If error is already a string, clean it up
+    let errorText = typeof error === 'string' ? error : error.message || String(error);
+    
+    // Remove excessive whitespace and normalize
+    errorText = errorText.trim();
+    
+    // Split by lines and process
+    const lines = errorText.split('\n');
+    const processedLines = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Skip empty lines at the beginning
+      if (processedLines.length === 0 && line === '') continue;
+      
+      // Include error message, stack trace, and expect statements
+      if (line.includes('expect(') || 
+          line.includes('Expected:') || 
+          line.includes('Received:') || 
+          line.includes('at ') ||
+          line.includes('Error:') ||
+          line.includes('Failed') ||
+          line.includes('Difference:') ||
+          line.match(/^\d+\s*\|/) || // Line numbers from Jest diff
+          processedLines.length < 10) { // Include first 10 lines regardless
+        processedLines.push(line);
+      }
+      
+      // Stop after we have enough context (max 20 lines)
+      if (processedLines.length >= 20) break;
+    }
+    
+    return processedLines.join('\n');
   }
 
   getMemoryUsage() {
@@ -283,6 +334,16 @@ class ReportGenerator {
         .no-results { text-align: center; padding: 50px; color: #95a5a6; font-size: 1.2em; }
         .test-name { font-weight: 500; color: #2c3e50; }
         .error-message { color: #e74c3c; font-size: 0.9em; font-style: italic; margin-top: 5px; }
+        .source-info { 
+          color: #6c757d; 
+          font-size: 0.8em; 
+          font-family: 'Monaco', 'Consolas', monospace; 
+          background: #f8f9fa; 
+          padding: 3px 6px; 
+          border-radius: 3px; 
+          margin-top: 3px; 
+          display: inline-block;
+        }
         .status-icon { font-size: 1.2em; }
         code { background: #f8f9fa; padding: 2px 6px; border-radius: 4px; font-family: 'Monaco', 'Consolas', monospace; font-size: 0.9em; }
         .usage-bar { width: 100px; height: 8px; background: #ecf0f1; border-radius: 4px; overflow: hidden; }
@@ -304,6 +365,17 @@ class ReportGenerator {
         .test-item:last-child { border-bottom: none; }
         .test-item .name { flex: 1; font-size: 0.9em; }
         .test-item .duration, .test-item .memory { font-size: 0.8em; color: #7f8c8d; }
+        .error-message pre { 
+          background: #f8f9fa; 
+          border: 1px solid #e9ecef; 
+          border-radius: 4px; 
+          padding: 8px; 
+          font-size: 0.85em; 
+          color: #d73027; 
+          overflow-x: auto; 
+          white-space: pre-wrap; 
+          max-width: 500px; 
+        }
         @media (max-width: 768px) { .container { padding: 10px; } .summary-cards { grid-template-columns: 1fr; } .file-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -379,8 +451,9 @@ class ReportGenerator {
                             <tr class="${test.status === 'passed' ? 'success' : 'failure'}">
                                 <td><span class="status-icon">${test.status === 'passed' ? '✅' : '❌'}</span></td>
                                 <td>
-                                    <div class="test-name">${test.testName}</div>
-                                    ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
+                                    <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
+                                    ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
+                                    ${test.source ? `<div class="source-info">📍 ${this.escapeHtml(test.source.location)}</div>` : ''}
                                 </td>
                                 <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
                                 <td>${this.formatDuration(test.duration)}</td>
@@ -410,8 +483,9 @@ class ReportGenerator {
                             <tr class="failure">
                                 <td><span class="status-icon">❌</span></td>
                                 <td>
-                                    <div class="test-name">${test.testName}</div>
-                                    ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
+                                    <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
+                                    ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
+                                    ${test.source ? `<div class="source-info">📍 ${this.escapeHtml(test.source.location)}</div>` : ''}
                                 </td>
                                 <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
                                 <td>${this.formatDuration(test.duration)}</td>
@@ -441,8 +515,9 @@ class ReportGenerator {
                             <tr class="${test.status === 'passed' ? 'success' : 'failure'}">
                                 <td><span class="status-icon">${test.status === 'passed' ? '✅' : '❌'}</span></td>
                                 <td>
-                                    <div class="test-name">${test.testName}</div>
-                                    ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
+                                    <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
+                                    ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
+                                    ${test.source ? `<div class="source-info">📍 ${this.escapeHtml(test.source.location)}</div>` : ''}
                                 </td>
                                 <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
                                 <td>${this.formatDuration(test.duration)}</td>
@@ -472,8 +547,9 @@ class ReportGenerator {
                             <tr class="${test.status === 'passed' ? 'success' : 'failure'}">
                                 <td><span class="status-icon">${test.status === 'passed' ? '✅' : '❌'}</span></td>
                                 <td>
-                                    <div class="test-name">${test.testName}</div>
-                                    ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
+                                    <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
+                                    ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
+                                    ${test.source ? `<div class="source-info">📍 ${this.escapeHtml(test.source.location)}</div>` : ''}
                                 </td>
                                 <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
                                 <td>${this.formatDuration(test.duration)}</td>
@@ -510,6 +586,7 @@ class ReportGenerator {
                                     <span class="name">${test.testName}</span>
                                     <span class="duration">${this.formatDuration(test.duration)}</span>
                                     ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
+                                    ${test.source ? `<div class="source-info">📍 ${this.escapeHtml(test.source.location)}</div>` : ''}
                                 </div>
                             `).join('')}
                         </div>

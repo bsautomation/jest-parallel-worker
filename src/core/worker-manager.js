@@ -153,9 +153,10 @@ class WorkerManager {
     this.initializeTestCounts(parsedFiles);
     
     const workItems = parsedFiles.map(file => ({
-      type: 'file',
+      type: 'native-parallel',  // Use native-parallel-worker for better error parsing
       filePath: file.filePath,
-      testCount: file.tests.length
+      testCount: file.tests.length,
+      strategy: 'file-parallelism'  // Run entire file with Jest's parallel capabilities
     }));
 
     this.workQueue = [...workItems];
@@ -666,8 +667,6 @@ class WorkerManager {
       })
     ];
 
-    console.log(`Spawning native parallel worker ${workerId} with args:`, args);
-
     const worker = spawn('node', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=4096' }
@@ -810,9 +809,30 @@ class WorkerManager {
       // Parse Jest output to extract individual test results
       const lines = output.split('\n');
       let currentSuite = '';
+      let currentFailedTest = null;
+      let collectingError = false;
+      let errorLines = [];
       
       for (const line of lines) {
         const trimmedLine = line.trim();
+        
+        // If collecting error for failed test
+        if (collectingError && currentFailedTest) {
+          if (trimmedLine.startsWith('✓') || trimmedLine.startsWith('✗') || 
+              trimmedLine.includes('Test Suites:') || trimmedLine.includes('Tests:') ||
+              trimmedLine.includes('Snapshots:') || trimmedLine.includes('Time:') ||
+              trimmedLine.includes('Ran all test suites') || trimmedLine.startsWith('PASS') ||
+              trimmedLine.startsWith('FAIL')) {
+            if (errorLines.length > 0) {
+              currentFailedTest.error = errorLines.join('\n').trim();
+            }
+            currentFailedTest = null;
+            collectingError = false;
+            errorLines = [];
+          } else {
+            errorLines.push(line);
+          }
+        }
         
         // Look for test suite names (appear after PASS and before indented tests)
         if (trimmedLine && !trimmedLine.startsWith('✓') && !trimmedLine.startsWith('✗') && 
@@ -820,7 +840,8 @@ class WorkerManager {
             !trimmedLine.includes('Test Suites:') && !trimmedLine.includes('Tests:') &&
             !trimmedLine.includes('Snapshots:') && !trimmedLine.includes('Time:') &&
             !trimmedLine.includes('Ran all test suites') && !trimmedLine.startsWith('RUNS') &&
-            !trimmedLine.includes('Determining test suites') && !trimmedLine.includes('.test.js')) {
+            !trimmedLine.includes('Determining test suites') && !trimmedLine.includes('.test.js') &&
+            !trimmedLine.startsWith('at ') && !trimmedLine.includes('Error:')) {
           
           // Check if this looks like a describe block name (not indented test)
           if (!line.startsWith('    ') && trimmedLine.length > 0) {
@@ -832,22 +853,28 @@ class WorkerManager {
         const testMatch = line.match(/^\s*✓\s+(.+?)\s*\((\d+)\s*ms\)/);
         if (testMatch) {
           const [, testName, duration] = testMatch;
-          testResults.push({
-            name: testName.trim(),
-            suite: currentSuite,
-            status: 'passed',
-            duration: parseInt(duration),
-            error: null
-          });
+          const cleanTestName = testName.trim();
+          
+          if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
+            testResults.push({
+              name: cleanTestName,
+              suite: currentSuite,
+              status: 'passed',
+              duration: parseInt(duration),
+              error: null
+            });
+          }
         } else {
           // Handle tests without explicit timing (usually very fast tests)
           const quickTestMatch = line.match(/^\s*✓\s+(.+?)$/);
           if (quickTestMatch) {
             const [, testName] = quickTestMatch;
-            // Only process if it doesn't contain duration info
-            if (!testName.includes('(') && !testName.includes('ms')) {
+            const cleanTestName = testName.trim();
+            // Only process if it doesn't contain duration info and is not empty
+            if (!testName.includes('(') && !testName.includes('ms') && 
+                cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
               testResults.push({
-                name: testName.trim(),
+                name: cleanTestName,
                 suite: currentSuite,
                 status: 'passed',
                 duration: 0, // Very fast test, under 1ms
@@ -858,17 +885,47 @@ class WorkerManager {
         }
         
         // Look for failed tests
-        const failedTestMatch = line.match(/^\s*✗\s+(.+?)\s*(?:\((\d+)\s*ms\))?/);
+        const failedTestMatch = line.match(/^\s*[✗✕×]\s+(.+?)\s*(?:\((\d+)\s*ms\))?/);
         if (failedTestMatch) {
           const [, testName, duration] = failedTestMatch;
-          testResults.push({
-            name: testName.trim(),
-            suite: currentSuite,
-            status: 'failed',
-            duration: duration ? parseInt(duration) : 0,
-            error: null // Could be enhanced to capture error message
-          });
+          const cleanTestName = testName.trim();
+          
+          if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
+            const failedTest = {
+              name: cleanTestName,
+              suite: currentSuite,
+              status: 'failed',
+              duration: duration ? parseInt(duration) : 0,
+              error: null
+            };
+            testResults.push(failedTest);
+            currentFailedTest = failedTest;
+            collectingError = true;
+            errorLines = [];
+          }
         }
+        
+        // Look for skipped tests
+        const skippedTestMatch = line.match(/^\s*○\s+(.+?)$/);
+        if (skippedTestMatch) {
+          const [, testName] = skippedTestMatch;
+          const cleanTestName = testName.trim();
+          
+          if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
+            testResults.push({
+              name: cleanTestName,
+              suite: currentSuite,
+              status: 'skipped',
+              duration: 0,
+              error: null
+            });
+          }
+        }
+      }
+      
+      // Handle any remaining error collection
+      if (collectingError && currentFailedTest && errorLines.length > 0) {
+        currentFailedTest.error = errorLines.join('\n').trim();
       }
       
       // If no tests were parsed, try alternative parsing for different Jest output formats
