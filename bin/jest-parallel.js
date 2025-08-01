@@ -101,7 +101,7 @@ program
   .argument('[testFiles...]', 'Specific test files to run')
   .option('-m, --mode <mode>', 'Execution mode: parallel-test, parallel-file, jest-parallel, native-parallel', 'parallel-test')
   .option('-t, --testMatch <pattern>', 'Test file pattern to match', 'tests/**/*.test.js')
-  .option('--timeout <ms>', 'Test timeout in milliseconds', '30000')
+  .option('--timeout <minutes>', 'Test timeout in minutes (default: 5 minutes = 300 seconds)', '5')
   .option('--maxWorkers <number>', 'Maximum number of worker processes', '4')
   .option('--reporter <type>', 'Reporter type: console, html, both', 'both')
   .option('--outputDir <dir>', 'Output directory for reports', './reports')
@@ -131,7 +131,7 @@ program
       const runner = new JestParallelRunner({
         mode: options.mode,
         testMatch: testMatch,
-        timeout: parseInt(options.timeout),
+        timeout: parseFloat(options.timeout),
         maxWorkers: parseInt(options.maxWorkers),
         reporter: options.reporter,
         outputDir: options.outputDir,
