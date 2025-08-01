@@ -175,9 +175,44 @@ class ExecutionLogger {
     await this.error(`WORKER-${workerId}`, message, { error: error.toString() });
   }
 
-  async logWorkerTimeout(workerId) {
-    const message = `Worker timed out`;
+  async logWorkerTimeout(workerId, context = null) {
+    const activity = this.workerActivities.get(workerId);
+    let message = `Worker timed out`;
+    
+    if (activity && activity.workItem) {
+      const elapsed = Date.now() - activity.startTime;
+      const workItem = activity.workItem;
+      
+      if (workItem.testName) {
+        message += ` while executing test: "${workItem.testName}" in ${path.basename(workItem.filePath)} (running for ${this.formatDuration(elapsed)})`;
+      } else {
+        message += ` while processing file: ${path.basename(workItem.filePath)} (running for ${this.formatDuration(elapsed)})`;
+      }
+    }
+    
+    if (context) {
+      message += ` - ${context}`;
+    }
+    
     await this.warn(`WORKER-${workerId}`, message);
+    
+    // Also log any other currently running workers for context
+    const runningWorkers = [];
+    for (const [id, activ] of this.workerActivities) {
+      if (id !== workerId && activ.status === 'running') {
+        const elapsed = Date.now() - activ.startTime;
+        const item = activ.workItem;
+        if (item.testName) {
+          runningWorkers.push(`Worker ${id}: "${item.testName}" in ${path.basename(item.filePath)} (${this.formatDuration(elapsed)})`);
+        } else {
+          runningWorkers.push(`Worker ${id}: ${path.basename(item.filePath)} (${this.formatDuration(elapsed)})`);
+        }
+      }
+    }
+    
+    if (runningWorkers.length > 0) {
+      await this.warn('TIMEOUT-CONTEXT', `Other running workers at timeout: ${runningWorkers.join(', ')}`);
+    }
   }
 
   // Test execution tracking

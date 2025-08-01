@@ -38,6 +38,19 @@ class WorkerManager {
     this.logger.debug(`WorkerManager initialized with ${this.maxWorkers} max workers and ${timeoutMinutes} minute(s) timeout (${this.timeout}ms)`);
   }
 
+  // Helper method to format duration in human-readable format
+  formatDuration(ms) {
+    if (ms < 1000) {
+      return `${ms}ms`;
+    } else if (ms < 60000) {
+      return `${(ms / 1000).toFixed(1)}s`;
+    } else {
+      const minutes = Math.floor(ms / 60000);
+      const seconds = Math.floor((ms % 60000) / 1000);
+      return `${minutes}m ${seconds}s`;
+    }
+  }
+
   // Add real-time test status tracking methods
   initializeTestCounts(parsedFiles) {
     this.testStatus.total = parsedFiles.reduce((sum, file) => sum + file.tests.length, 0);
@@ -385,9 +398,10 @@ class WorkerManager {
     });
 
     // Set timeout
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (!worker.killed) {
         worker.kill('SIGKILL');
+        this.executionLogger.logWorkerTimeout(workerId, `Exceeded ${this.formatDuration(this.timeout)} timeout limit`);
         this.logger.warn(`Worker ${workerId} killed due to timeout`);
       }
     }, this.timeout);
@@ -577,11 +591,20 @@ class WorkerManager {
       this.logger.debug(`Output length: ${output.length} chars`);
       
       if (isTimeout) {
+        const activity = this.executionLogger.workerActivities.get(workerId);
+        let timeoutError = `Worker timeout - exceeded ${this.formatDuration(this.timeout)} limit`;
+        
+        if (activity && activity.workItem) {
+          const elapsed = Date.now() - activity.startTime;
+          timeoutError += ` while processing ${path.basename(workItem.filePath)} (running for ${this.formatDuration(elapsed)})`;
+        }
+        
+        this.executionLogger.logWorkerTimeout(workerId, `File processing timeout`);
         this.logger.error(`Concurrent file worker ${workerId} timed out`);
         this.results.push({
           filePath: workItem.filePath,
           status: 'failed',
-          error: 'Worker timeout',
+          error: timeoutError,
           duration: this.timeout,
           workerId,
           testResults: []
@@ -869,7 +892,30 @@ class WorkerManager {
             worker.kill('SIGKILL');
           }
         }, 2000);
+        
+        // Enhanced timeout logging with context
+        this.executionLogger.logWorkerTimeout(workerId, `Native parallel execution timeout`);
         this.logger.warn(`Native parallel worker ${workerId} killed due to timeout`);
+        
+        // Add timeout result with detailed context
+        const activity = this.executionLogger.workerActivities.get(workerId);
+        let timeoutError = `Worker timeout - exceeded ${this.formatDuration(this.timeout)} limit`;
+        
+        if (activity && activity.workItem) {
+          const elapsed = Date.now() - activity.startTime;
+          timeoutError += ` while processing ${path.basename(workItem.filePath)} (running for ${this.formatDuration(elapsed)})`;
+        }
+        
+        // Create a timeout result
+        this.results.push({
+          filePath: workItem.filePath,
+          status: 'failed',
+          error: timeoutError,
+          duration: this.timeout,
+          workerId,
+          testResults: []
+        });
+        
         handleCompletion(null, true);
       }
     }, this.timeout);
