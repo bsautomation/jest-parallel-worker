@@ -60,12 +60,9 @@ class WorkerManager {
     this.testStatus.completed = this.testStatus.passed + this.testStatus.failed + this.testStatus.skipped;
     this.testStatus.running = Math.max(0, this.testStatus.total - this.testStatus.completed);
     
-    // Log status update (throttled)
-    const now = Date.now();
-    if (now - this.lastStatusUpdate > this.statusUpdateInterval) {
-      this.logTestStatus('PROGRESS');
-      this.lastStatusUpdate = now;
-    }
+    // Always log status update on each completion for real-time progress
+    this.logTestStatus('PROGRESS');
+    this.lastStatusUpdate = Date.now();
   }
   
   async logTestStatus(phase) {
@@ -358,6 +355,10 @@ class WorkerManager {
         
         // Update test status tracking for individual test results
         this.updateTestStatus([result]);
+        
+        // Log immediate test completion status
+        const statusIcon = result.status === 'passed' ? '✅' : '❌';
+        this.logger.info(`${statusIcon} ${result.testName || 'Unknown Test'} (${result.duration || 0}ms) [Worker: ${workerId}]`);
       } catch (error) {
         this.logger.error(`Worker ${workerId} output parsing failed:`, error.message);
         const failedResult = {
@@ -371,6 +372,9 @@ class WorkerManager {
         
         // Update test status tracking for failed result
         this.updateTestStatus([failedResult]);
+        
+        // Log immediate test completion status for failed parsing
+        this.logger.error(`❌ ${workItem.testName || 'Unknown Test'} (parsing failed) [Worker: ${workerId}]`);
       }
     });
 
@@ -432,6 +436,11 @@ class WorkerManager {
         });
       }
       this.updateTestStatus(fileTestResults);
+      
+      // Log file completion status for file worker
+      const fileName = path.basename(result.filePath || 'Unknown File');
+      const statusIcon = result.status === 'passed' ? '✅' : '❌';
+      this.logger.info(`📁 ${fileName} ${statusIcon} ${result.status} (${workItem.testCount} tests) [Worker: ${workerId}]`);
     });
 
     return worker;
@@ -494,6 +503,29 @@ class WorkerManager {
       };
       
       this.results.push(result);
+      
+      // Log detailed file completion status for jest-parallel worker
+      if (testResults && Array.isArray(testResults)) {
+        this.updateTestStatus(testResults);
+        
+        const fileName = path.basename(result.filePath || 'Unknown File');
+        const passedCount = testResults.filter(t => t.status === 'passed').length;
+        const failedCount = testResults.filter(t => t.status === 'failed').length;
+        const skippedCount = testResults.filter(t => t.status === 'skipped').length;
+        
+        this.logger.info(`📁 ${fileName} completed: ✅ ${passedCount} passed, ❌ ${failedCount} failed, ⏭️ ${skippedCount} skipped [Worker: ${workerId}]`);
+        
+        // Log individual test results for immediate feedback
+        testResults.forEach(test => {
+          const statusIcon = test.status === 'passed' ? '✅' : test.status === 'failed' ? '❌' : '⏭️';
+          this.logger.info(`  ${statusIcon} ${test.name || 'Unknown Test'} (${test.duration || 0}ms)`);
+        });
+      } else {
+        // File-level result without individual test breakdown
+        const fileName = path.basename(result.filePath || 'Unknown File');
+        const statusIcon = result.status === 'passed' ? '✅' : '❌';
+        this.logger.info(`📁 ${fileName} ${statusIcon} ${result.status} [Worker: ${workerId}]`);
+      }
       
       // Note: Individual test results will be processed by the reporter
       // from the testResults array in the file result
@@ -596,6 +628,29 @@ class WorkerManager {
         }
         
         this.results.push(result);
+        
+        // Log detailed file completion status for concurrent file worker
+        if (result.testResults && Array.isArray(result.testResults)) {
+          this.updateTestStatus(result.testResults);
+          
+          const fileName = path.basename(result.filePath || 'Unknown File');
+          const passedCount = result.testResults.filter(t => t.status === 'passed').length;
+          const failedCount = result.testResults.filter(t => t.status === 'failed').length;
+          const skippedCount = result.testResults.filter(t => t.status === 'skipped').length;
+          
+          this.logger.info(`📁 ${fileName} completed: ✅ ${passedCount} passed, ❌ ${failedCount} failed, ⏭️ ${skippedCount} skipped [Worker: ${workerId}]`);
+          
+          // Log individual test results for immediate feedback
+          result.testResults.forEach(test => {
+            const statusIcon = test.status === 'passed' ? '✅' : test.status === 'failed' ? '❌' : '⏭️';
+            this.logger.info(`  ${statusIcon} ${test.testName || test.name || 'Unknown Test'} (${test.duration || 0}ms)`);
+          });
+        } else {
+          // File-level result without individual test breakdown
+          const fileName = path.basename(result.filePath || 'Unknown File');
+          const statusIcon = result.status === 'passed' ? '✅' : '❌';
+          this.logger.info(`📁 ${fileName} ${statusIcon} ${result.status} [Worker: ${workerId}]`);
+        }
       } catch (error) {
         this.logger.error(`Concurrent file worker ${workerId} output parsing failed:`, error.message);
         this.logger.debug(`Raw output (first 1000 chars): ${output.substring(0, 1000)}`);
@@ -738,6 +793,25 @@ class WorkerManager {
         // Update test status tracking with detailed test results
         if (result.testResults && Array.isArray(result.testResults)) {
           this.updateTestStatus(result.testResults);
+          
+          // Log detailed file completion status
+          const fileName = path.basename(result.filePath || 'Unknown File');
+          const passedCount = result.testResults.filter(t => t.status === 'passed').length;
+          const failedCount = result.testResults.filter(t => t.status === 'failed').length;
+          const skippedCount = result.testResults.filter(t => t.status === 'skipped').length;
+          
+          this.logger.info(`📁 ${fileName} completed: ✅ ${passedCount} passed, ❌ ${failedCount} failed, ⏭️ ${skippedCount} skipped [Worker: ${workerId}]`);
+          
+          // Log individual test results for immediate feedback
+          result.testResults.forEach(test => {
+            const statusIcon = test.status === 'passed' ? '✅' : test.status === 'failed' ? '❌' : '⏭️';
+            this.logger.info(`  ${statusIcon} ${test.testName || test.name || 'Unknown Test'} (${test.duration || 0}ms)`);
+          });
+        } else {
+          // File-level result without individual test breakdown
+          const fileName = path.basename(result.filePath || 'Unknown File');
+          const statusIcon = result.status === 'passed' ? '✅' : '❌';
+          this.logger.info(`📁 ${fileName} ${statusIcon} ${result.status} [Worker: ${workerId}]`);
         }
       } catch (error) {
         this.logger.error(`Native parallel worker ${workerId} output parsing failed:`, error.message);
