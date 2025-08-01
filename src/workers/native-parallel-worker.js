@@ -468,9 +468,11 @@ function parseJestOutput(output, config, specificTestName = null) {
       
       if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
         if (!specificTestName || cleanTestName === specificTestName) {
+          // Store the full test name, preserving nested structure
           testResults.push({
             testId: `${config.filePath}:${cleanTestName}`,
             testName: cleanTestName,
+            fullTestName: cleanTestName, // Keep full nested name for better matching
             suite: currentSuite,
             status: 'failed',
             duration: duration ? parseFloat(duration) : 0,
@@ -523,8 +525,8 @@ function parseIndividualErrors(output, failedTests) {
     const line = lines[i];
     const trimmedLine = line.trim();
     
-    // Look for test-specific error headers: "● Suite › test name"
-    const errorHeaderMatch = line.match(/^\s*●\s+(.+?)\s*›\s*(.+?)$/);
+    // Look for test-specific error headers: "● Suite › test name" or "● Full › Nested › Test › Name"
+    const errorHeaderMatch = line.match(/^\s*●\s+(.+?)$/);
     if (errorHeaderMatch) {
       // Save previous error if we were collecting one
       if (currentErrorTest && errorLines.length > 0) {
@@ -533,10 +535,17 @@ function parseIndividualErrors(output, failedTests) {
         currentErrorTest.source = extractSourceInfo(errorMessage);
       }
       
-      // Find the matching failed test
-      const [, suite, testName] = errorHeaderMatch;
-      const cleanTestName = testName.trim();
-      currentErrorTest = failedTests.find(t => t.testName === cleanTestName);
+      // Extract the full test path and find the matching failed test
+      const fullTestPath = errorHeaderMatch[1].trim();
+      
+      // Try to match by the last part of the path (most specific test name)
+      const testNameParts = fullTestPath.split(' › ');
+      const lastTestName = testNameParts[testNameParts.length - 1].trim();
+      
+      // Try exact match first, then partial match
+      currentErrorTest = failedTests.find(t => t.testName === lastTestName) || 
+                        failedTests.find(t => fullTestPath.includes(t.testName)) ||
+                        failedTests.find(t => t.testName.includes(lastTestName));
       errorLines = [];
     } else if (currentErrorTest && (
       trimmedLine.includes('expect(') || 

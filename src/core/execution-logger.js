@@ -371,7 +371,19 @@ class ExecutionLogger {
       for (const test of summary.tests.failedTests) {
         console.log(`  ✗ ${test.name} (${test.file}) [Worker: ${test.workerId}]`);
         if (test.error) {
-          console.log(`    Error: ${test.error.split('\n')[0]}`);
+          // Show first 3 lines of error for better debugging
+          const errorLines = test.error.split('\n').slice(0, 3);
+          errorLines.forEach((line, index) => {
+            if (index === 0) {
+              console.log(`    Error: ${line}`);
+            } else {
+              console.log(`           ${line}`);
+            }
+          });
+          // If there are more lines, indicate truncation
+          if (test.error.split('\n').length > 3) {
+            console.log(`           ... (${test.error.split('\n').length - 3} more lines)`);
+          }
         }
       }
     }
