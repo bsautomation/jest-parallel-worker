@@ -381,29 +381,10 @@ function parseJestOutput(output, config, specificTestName = null) {
   let collectingError = false;
   let errorLines = [];
   
+  // First pass: collect test results (pass/fail status)
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmedLine = line.trim();
-    
-    // If we're collecting error messages for a failed test
-    if (collectingError && currentFailedTest) {
-      // Stop collecting when we hit another test result or section boundary
-      if (trimmedLine.startsWith('✓') || trimmedLine.startsWith('✗') || trimmedLine.startsWith('✕') || 
-          trimmedLine.startsWith('○') || trimmedLine.includes('Test Suites:') ||
-          trimmedLine.includes('Tests:') || trimmedLine.includes('Snapshots:') ||
-          trimmedLine.includes('Time:') || trimmedLine.includes('Ran all test suites') ||
-          (trimmedLine === '' && errorLines.length > 2)) {
-        if (errorLines.length > 0) {
-          currentFailedTest.error = errorLines.join('\n').trim();
-        }
-        currentFailedTest = null;
-        collectingError = false;
-        errorLines = [];
-      } else {
-        // Collect all error lines without filtering to match full Jest output
-        errorLines.push(line);
-      }
-    }
     
     // Look for test suite names
     if (trimmedLine && !trimmedLine.startsWith('✓') && !trimmedLine.startsWith('✗') && 
@@ -427,18 +408,22 @@ function parseJestOutput(output, config, specificTestName = null) {
       const [, testName, duration] = testMatch;
       const cleanTestName = testName.trim();
       
-      // If we're looking for a specific test, only include it
-      if (!specificTestName || cleanTestName === specificTestName) {
-        testResults.push({
-          testId: `${config.filePath}:${cleanTestName}`,
-          testName: cleanTestName,
-          suite: currentSuite,
-          status: 'passed',
-          duration: parseFloat(duration),
-          error: null,
-          workerId: config.workerId,
-          filePath: config.filePath
-        });
+      // Skip empty or invalid test names
+      if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
+        // If we're looking for a specific test, only include it
+        if (!specificTestName || cleanTestName === specificTestName) {
+          testResults.push({
+            testId: `${config.filePath}:${cleanTestName}`,
+            testName: cleanTestName,
+            suite: currentSuite,
+            status: 'passed',
+            duration: parseFloat(duration),
+            error: null,
+            source: null,
+            workerId: config.workerId,
+            filePath: config.filePath
+          });
+        }
       }
     } else {
       // Pattern 2: ✓ test name (no timing)
@@ -447,15 +432,16 @@ function parseJestOutput(output, config, specificTestName = null) {
         const [, testName] = quickTestMatch;
         const cleanTestName = testName.trim();
         
-        if (!testName.includes('(') && !testName.includes('ms') && cleanTestName.length > 0) {
+        if (!testName.includes('(') && !testName.includes('ms') && cleanTestName.length > 0 && cleanTestName !== '\n') {
           if (!specificTestName || cleanTestName === specificTestName) {
             testResults.push({
               testId: `${config.filePath}:${cleanTestName}`,
               testName: cleanTestName,
               suite: currentSuite,
               status: 'passed',
-              duration: 0,
+              duration: 0, // Very fast test, under 1ms
               error: null,
+              source: null,
               workerId: config.workerId,
               filePath: config.filePath
             });
@@ -464,67 +450,179 @@ function parseJestOutput(output, config, specificTestName = null) {
       }
     }
     
-    // Pattern 3: ✗ or ✕ failed test
-    const failedTestMatch = line.match(/^\s*[✗✕]\s+([^\(\n]{2,}?)(?:\s*\((\d+(?:\.\d+)?)\s*m?s\))?$/);
-    if (failedTestMatch) {
-      const [, testNameRaw, duration] = failedTestMatch;
-      // Remove leading/trailing non-alphanumeric symbols and trim
-      const cleanTestName = testNameRaw.trim().replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '');
-      // Only add if testName is not empty, not just symbols, and longer than 1 character
-      if (cleanTestName.length > 1 && !/^[✗✕]+$/.test(cleanTestName)) {
+    // Parse failed tests
+    // Pattern 1: ✗ test name (time) or ✗ test name
+    const failedMatchWithTime = line.match(/^\s*[✗✕×]\s+(.+?)\s+\((\d+(?:\.\d+)?)\s*m?s\)$/);
+    const failedMatchNoTime = line.match(/^\s*[✗✕×]\s+(.+?)$/);
+    
+    let failedMatch = null;
+    if (failedMatchWithTime) {
+      failedMatch = failedMatchWithTime;
+    } else if (failedMatchNoTime && !failedMatchNoTime[1].includes('(') && !failedMatchNoTime[1].includes('ms')) {
+      failedMatch = [failedMatchNoTime[0], failedMatchNoTime[1], null];
+    }
+    
+    if (failedMatch) {
+      const [, testName, duration] = failedMatch;
+      const cleanTestName = testName.trim();
+      
+      if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
         if (!specificTestName || cleanTestName === specificTestName) {
-          const failedTest = {
+          testResults.push({
             testId: `${config.filePath}:${cleanTestName}`,
             testName: cleanTestName,
             suite: currentSuite,
             status: 'failed',
             duration: duration ? parseFloat(duration) : 0,
-            error: '', // Always set error field, will be filled after collecting
+            error: null,
+            source: null,
             workerId: config.workerId,
             filePath: config.filePath
-          };
-          testResults.push(failedTest);
-          currentFailedTest = failedTest;
-          collectingError = true;
-          errorLines = [];
+          });
         }
       }
     }
     
-    // Pattern 4: ○ skipped test
-    const skippedTestMatch = line.match(/^\s*○\s+(.+?)(?:\s*\(skipped\))?/);
-    if (skippedTestMatch) {
-      const [, testName] = skippedTestMatch;
+    // Parse skipped tests
+    const skippedMatch = line.match(/^\s*○\s+(.+?)$/);
+    if (skippedMatch) {
+      const [, testName] = skippedMatch;
       const cleanTestName = testName.trim();
       
-      if (!specificTestName || cleanTestName === specificTestName) {
-        testResults.push({
-          testId: `${config.filePath}:${cleanTestName}`,
-          testName: cleanTestName,
-          suite: currentSuite,
-          status: 'skipped',
-          duration: 0,
-          error: null,
-          workerId: config.workerId,
-          filePath: config.filePath
-        });
+      if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
+        if (!specificTestName || cleanTestName === specificTestName) {
+          testResults.push({
+            testId: `${config.filePath}:${cleanTestName}`,
+            testName: cleanTestName,
+            suite: currentSuite,
+            status: 'skipped',
+            duration: 0,
+            error: null,
+            source: null,
+            workerId: config.workerId,
+            filePath: config.filePath
+          });
+        }
       }
     }
   }
   
-  // Always assign error lines to last failed test, even if empty
-  if (collectingError && currentFailedTest) {
-    currentFailedTest.error = errorLines.join('\n').trim();
-  }
-
-  // For each failed test, set error field to full Jest output
-  testResults.forEach(tr => {
-    if (tr.status === 'failed') {
-      tr.error = output.trim();
-    }
-  });
+  // Second pass: assign error messages to failed tests
+  const failedTests = testResults.filter(t => t.status === 'failed');
+  parseIndividualErrors(output, failedTests);
   
   return testResults;
+}
+
+function parseIndividualErrors(output, failedTests) {
+  const lines = output.split('\n');
+  let currentErrorTest = null;
+  let errorLines = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+    
+    // Look for test-specific error headers: "● Suite › test name"
+    const errorHeaderMatch = line.match(/^\s*●\s+(.+?)\s*›\s*(.+?)$/);
+    if (errorHeaderMatch) {
+      // Save previous error if we were collecting one
+      if (currentErrorTest && errorLines.length > 0) {
+        const errorMessage = errorLines.join('\n').trim();
+        currentErrorTest.error = errorMessage;
+        currentErrorTest.source = extractSourceInfo(errorMessage);
+      }
+      
+      // Find the matching failed test
+      const [, suite, testName] = errorHeaderMatch;
+      const cleanTestName = testName.trim();
+      currentErrorTest = failedTests.find(t => t.testName === cleanTestName);
+      errorLines = [];
+    } else if (currentErrorTest && (
+      trimmedLine.includes('expect(') || 
+      trimmedLine.includes('Expected:') || 
+      trimmedLine.includes('Received:') || 
+      trimmedLine.includes('at Object.') ||
+      trimmedLine.includes('at ') ||
+      trimmedLine.startsWith('>') ||
+      /^\d+\s*\|/.test(trimmedLine) ||
+      trimmedLine.includes('|') ||
+      trimmedLine.includes('^')
+    )) {
+      // Collect error details
+      errorLines.push(line);
+    } else if (trimmedLine.startsWith('●') || trimmedLine.includes('Test Suites:')) {
+      // End of current error section
+      if (currentErrorTest && errorLines.length > 0) {
+        const errorMessage = errorLines.join('\n').trim();
+        currentErrorTest.error = errorMessage;
+        currentErrorTest.source = extractSourceInfo(errorMessage);
+      }
+      currentErrorTest = null;
+      errorLines = [];
+    } else if (currentErrorTest && errorLines.length > 0) {
+      // Continue collecting error lines
+      errorLines.push(line);
+    }
+  }
+  
+  // Handle any remaining error
+  if (currentErrorTest && errorLines.length > 0) {
+    const errorMessage = errorLines.join('\n').trim();
+    currentErrorTest.error = errorMessage;
+    currentErrorTest.source = extractSourceInfo(errorMessage);
+  }
+}
+
+function extractSourceInfo(errorMessage) {
+  if (!errorMessage) return null;
+  
+  // Look for Jest stack trace patterns:
+  // "at Object.toBe (tests/error-demo.test.js:9:15)"
+  // "at Object.toContain (tests/error-demo.test.js:13:21)"
+  const stackTracePattern = /at\s+[\w.]+\s+\(([^:]+):(\d+):(\d+)\)/;
+  const match = errorMessage.match(stackTracePattern);
+  
+  if (match) {
+    const [, filePath, lineNumber, columnNumber] = match;
+    return {
+      file: filePath,
+      line: parseInt(lineNumber, 10),
+      column: parseInt(columnNumber, 10),
+      location: `${filePath}:${lineNumber}:${columnNumber}`
+    };
+  }
+  
+  // Alternative pattern for simpler stack traces
+  // "at tests/error-demo.test.js:9:15"
+  const simpleStackPattern = /at\s+([^:]+):(\d+):(\d+)/;
+  const simpleMatch = errorMessage.match(simpleStackPattern);
+  
+  if (simpleMatch) {
+    const [, filePath, lineNumber, columnNumber] = simpleMatch;
+    return {
+      file: filePath,
+      line: parseInt(lineNumber, 10),
+      column: parseInt(columnNumber, 10),
+      location: `${filePath}:${lineNumber}:${columnNumber}`
+    };
+  }
+  
+  // Look for code context indicators (lines starting with ">")
+  const codeContextPattern = />\s*(\d+)\s*\|/;
+  const codeMatch = errorMessage.match(codeContextPattern);
+  
+  if (codeMatch) {
+    const lineNumber = parseInt(codeMatch[1], 10);
+    return {
+      file: null, // File path not available in this pattern
+      line: lineNumber,
+      column: null,
+      location: `line ${lineNumber}`
+    };
+  }
+  
+  return null;
 }
 
 // Main execution
