@@ -215,6 +215,52 @@ class ExecutionLogger {
     }
   }
 
+  // Log hook failures specifically
+  async logHookFailure(workerId, hookType, suiteName, filePath, error = null) {
+    const hookTypeCapitalized = hookType.charAt(0).toUpperCase() + hookType.slice(1);
+    const message = `${hookTypeCapitalized} hook failed in suite "${suiteName}" (${path.basename(filePath)})`;
+    
+    await this.error(`WORKER-${workerId}`, message);
+    
+    if (error) {
+      await this.error(`HOOK-ERROR-${workerId}`, `${hookTypeCapitalized} failure details: ${error}`);
+    }
+    
+    // Log additional context about hook failures
+    const contextMessage = `Hook failure detected - this may cause multiple test failures in the same suite`;
+    await this.warn('HOOK-CONTEXT', contextMessage);
+  }
+
+  // Log hook timeouts specifically
+  async logHookTimeout(workerId, hookType, suiteName, filePath, timeoutDuration) {
+    const hookTypeCapitalized = hookType.charAt(0).toUpperCase() + hookType.slice(1);
+    const message = `${hookTypeCapitalized} hook timed out in suite "${suiteName}" (${path.basename(filePath)}) after ${this.formatDuration(timeoutDuration)}`;
+    
+    await this.error(`WORKER-${workerId}`, message);
+    
+    // Log additional context about hook timeouts
+    const contextMessage = `Hook timeout detected - ${hookTypeCapitalized} hook exceeded timeout limit, causing test suite failure`;
+    await this.error('HOOK-TIMEOUT-CONTEXT', contextMessage);
+    
+    // Check if other workers are still running
+    const runningWorkers = [];
+    for (const [id, activity] of this.workerActivities) {
+      if (id !== workerId && activity.status === 'running') {
+        const elapsed = Date.now() - activity.startTime;
+        const item = activity.workItem;
+        if (item.testName) {
+          runningWorkers.push(`Worker ${id}: "${item.testName}" in ${path.basename(item.filePath)} (${this.formatDuration(elapsed)})`);
+        } else {
+          runningWorkers.push(`Worker ${id}: ${path.basename(item.filePath)} (${this.formatDuration(elapsed)})`);
+        }
+      }
+    }
+    
+    if (runningWorkers.length > 0) {
+      await this.warn('HOOK-TIMEOUT-CONTEXT', `Other workers still running during hook timeout: ${runningWorkers.join(', ')}`);
+    }
+  }
+
   // Test execution tracking
   trackTestExecution(testId, workerId, testName, filePath) {
     this.testExecutions.set(testId, {

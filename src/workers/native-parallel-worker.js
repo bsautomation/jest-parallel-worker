@@ -380,11 +380,50 @@ function parseJestOutput(output, config, specificTestName = null) {
   let currentFailedTest = null;
   let collectingError = false;
   let errorLines = [];
+  let beforeAllFailure = null; // Track beforeAll hook failures
   
-  // First pass: collect test results (pass/fail status)
+  // First pass: collect test results (pass/fail status) and detect hook failures
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmedLine = line.trim();
+    
+    // Detect beforeAll hook failures
+    const beforeAllMatch = line.match(/●\s+(.+?)\s+›\s+beforeAll/i);
+    if (beforeAllMatch) {
+      const suiteName = beforeAllMatch[1].trim();
+      beforeAllFailure = {
+        suite: suiteName,
+        type: 'beforeAll',
+        message: 'beforeAll hook failed',
+        errorLines: []
+      };
+      console.log(`🚨 DETECTED beforeAll hook failure in suite: "${suiteName}"`);
+      continue;
+    }
+    
+    // Detect beforeEach hook failures
+    const beforeEachMatch = line.match(/●\s+(.+?)\s+›\s+beforeEach/i);
+    if (beforeEachMatch) {
+      const suiteName = beforeEachMatch[1].trim();
+      console.log(`🚨 DETECTED beforeEach hook failure in suite: "${suiteName}"`);
+      continue;
+    }
+    
+    // Detect afterAll hook failures
+    const afterAllMatch = line.match(/●\s+(.+?)\s+›\s+afterAll/i);
+    if (afterAllMatch) {
+      const suiteName = afterAllMatch[1].trim();
+      console.log(`🚨 DETECTED afterAll hook failure in suite: "${suiteName}"`);
+      continue;
+    }
+    
+    // Detect afterEach hook failures
+    const afterEachMatch = line.match(/●\s+(.+?)\s+›\s+afterEach/i);
+    if (afterEachMatch) {
+      const suiteName = afterEachMatch[1].trim();
+      console.log(`🚨 DETECTED afterEach hook failure in suite: "${suiteName}"`);
+      continue;
+    }
     
     // Look for test suite names
     if (trimmedLine && !trimmedLine.startsWith('✓') && !trimmedLine.startsWith('✗') && 
@@ -468,11 +507,9 @@ function parseJestOutput(output, config, specificTestName = null) {
       
       if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
         if (!specificTestName || cleanTestName === specificTestName) {
-          // Store the full test name, preserving nested structure
           testResults.push({
             testId: `${config.filePath}:${cleanTestName}`,
             testName: cleanTestName,
-            fullTestName: cleanTestName, // Keep full nested name for better matching
             suite: currentSuite,
             status: 'failed',
             duration: duration ? parseFloat(duration) : 0,
@@ -525,8 +562,8 @@ function parseIndividualErrors(output, failedTests) {
     const line = lines[i];
     const trimmedLine = line.trim();
     
-    // Look for test-specific error headers: "● Suite › test name" or "● Full › Nested › Test › Name"
-    const errorHeaderMatch = line.match(/^\s*●\s+(.+?)$/);
+    // Look for test-specific error headers: "● Suite › test name"
+    const errorHeaderMatch = line.match(/^\s*●\s+(.+?)\s*›\s*(.+?)$/);
     if (errorHeaderMatch) {
       // Save previous error if we were collecting one
       if (currentErrorTest && errorLines.length > 0) {
@@ -535,17 +572,10 @@ function parseIndividualErrors(output, failedTests) {
         currentErrorTest.source = extractSourceInfo(errorMessage);
       }
       
-      // Extract the full test path and find the matching failed test
-      const fullTestPath = errorHeaderMatch[1].trim();
-      
-      // Try to match by the last part of the path (most specific test name)
-      const testNameParts = fullTestPath.split(' › ');
-      const lastTestName = testNameParts[testNameParts.length - 1].trim();
-      
-      // Try exact match first, then partial match
-      currentErrorTest = failedTests.find(t => t.testName === lastTestName) || 
-                        failedTests.find(t => fullTestPath.includes(t.testName)) ||
-                        failedTests.find(t => t.testName.includes(lastTestName));
+      // Find the matching failed test
+      const [, suite, testName] = errorHeaderMatch;
+      const cleanTestName = testName.trim();
+      currentErrorTest = failedTests.find(t => t.testName === cleanTestName);
       errorLines = [];
     } else if (currentErrorTest && (
       trimmedLine.includes('expect(') || 

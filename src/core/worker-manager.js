@@ -597,9 +597,19 @@ class WorkerManager {
         if (activity && activity.workItem) {
           const elapsed = Date.now() - activity.startTime;
           timeoutError += ` while processing ${path.basename(workItem.filePath)} (running for ${this.formatDuration(elapsed)})`;
+          
+          // Check if this might be a hook timeout by analyzing the last output
+          const isLikelyHookTimeout = this.detectHookTimeout(output, errorOutput, workItem.filePath);
+          if (isLikelyHookTimeout) {
+            this.executionLogger.logHookTimeout(workerId, isLikelyHookTimeout.hookType, isLikelyHookTimeout.suiteName, workItem.filePath, this.timeout);
+            timeoutError += ` - likely ${isLikelyHookTimeout.hookType} hook timeout in suite "${isLikelyHookTimeout.suiteName}"`;
+          } else {
+            this.executionLogger.logWorkerTimeout(workerId, `File processing timeout`);
+          }
+        } else {
+          this.executionLogger.logWorkerTimeout(workerId, `File processing timeout`);
         }
         
-        this.executionLogger.logWorkerTimeout(workerId, `File processing timeout`);
         this.logger.error(`Concurrent file worker ${workerId} timed out`);
         this.results.push({
           filePath: workItem.filePath,
@@ -894,17 +904,27 @@ class WorkerManager {
         }, 2000);
         
         // Enhanced timeout logging with context
-        this.executionLogger.logWorkerTimeout(workerId, `Native parallel execution timeout`);
-        this.logger.warn(`Native parallel worker ${workerId} killed due to timeout`);
-        
-        // Add timeout result with detailed context
         const activity = this.executionLogger.workerActivities.get(workerId);
         let timeoutError = `Worker timeout - exceeded ${this.formatDuration(this.timeout)} limit`;
         
         if (activity && activity.workItem) {
           const elapsed = Date.now() - activity.startTime;
           timeoutError += ` while processing ${path.basename(workItem.filePath)} (running for ${this.formatDuration(elapsed)})`;
+          
+          // Check if this might be a hook timeout
+          const isLikelyHookTimeout = this.detectHookTimeout(output, errorOutput, workItem.filePath);
+          if (isLikelyHookTimeout) {
+            this.executionLogger.logHookTimeout(workerId, isLikelyHookTimeout.hookType, isLikelyHookTimeout.suiteName, workItem.filePath, this.timeout);
+            this.logger.error(`🚨 ${isLikelyHookTimeout.hookType} hook timed out in suite "${isLikelyHookTimeout.suiteName}" (${path.basename(workItem.filePath)})`);
+            timeoutError += ` - likely ${isLikelyHookTimeout.hookType} hook timeout in suite "${isLikelyHookTimeout.suiteName}"`;
+          } else {
+            this.executionLogger.logWorkerTimeout(workerId, `Native parallel execution timeout`);
+          }
+        } else {
+          this.executionLogger.logWorkerTimeout(workerId, `Native parallel execution timeout`);
         }
+        
+        this.logger.warn(`Native parallel worker ${workerId} killed due to timeout`);
         
         // Create a timeout result
         this.results.push({
@@ -938,9 +958,63 @@ class WorkerManager {
       let currentFailedTest = null;
       let collectingError = false;
       let errorLines = [];
+      let hookFailures = []; // Track hook failures
       
       for (const line of lines) {
         const trimmedLine = line.trim();
+        
+        // Detect hook failures
+        const beforeAllMatch = line.match(/●\s+(.+?)\s+›\s+beforeAll/i);
+        if (beforeAllMatch) {
+          const suiteName = beforeAllMatch[1].trim();
+          hookFailures.push({
+            type: 'beforeAll',
+            suite: suiteName,
+            message: 'beforeAll hook failed'
+          });
+          this.executionLogger.logHookFailure(workItem.workerId || 0, 'beforeAll', suiteName, workItem.filePath);
+          this.logger.error(`🚨 beforeAll hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+          continue;
+        }
+        
+        const beforeEachMatch = line.match(/●\s+(.+?)\s+›\s+beforeEach/i);
+        if (beforeEachMatch) {
+          const suiteName = beforeEachMatch[1].trim();
+          hookFailures.push({
+            type: 'beforeEach',
+            suite: suiteName,
+            message: 'beforeEach hook failed'
+          });
+          this.executionLogger.logHookFailure(workItem.workerId || 0, 'beforeEach', suiteName, workItem.filePath);
+          this.logger.error(`🚨 beforeEach hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+          continue;
+        }
+        
+        const afterAllMatch = line.match(/●\s+(.+?)\s+›\s+afterAll/i);
+        if (afterAllMatch) {
+          const suiteName = afterAllMatch[1].trim();
+          hookFailures.push({
+            type: 'afterAll',
+            suite: suiteName,
+            message: 'afterAll hook failed'
+          });
+          this.executionLogger.logHookFailure(workItem.workerId || 0, 'afterAll', suiteName, workItem.filePath);
+          this.logger.error(`🚨 afterAll hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+          continue;
+        }
+        
+        const afterEachMatch = line.match(/●\s+(.+?)\s+›\s+afterEach/i);
+        if (afterEachMatch) {
+          const suiteName = afterEachMatch[1].trim();
+          hookFailures.push({
+            type: 'afterEach',
+            suite: suiteName,
+            message: 'afterEach hook failed'
+          });
+          this.executionLogger.logHookFailure(workItem.workerId || 0, 'afterEach', suiteName, workItem.filePath);
+          this.logger.error(`🚨 afterEach hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+          continue;
+        }
         
         // If collecting error for failed test
         if (collectingError && currentFailedTest) {
@@ -1076,6 +1150,77 @@ class WorkerManager {
     }
     
     return testResults;
+  }
+
+  // Detect if a timeout likely occurred during hook execution
+  detectHookTimeout(output, errorOutput, filePath) {
+    const allOutput = (output + '\n' + errorOutput).toLowerCase();
+    const lines = allOutput.split('\n');
+    
+    // Look for hook-related patterns in the output
+    let lastSuiteName = '';
+    let hookInProgress = null;
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      // Track current suite/describe block
+      if (trimmedLine.includes('describe') && !trimmedLine.includes('at ')) {
+        const suiteMatch = trimmedLine.match(/describe[^"']*["']([^"']+)["']/);
+        if (suiteMatch) {
+          lastSuiteName = suiteMatch[1];
+        }
+      }
+      
+      // Detect hook execution messages
+      if (trimmedLine.includes('beforeall starting') || trimmedLine.includes('beforeall setup')) {
+        hookInProgress = { hookType: 'beforeAll', suiteName: lastSuiteName };
+      } else if (trimmedLine.includes('beforeeach starting') || trimmedLine.includes('beforeeach setup')) {
+        hookInProgress = { hookType: 'beforeEach', suiteName: lastSuiteName };
+      } else if (trimmedLine.includes('afterall starting') || trimmedLine.includes('afterall cleanup')) {
+        hookInProgress = { hookType: 'afterAll', suiteName: lastSuiteName };
+      } else if (trimmedLine.includes('aftereach starting') || trimmedLine.includes('aftereach cleanup')) {
+        hookInProgress = { hookType: 'afterEach', suiteName: lastSuiteName };
+      }
+      
+      // Detect hook completion messages (if hook completed, it wasn't a timeout)
+      if (trimmedLine.includes('beforeall completed') || trimmedLine.includes('beforeeach completed') ||
+          trimmedLine.includes('afterall completed') || trimmedLine.includes('aftereach completed')) {
+        hookInProgress = null;
+      }
+      
+      // Look for Jest timeout patterns
+      if (trimmedLine.includes('timeout') || trimmedLine.includes('exceeded timeout')) {
+        // If we detected a hook in progress and then see timeout, it's likely a hook timeout
+        if (hookInProgress) {
+          return hookInProgress;
+        }
+      }
+    }
+    
+    // If we detected a hook in progress but never saw completion, assume timeout in that hook
+    if (hookInProgress) {
+      return hookInProgress;
+    }
+    
+    // Check for other timeout indicators when we can infer the suite name
+    if (allOutput.includes('timeout') && lastSuiteName) {
+      // Look for beforeAll/beforeEach patterns in the file content to guess which hook
+      try {
+        const fs = require('fs');
+        const fileContent = fs.readFileSync(filePath, 'utf8').toLowerCase();
+        
+        if (fileContent.includes('beforeall')) {
+          return { hookType: 'beforeAll', suiteName: lastSuiteName };
+        } else if (fileContent.includes('beforeeach')) {
+          return { hookType: 'beforeEach', suiteName: lastSuiteName };
+        }
+      } catch (error) {
+        // Ignore file read errors
+      }
+    }
+    
+    return null;
   }
 
   processWorkQueue() {
