@@ -22,6 +22,10 @@ class WorkerManager {
     this.onComplete = null;
     this.onError = null;
     
+    // Add execution timing tracking
+    this.executionStartTime = null;
+    this.executionEndTime = null;
+    
     // Add real-time test status tracking
     this.testStatus = {
       total: 0,
@@ -128,7 +132,11 @@ class WorkerManager {
   }
 
   async runParallelTests(parsedFiles) {
+    // Record execution start time
+    this.executionStartTime = new Date();
+    
     await this.executionLogger.info('WORKER-MANAGER', `Starting parallel test execution with ${this.maxWorkers} workers`);
+    this.logger.info(`Execution started at: ${this.executionStartTime.toISOString()}`);
     
     // Initialize test status tracking
     this.initializeTestCounts(parsedFiles);
@@ -163,7 +171,11 @@ class WorkerManager {
   }
 
   async runParallelFiles(parsedFiles) {
+    // Record execution start time
+    this.executionStartTime = new Date();
+    
     this.logger.info(`Starting parallel file execution with ${this.maxWorkers} workers`);
+    this.logger.info(`Execution started at: ${this.executionStartTime.toISOString()}`);
     
     // Initialize test status tracking
     this.initializeTestCounts(parsedFiles);
@@ -188,7 +200,11 @@ class WorkerManager {
   }
 
   async runJestParallel(parsedFiles) {
+    // Record execution start time
+    this.executionStartTime = new Date();
+    
     this.logger.info(`Starting Jest parallel execution (file-level processes with internal test parallelism)`);
+    this.logger.info(`Execution started at: ${this.executionStartTime.toISOString()}`);
     
     // Initialize test status tracking
     this.initializeTestCounts(parsedFiles);
@@ -238,7 +254,11 @@ class WorkerManager {
   }
 
   async runNativeParallel(parsedFiles, options = {}) {
+    // Record execution start time
+    this.executionStartTime = new Date();
+    
     await this.executionLogger.info('WORKER-MANAGER', `Starting native parallel execution (no file rewriting)`);
+    this.logger.info(`Execution started at: ${this.executionStartTime.toISOString()}`);
     
     // Initialize test status tracking
     this.initializeTestCounts(parsedFiles);
@@ -597,9 +617,19 @@ class WorkerManager {
         if (activity && activity.workItem) {
           const elapsed = Date.now() - activity.startTime;
           timeoutError += ` while processing ${path.basename(workItem.filePath)} (running for ${this.formatDuration(elapsed)})`;
+          
+          // Check if this might be a hook timeout by analyzing the last output
+          const isLikelyHookTimeout = this.detectHookTimeout(output, errorOutput, workItem.filePath);
+          if (isLikelyHookTimeout) {
+            this.executionLogger.logHookTimeout(workerId, isLikelyHookTimeout.hookType, isLikelyHookTimeout.suiteName, workItem.filePath, this.timeout);
+            timeoutError += ` - likely ${isLikelyHookTimeout.hookType} hook timeout in suite "${isLikelyHookTimeout.suiteName}"`;
+          } else {
+            this.executionLogger.logWorkerTimeout(workerId, `File processing timeout`);
+          }
+        } else {
+          this.executionLogger.logWorkerTimeout(workerId, `File processing timeout`);
         }
         
-        this.executionLogger.logWorkerTimeout(workerId, `File processing timeout`);
         this.logger.error(`Concurrent file worker ${workerId} timed out`);
         this.results.push({
           filePath: workItem.filePath,
@@ -894,17 +924,27 @@ class WorkerManager {
         }, 2000);
         
         // Enhanced timeout logging with context
-        this.executionLogger.logWorkerTimeout(workerId, `Native parallel execution timeout`);
-        this.logger.warn(`Native parallel worker ${workerId} killed due to timeout`);
-        
-        // Add timeout result with detailed context
         const activity = this.executionLogger.workerActivities.get(workerId);
         let timeoutError = `Worker timeout - exceeded ${this.formatDuration(this.timeout)} limit`;
         
         if (activity && activity.workItem) {
           const elapsed = Date.now() - activity.startTime;
           timeoutError += ` while processing ${path.basename(workItem.filePath)} (running for ${this.formatDuration(elapsed)})`;
+          
+          // Check if this might be a hook timeout
+          const isLikelyHookTimeout = this.detectHookTimeout(output, errorOutput, workItem.filePath);
+          if (isLikelyHookTimeout) {
+            this.executionLogger.logHookTimeout(workerId, isLikelyHookTimeout.hookType, isLikelyHookTimeout.suiteName, workItem.filePath, this.timeout);
+            this.logger.error(`🚨 ${isLikelyHookTimeout.hookType} hook timed out in suite "${isLikelyHookTimeout.suiteName}" (${path.basename(workItem.filePath)})`);
+            timeoutError += ` - likely ${isLikelyHookTimeout.hookType} hook timeout in suite "${isLikelyHookTimeout.suiteName}"`;
+          } else {
+            this.executionLogger.logWorkerTimeout(workerId, `Native parallel execution timeout`);
+          }
+        } else {
+          this.executionLogger.logWorkerTimeout(workerId, `Native parallel execution timeout`);
         }
+        
+        this.logger.warn(`Native parallel worker ${workerId} killed due to timeout`);
         
         // Create a timeout result
         this.results.push({
@@ -938,9 +978,63 @@ class WorkerManager {
       let currentFailedTest = null;
       let collectingError = false;
       let errorLines = [];
+      let hookFailures = []; // Track hook failures
       
       for (const line of lines) {
         const trimmedLine = line.trim();
+        
+        // Detect hook failures
+        const beforeAllMatch = line.match(/●\s+(.+?)\s+›\s+beforeAll/i);
+        if (beforeAllMatch) {
+          const suiteName = beforeAllMatch[1].trim();
+          hookFailures.push({
+            type: 'beforeAll',
+            suite: suiteName,
+            message: 'beforeAll hook failed'
+          });
+          this.executionLogger.logHookFailure(workItem.workerId || 0, 'beforeAll', suiteName, workItem.filePath);
+          this.logger.error(`🚨 beforeAll hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+          continue;
+        }
+        
+        const beforeEachMatch = line.match(/●\s+(.+?)\s+›\s+beforeEach/i);
+        if (beforeEachMatch) {
+          const suiteName = beforeEachMatch[1].trim();
+          hookFailures.push({
+            type: 'beforeEach',
+            suite: suiteName,
+            message: 'beforeEach hook failed'
+          });
+          this.executionLogger.logHookFailure(workItem.workerId || 0, 'beforeEach', suiteName, workItem.filePath);
+          this.logger.error(`🚨 beforeEach hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+          continue;
+        }
+        
+        const afterAllMatch = line.match(/●\s+(.+?)\s+›\s+afterAll/i);
+        if (afterAllMatch) {
+          const suiteName = afterAllMatch[1].trim();
+          hookFailures.push({
+            type: 'afterAll',
+            suite: suiteName,
+            message: 'afterAll hook failed'
+          });
+          this.executionLogger.logHookFailure(workItem.workerId || 0, 'afterAll', suiteName, workItem.filePath);
+          this.logger.error(`🚨 afterAll hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+          continue;
+        }
+        
+        const afterEachMatch = line.match(/●\s+(.+?)\s+›\s+afterEach/i);
+        if (afterEachMatch) {
+          const suiteName = afterEachMatch[1].trim();
+          hookFailures.push({
+            type: 'afterEach',
+            suite: suiteName,
+            message: 'afterEach hook failed'
+          });
+          this.executionLogger.logHookFailure(workItem.workerId || 0, 'afterEach', suiteName, workItem.filePath);
+          this.logger.error(`🚨 afterEach hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+          continue;
+        }
         
         // If collecting error for failed test
         if (collectingError && currentFailedTest) {
@@ -1078,6 +1172,77 @@ class WorkerManager {
     return testResults;
   }
 
+  // Detect if a timeout likely occurred during hook execution
+  detectHookTimeout(output, errorOutput, filePath) {
+    const allOutput = (output + '\n' + errorOutput).toLowerCase();
+    const lines = allOutput.split('\n');
+    
+    // Look for hook-related patterns in the output
+    let lastSuiteName = '';
+    let hookInProgress = null;
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      // Track current suite/describe block
+      if (trimmedLine.includes('describe') && !trimmedLine.includes('at ')) {
+        const suiteMatch = trimmedLine.match(/describe[^"']*["']([^"']+)["']/);
+        if (suiteMatch) {
+          lastSuiteName = suiteMatch[1];
+        }
+      }
+      
+      // Detect hook execution messages
+      if (trimmedLine.includes('beforeall starting') || trimmedLine.includes('beforeall setup')) {
+        hookInProgress = { hookType: 'beforeAll', suiteName: lastSuiteName };
+      } else if (trimmedLine.includes('beforeeach starting') || trimmedLine.includes('beforeeach setup')) {
+        hookInProgress = { hookType: 'beforeEach', suiteName: lastSuiteName };
+      } else if (trimmedLine.includes('afterall starting') || trimmedLine.includes('afterall cleanup')) {
+        hookInProgress = { hookType: 'afterAll', suiteName: lastSuiteName };
+      } else if (trimmedLine.includes('aftereach starting') || trimmedLine.includes('aftereach cleanup')) {
+        hookInProgress = { hookType: 'afterEach', suiteName: lastSuiteName };
+      }
+      
+      // Detect hook completion messages (if hook completed, it wasn't a timeout)
+      if (trimmedLine.includes('beforeall completed') || trimmedLine.includes('beforeeach completed') ||
+          trimmedLine.includes('afterall completed') || trimmedLine.includes('aftereach completed')) {
+        hookInProgress = null;
+      }
+      
+      // Look for Jest timeout patterns
+      if (trimmedLine.includes('timeout') || trimmedLine.includes('exceeded timeout')) {
+        // If we detected a hook in progress and then see timeout, it's likely a hook timeout
+        if (hookInProgress) {
+          return hookInProgress;
+        }
+      }
+    }
+    
+    // If we detected a hook in progress but never saw completion, assume timeout in that hook
+    if (hookInProgress) {
+      return hookInProgress;
+    }
+    
+    // Check for other timeout indicators when we can infer the suite name
+    if (allOutput.includes('timeout') && lastSuiteName) {
+      // Look for beforeAll/beforeEach patterns in the file content to guess which hook
+      try {
+        const fs = require('fs');
+        const fileContent = fs.readFileSync(filePath, 'utf8').toLowerCase();
+        
+        if (fileContent.includes('beforeall')) {
+          return { hookType: 'beforeAll', suiteName: lastSuiteName };
+        } else if (fileContent.includes('beforeeach')) {
+          return { hookType: 'beforeEach', suiteName: lastSuiteName };
+        }
+      } catch (error) {
+        // Ignore file read errors
+      }
+    }
+    
+    return null;
+  }
+
   processWorkQueue() {
     // Start workers up to maxWorkers limit while there are items in the queue
     while (this.activeWorkers < this.maxWorkers && this.workQueue.length > 0) {
@@ -1105,7 +1270,18 @@ class WorkerManager {
 
   checkCompletion() {
     if (this.activeWorkers === 0 && this.workQueue.length === 0) {
+      // Record execution end time
+      this.executionEndTime = new Date();
+      
       this.logger.success(`All workers completed. Total results: ${this.results.length}`);
+      
+      // Log execution time if available
+      if (this.executionStartTime && this.executionEndTime) {
+        const totalDurationMs = this.executionEndTime - this.executionStartTime;
+        const totalDurationSeconds = (totalDurationMs / 1000).toFixed(2);
+        this.logger.info(`Total execution time: ${totalDurationSeconds}s`);
+      }
+      
       // Log final test status
       this.logFinalTestStatus().catch(err => 
         console.error('Error logging final test status:', err.message)
@@ -1132,23 +1308,44 @@ class WorkerManager {
               passed: 0,
               failed: 0,
               skipped: 0,
-              tests: []
+              tests: [],
+              startTime: null,
+              endTime: null
             };
           }
           // File-level status
           if (result.status === 'failed') fileMap[file].status = 'failed';
           if (result.testCount) fileMap[file].testCount += result.testCount;
+          
+          // Track file timing
+          if (result.startTime && (!fileMap[file].startTime || new Date(result.startTime) < new Date(fileMap[file].startTime))) {
+            fileMap[file].startTime = result.startTime;
+          }
+          if (result.endTime && (!fileMap[file].endTime || new Date(result.endTime) > new Date(fileMap[file].endTime))) {
+            fileMap[file].endTime = result.endTime;
+          }
+          
           // Individual test results
           if (Array.isArray(result.testResults)) {
             for (const t of result.testResults) {
-              fileMap[file].tests.push(t);
+              fileMap[file].tests.push({
+                name: t.testName || t.fullName || t.title || t.name || 'Unknown Test',
+                status: t.status,
+                duration: t.duration ? `${(t.duration / 1000).toFixed(3)}s` : 'N/A',
+                durationMs: t.duration || 0
+              });
               if (t.status === 'passed') fileMap[file].passed++;
               if (t.status === 'failed') fileMap[file].failed++;
               if (t.status === 'skipped') fileMap[file].skipped++;
             }
           } else if (result.status) {
             // Fallback for single test
-            fileMap[file].tests.push(result);
+            fileMap[file].tests.push({
+              name: result.testName || result.fullName || result.title || result.name || 'Unknown Test',
+              status: result.status,
+              duration: result.duration ? `${(result.duration / 1000).toFixed(3)}s` : 'N/A',
+              durationMs: result.duration || 0
+            });
             if (result.status === 'passed') fileMap[file].passed++;
             if (result.status === 'failed') fileMap[file].failed++;
             if (result.status === 'skipped') fileMap[file].skipped++;
@@ -1156,14 +1353,28 @@ class WorkerManager {
         }
 
         // Build file summary array
-        const fileSummaries = Object.values(fileMap).map(f => ({
-          filePath: f.filePath,
-          status: f.status,
-          testCount: f.testCount || f.tests.length,
-          passed: f.passed,
-          failed: f.failed,
-          skipped: f.skipped
-        }));
+        const fileSummaries = Object.values(fileMap).map(f => {
+          // Calculate file duration from test results if available
+          let fileDurationMs = 0;
+          if (f.tests && f.tests.length > 0) {
+            fileDurationMs = f.tests.reduce((sum, test) => sum + (test.durationMs || 0), 0);
+          }
+          
+          // Add calculated duration to the file map entry for fileDetails
+          f.duration = fileDurationMs > 0 ? `${(fileDurationMs / 1000).toFixed(3)}s` : 'N/A';
+          f.durationMs = fileDurationMs;
+          
+          return {
+            filePath: f.filePath,
+            status: f.status,
+            testCount: f.testCount || f.tests.length,
+            passed: f.passed,
+            failed: f.failed,
+            skipped: f.skipped,
+            duration: f.duration,
+            durationMs: f.durationMs
+          };
+        });
 
         const jsonReport = {
           summary: {
@@ -1173,7 +1384,13 @@ class WorkerManager {
             skipped: this.testStatus.skipped,
             completed: this.testStatus.completed,
             running: this.testStatus.running,
-            successRate: this.testStatus.total > 0 ? ((this.testStatus.passed / this.testStatus.total) * 100).toFixed(1) : '0.0'
+            successRate: this.testStatus.total > 0 ? ((this.testStatus.passed / this.testStatus.total) * 100).toFixed(1) : '0.0',
+            duration: this.executionEndTime && this.executionStartTime ? 
+              `${((this.executionEndTime - this.executionStartTime) / 1000).toFixed(2)}s` : 'N/A',
+            durationMs: this.executionEndTime && this.executionStartTime ? 
+              (this.executionEndTime - this.executionStartTime) : 0,
+            startTime: this.executionStartTime ? this.executionStartTime.toISOString() : null,
+            endTime: this.executionEndTime ? this.executionEndTime.toISOString() : null
           },
           fileSummary: fileSummaries,
           fileDetails: fileMap,
