@@ -22,6 +22,10 @@ class WorkerManager {
     this.onComplete = null;
     this.onError = null;
     
+    // Add execution timing tracking
+    this.executionStartTime = null;
+    this.executionEndTime = null;
+    
     // Add real-time test status tracking
     this.testStatus = {
       total: 0,
@@ -128,7 +132,11 @@ class WorkerManager {
   }
 
   async runParallelTests(parsedFiles) {
+    // Record execution start time
+    this.executionStartTime = new Date();
+    
     await this.executionLogger.info('WORKER-MANAGER', `Starting parallel test execution with ${this.maxWorkers} workers`);
+    this.logger.info(`Execution started at: ${this.executionStartTime.toISOString()}`);
     
     // Initialize test status tracking
     this.initializeTestCounts(parsedFiles);
@@ -163,7 +171,11 @@ class WorkerManager {
   }
 
   async runParallelFiles(parsedFiles) {
+    // Record execution start time
+    this.executionStartTime = new Date();
+    
     this.logger.info(`Starting parallel file execution with ${this.maxWorkers} workers`);
+    this.logger.info(`Execution started at: ${this.executionStartTime.toISOString()}`);
     
     // Initialize test status tracking
     this.initializeTestCounts(parsedFiles);
@@ -188,7 +200,11 @@ class WorkerManager {
   }
 
   async runJestParallel(parsedFiles) {
+    // Record execution start time
+    this.executionStartTime = new Date();
+    
     this.logger.info(`Starting Jest parallel execution (file-level processes with internal test parallelism)`);
+    this.logger.info(`Execution started at: ${this.executionStartTime.toISOString()}`);
     
     // Initialize test status tracking
     this.initializeTestCounts(parsedFiles);
@@ -238,7 +254,11 @@ class WorkerManager {
   }
 
   async runNativeParallel(parsedFiles, options = {}) {
+    // Record execution start time
+    this.executionStartTime = new Date();
+    
     await this.executionLogger.info('WORKER-MANAGER', `Starting native parallel execution (no file rewriting)`);
+    this.logger.info(`Execution started at: ${this.executionStartTime.toISOString()}`);
     
     // Initialize test status tracking
     this.initializeTestCounts(parsedFiles);
@@ -1250,7 +1270,18 @@ class WorkerManager {
 
   checkCompletion() {
     if (this.activeWorkers === 0 && this.workQueue.length === 0) {
+      // Record execution end time
+      this.executionEndTime = new Date();
+      
       this.logger.success(`All workers completed. Total results: ${this.results.length}`);
+      
+      // Log execution time if available
+      if (this.executionStartTime && this.executionEndTime) {
+        const totalDurationMs = this.executionEndTime - this.executionStartTime;
+        const totalDurationSeconds = (totalDurationMs / 1000).toFixed(2);
+        this.logger.info(`Total execution time: ${totalDurationSeconds}s`);
+      }
+      
       // Log final test status
       this.logFinalTestStatus().catch(err => 
         console.error('Error logging final test status:', err.message)
@@ -1277,23 +1308,44 @@ class WorkerManager {
               passed: 0,
               failed: 0,
               skipped: 0,
-              tests: []
+              tests: [],
+              startTime: null,
+              endTime: null
             };
           }
           // File-level status
           if (result.status === 'failed') fileMap[file].status = 'failed';
           if (result.testCount) fileMap[file].testCount += result.testCount;
+          
+          // Track file timing
+          if (result.startTime && (!fileMap[file].startTime || new Date(result.startTime) < new Date(fileMap[file].startTime))) {
+            fileMap[file].startTime = result.startTime;
+          }
+          if (result.endTime && (!fileMap[file].endTime || new Date(result.endTime) > new Date(fileMap[file].endTime))) {
+            fileMap[file].endTime = result.endTime;
+          }
+          
           // Individual test results
           if (Array.isArray(result.testResults)) {
             for (const t of result.testResults) {
-              fileMap[file].tests.push(t);
+              fileMap[file].tests.push({
+                name: t.testName || t.fullName || t.title || t.name || 'Unknown Test',
+                status: t.status,
+                duration: t.duration ? `${(t.duration / 1000).toFixed(3)}s` : 'N/A',
+                durationMs: t.duration || 0
+              });
               if (t.status === 'passed') fileMap[file].passed++;
               if (t.status === 'failed') fileMap[file].failed++;
               if (t.status === 'skipped') fileMap[file].skipped++;
             }
           } else if (result.status) {
             // Fallback for single test
-            fileMap[file].tests.push(result);
+            fileMap[file].tests.push({
+              name: result.testName || result.fullName || result.title || result.name || 'Unknown Test',
+              status: result.status,
+              duration: result.duration ? `${(result.duration / 1000).toFixed(3)}s` : 'N/A',
+              durationMs: result.duration || 0
+            });
             if (result.status === 'passed') fileMap[file].passed++;
             if (result.status === 'failed') fileMap[file].failed++;
             if (result.status === 'skipped') fileMap[file].skipped++;
@@ -1301,14 +1353,28 @@ class WorkerManager {
         }
 
         // Build file summary array
-        const fileSummaries = Object.values(fileMap).map(f => ({
-          filePath: f.filePath,
-          status: f.status,
-          testCount: f.testCount || f.tests.length,
-          passed: f.passed,
-          failed: f.failed,
-          skipped: f.skipped
-        }));
+        const fileSummaries = Object.values(fileMap).map(f => {
+          // Calculate file duration from test results if available
+          let fileDurationMs = 0;
+          if (f.tests && f.tests.length > 0) {
+            fileDurationMs = f.tests.reduce((sum, test) => sum + (test.durationMs || 0), 0);
+          }
+          
+          // Add calculated duration to the file map entry for fileDetails
+          f.duration = fileDurationMs > 0 ? `${(fileDurationMs / 1000).toFixed(3)}s` : 'N/A';
+          f.durationMs = fileDurationMs;
+          
+          return {
+            filePath: f.filePath,
+            status: f.status,
+            testCount: f.testCount || f.tests.length,
+            passed: f.passed,
+            failed: f.failed,
+            skipped: f.skipped,
+            duration: f.duration,
+            durationMs: f.durationMs
+          };
+        });
 
         const jsonReport = {
           summary: {
@@ -1318,7 +1384,13 @@ class WorkerManager {
             skipped: this.testStatus.skipped,
             completed: this.testStatus.completed,
             running: this.testStatus.running,
-            successRate: this.testStatus.total > 0 ? ((this.testStatus.passed / this.testStatus.total) * 100).toFixed(1) : '0.0'
+            successRate: this.testStatus.total > 0 ? ((this.testStatus.passed / this.testStatus.total) * 100).toFixed(1) : '0.0',
+            duration: this.executionEndTime && this.executionStartTime ? 
+              `${((this.executionEndTime - this.executionStartTime) / 1000).toFixed(2)}s` : 'N/A',
+            durationMs: this.executionEndTime && this.executionStartTime ? 
+              (this.executionEndTime - this.executionStartTime) : 0,
+            startTime: this.executionStartTime ? this.executionStartTime.toISOString() : null,
+            endTime: this.executionEndTime ? this.executionEndTime.toISOString() : null
           },
           fileSummary: fileSummaries,
           fileDetails: fileMap,
