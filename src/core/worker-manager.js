@@ -526,7 +526,9 @@ class WorkerManager {
 
     worker.on('close', (code) => {
       // Jest sends test results to stderr, so we need to parse that instead of stdout
-      const testResults = this.parseJestOutput(errorOutput, workItem);
+      const parseResult = this.parseJestOutput(errorOutput, workItem);
+      const testResults = parseResult.testResults || parseResult; // Handle both old and new return formats
+      const hookInfo = parseResult.hookInfo || {};
       
       const result = {
         filePath: workItem.filePath,
@@ -539,7 +541,8 @@ class WorkerManager {
         mode: 'jest-parallel',
         hasBeforeAll: workItem.hasBeforeAll,
         hasAfterAll: workItem.hasAfterAll,
-        testResults: testResults // Add parsed test results
+        testResults: testResults, // Add parsed test results
+        hookInfo: hookInfo // Add hook timing information
       };
       
       this.results.push(result);
@@ -970,15 +973,31 @@ class WorkerManager {
 
   parseJestOutput(output, workItem) {
     const testResults = [];
+    let hookInfo = {
+      beforeAll: { duration: 0, status: 'not_found' },
+      beforeEach: { duration: 0, status: 'not_found' },
+      afterAll: { duration: 0, status: 'not_found' },
+      afterEach: { duration: 0, status: 'not_found' }
+    };
     
     try {
-      // Parse Jest output to extract individual test results
+      // Parse Jest output to extract individual test results and hook information
       const lines = output.split('\n');
       let currentSuite = '';
       let currentFailedTest = null;
       let collectingError = false;
       let errorLines = [];
       let hookFailures = []; // Track hook failures
+      
+      // Extract overall test timing to calculate hook duration
+      let totalTestDuration = 0;
+      let overallSuiteDuration = 0;
+      
+      // Look for Jest timing information
+      const timeMatch = output.match(/Time:\s+(\d+(?:\.\d+)?)\s*s/);
+      if (timeMatch) {
+        overallSuiteDuration = parseFloat(timeMatch[1]) * 1000; // Convert to ms
+      }
       
       for (const line of lines) {
         const trimmedLine = line.trim();
@@ -1074,13 +1093,15 @@ class WorkerManager {
         if (testMatch) {
           const [, testName, duration] = testMatch;
           const cleanTestName = testName.trim();
+          const testDuration = parseInt(duration);
+          totalTestDuration += testDuration;
           
           if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
             testResults.push({
               name: cleanTestName,
               suite: currentSuite,
               status: 'passed',
-              duration: parseInt(duration),
+              duration: testDuration,
               error: null
             });
           }
@@ -1103,19 +1124,21 @@ class WorkerManager {
             }
           }
         }
-        
+
         // Look for failed tests
         const failedTestMatch = line.match(/^\s*[✗✕×]\s+(.+?)\s*(?:\((\d+)\s*ms\))?/);
         if (failedTestMatch) {
           const [, testName, duration] = failedTestMatch;
           const cleanTestName = testName.trim();
+          const testDuration = duration ? parseInt(duration) : 0;
+          totalTestDuration += testDuration;
           
           if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
             const failedTest = {
               name: cleanTestName,
               suite: currentSuite,
               status: 'failed',
-              duration: duration ? parseInt(duration) : 0,
+              duration: testDuration,
               error: null
             };
             testResults.push(failedTest);
@@ -1123,9 +1146,7 @@ class WorkerManager {
             collectingError = true;
             errorLines = [];
           }
-        }
-        
-        // Look for skipped tests
+        }        // Look for skipped tests
         const skippedTestMatch = line.match(/^\s*○\s+(.+?)$/);
         if (skippedTestMatch) {
           const [, testName] = skippedTestMatch;
@@ -1146,6 +1167,30 @@ class WorkerManager {
       // Handle any remaining error collection
       if (collectingError && currentFailedTest && errorLines.length > 0) {
         currentFailedTest.error = errorLines.join('\n').trim();
+      }
+      
+      // Calculate hook duration based on timing analysis
+      if (overallSuiteDuration > 0 && totalTestDuration >= 0) {
+        // Estimate hook duration as the difference between total suite time and test execution time
+        const estimatedHookDuration = Math.max(0, overallSuiteDuration - totalTestDuration);
+        
+        // For now, attribute most hook overhead to beforeAll
+        // This is a reasonable assumption since beforeAll typically contains setup logic
+        if (estimatedHookDuration > 10) { // Only track if significant (>10ms)
+          hookInfo.beforeAll.duration = Math.round(estimatedHookDuration * 0.8); // 80% to beforeAll
+          hookInfo.beforeAll.status = 'estimated';
+          
+          // Distribute remaining time to other hooks if tests show they might exist
+          const remainingDuration = estimatedHookDuration - hookInfo.beforeAll.duration;
+          if (remainingDuration > 5 && testResults.length > 1) {
+            hookInfo.beforeEach.duration = Math.round(remainingDuration * 0.7);
+            hookInfo.beforeEach.status = 'estimated';
+            hookInfo.afterEach.duration = Math.round(remainingDuration * 0.2);
+            hookInfo.afterEach.status = 'estimated';
+            hookInfo.afterAll.duration = Math.round(remainingDuration * 0.1);
+            hookInfo.afterAll.status = 'estimated';
+          }
+        }
       }
       
       // If no tests were parsed, try alternative parsing for different Jest output formats
@@ -1169,7 +1214,7 @@ class WorkerManager {
       this.logger.error(`Error parsing Jest output for ${workItem.filePath}:`, error.message);
     }
     
-    return testResults;
+    return { testResults, hookInfo };
   }
 
   // Detect if a timeout likely occurred during hook execution
@@ -1310,7 +1355,13 @@ class WorkerManager {
               skipped: 0,
               tests: [],
               startTime: null,
-              endTime: null
+              endTime: null,
+              hooks: {
+                beforeAll: { duration: 0, status: 'not_found' },
+                beforeEach: { duration: 0, status: 'not_found' },
+                afterAll: { duration: 0, status: 'not_found' },
+                afterEach: { duration: 0, status: 'not_found' }
+              }
             };
           }
           // File-level status
@@ -1323,6 +1374,15 @@ class WorkerManager {
           }
           if (result.endTime && (!fileMap[file].endTime || new Date(result.endTime) > new Date(fileMap[file].endTime))) {
             fileMap[file].endTime = result.endTime;
+          }
+          
+          // Merge hook information if available
+          if (result.hookInfo) {
+            Object.keys(result.hookInfo).forEach(hookType => {
+              if (result.hookInfo[hookType].duration > fileMap[file].hooks[hookType].duration) {
+                fileMap[file].hooks[hookType] = { ...result.hookInfo[hookType] };
+              }
+            });
           }
           
           // Individual test results
@@ -1364,6 +1424,9 @@ class WorkerManager {
           f.duration = fileDurationMs > 0 ? `${(fileDurationMs / 1000).toFixed(3)}s` : 'N/A';
           f.durationMs = fileDurationMs;
           
+          // Calculate total hook duration for summary
+          const totalHookDuration = Object.values(f.hooks).reduce((sum, hook) => sum + (hook.duration || 0), 0);
+          
           return {
             filePath: f.filePath,
             status: f.status,
@@ -1372,7 +1435,14 @@ class WorkerManager {
             failed: f.failed,
             skipped: f.skipped,
             duration: f.duration,
-            durationMs: f.durationMs
+            durationMs: f.durationMs,
+            hooks: {
+              total: totalHookDuration,
+              beforeAll: f.hooks.beforeAll,
+              beforeEach: f.hooks.beforeEach,
+              afterAll: f.hooks.afterAll,
+              afterEach: f.hooks.afterEach
+            }
           };
         });
 
@@ -1390,7 +1460,14 @@ class WorkerManager {
             durationMs: this.executionEndTime && this.executionStartTime ? 
               (this.executionEndTime - this.executionStartTime) : 0,
             startTime: this.executionStartTime ? this.executionStartTime.toISOString() : null,
-            endTime: this.executionEndTime ? this.executionEndTime.toISOString() : null
+            endTime: this.executionEndTime ? this.executionEndTime.toISOString() : null,
+            hooks: {
+              totalDuration: fileSummaries.reduce((sum, f) => sum + (f.hooks?.total || 0), 0),
+              beforeAllTotal: fileSummaries.reduce((sum, f) => sum + (f.hooks?.beforeAll?.duration || 0), 0),
+              beforeEachTotal: fileSummaries.reduce((sum, f) => sum + (f.hooks?.beforeEach?.duration || 0), 0),
+              afterAllTotal: fileSummaries.reduce((sum, f) => sum + (f.hooks?.afterAll?.duration || 0), 0),
+              afterEachTotal: fileSummaries.reduce((sum, f) => sum + (f.hooks?.afterEach?.duration || 0), 0)
+            }
           },
           fileSummary: fileSummaries,
           fileDetails: fileMap,

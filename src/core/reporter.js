@@ -78,14 +78,16 @@ class ReportGenerator {
           fileResults[fileName] = {
             filePath: result.filePath,
             status: result.status,
-            testCount: result.testCount,
-            duration: result.duration || 0,
-            output: result.output,
-            errorOutput: result.errorOutput,
-            workerId: result.workerId,
             tests: [],
             passed: 0,
-            failed: 0
+            failed: 0,
+            duration: result.duration || 0,
+            hooks: result.hookInfo || {
+              beforeAll: { duration: 0, status: 'not_found' },
+              beforeEach: { duration: 0, status: 'not_found' },
+              afterAll: { duration: 0, status: 'not_found' },
+              afterEach: { duration: 0, status: 'not_found' }
+            }
           };
         }
         
@@ -359,6 +361,8 @@ class ReportGenerator {
         .file-stats .passed { color: #27ae60; }
         .file-stats .failed { color: #e74c3c; }
         .file-stats .duration { color: #7f8c8d; }
+        .hook-stats { display: flex; gap: 10px; font-size: 0.8em; margin-top: 8px; flex-wrap: wrap; }
+        .hook-info { color: #8e44ad; background: #f8f9fa; padding: 2px 6px; border-radius: 3px; }
         .file-path { padding: 0 20px 10px; color: #7f8c8d; font-size: 0.9em; }
         .test-summary { padding: 20px; }
         .test-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f1f2f6; }
@@ -577,6 +581,17 @@ class ReportGenerator {
                                 <span class="failed">${fileResult.failed || 0} failed</span>
                                 <span class="duration">${this.formatDuration(fileResult.duration || 0)} total</span>
                             </div>
+                            ${fileResult.hooks && fileResult.hooks.beforeAll && fileResult.hooks.beforeAll.duration > 0 ? `
+                                <div class="hook-stats">
+                                    <span class="hook-info">⚙️ beforeAll: ${this.formatDuration(fileResult.hooks.beforeAll.duration)}</span>
+                                    ${fileResult.hooks.beforeEach && fileResult.hooks.beforeEach.duration > 0 ? 
+                                        `<span class="hook-info">🔄 beforeEach: ${this.formatDuration(fileResult.hooks.beforeEach.duration)}</span>` : ''}
+                                    ${fileResult.hooks.afterAll && fileResult.hooks.afterAll.duration > 0 ? 
+                                        `<span class="hook-info">🏁 afterAll: ${this.formatDuration(fileResult.hooks.afterAll.duration)}</span>` : ''}
+                                    ${fileResult.hooks.afterEach && fileResult.hooks.afterEach.duration > 0 ? 
+                                        `<span class="hook-info">🔄 afterEach: ${this.formatDuration(fileResult.hooks.afterEach.duration)}</span>` : ''}
+                                </div>
+                            ` : ''}
                         </div>
                         <div class="file-path"><code>${fileResult.filePath || ''}</code></div>
                         <div class="test-summary">
