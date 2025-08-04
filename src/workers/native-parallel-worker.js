@@ -165,7 +165,9 @@ async function runFileWithConcurrentTransformation(config, startTime) {
           console.error('Standard output:', output);
         }
         
-        const testResults = parseJestOutput(errorOutput, config);
+        const parseResult = parseJestOutput(errorOutput, config);
+        const testResults = parseResult.testResults || parseResult; // Handle both old and new return formats
+        const hookInfo = parseResult.hookInfo || {};
         
         resolve({
           status: code === 0 ? 'passed' : 'failed',
@@ -178,7 +180,8 @@ async function runFileWithConcurrentTransformation(config, startTime) {
           exitCode: code,
           strategy: 'enhanced-file-parallelism-concurrent',
           concurrency: maxConcurrency,
-          tempFile: tempFilePath
+          tempFile: tempFilePath,
+          hookInfo: hookInfo
         });
       };
       
@@ -331,7 +334,9 @@ async function runFileWithParallelism(config, startTime) {
       if (hasResolved) return;
       hasResolved = true;
       
-      const testResults = parseJestOutput(errorOutput, config);
+      const parseResult = parseJestOutput(errorOutput, config);
+      const testResults = parseResult.testResults || parseResult; // Handle both old and new return formats  
+      const hookInfo = parseResult.hookInfo || {};
       
       resolve({
         status: code === 0 ? 'passed' : 'failed',
@@ -343,7 +348,8 @@ async function runFileWithParallelism(config, startTime) {
         filePath: config.filePath,
         exitCode: code,
         strategy: 'file-parallelism',
-        jestWorkers: maxWorkersForFile
+        jestWorkers: maxWorkersForFile,
+        hookInfo: hookInfo
       });
     };
     
@@ -375,12 +381,29 @@ async function runFileWithParallelism(config, startTime) {
 
 function parseJestOutput(output, config, specificTestName = null) {
   const testResults = [];
+  let hookInfo = {
+    beforeAll: { duration: 0, status: 'not_found' },
+    beforeEach: { duration: 0, status: 'not_found' },
+    afterAll: { duration: 0, status: 'not_found' },
+    afterEach: { duration: 0, status: 'not_found' }
+  };
+  
   const lines = output.split('\n');
   let currentSuite = '';
   let currentFailedTest = null;
   let collectingError = false;
   let errorLines = [];
   let beforeAllFailure = null; // Track beforeAll hook failures
+  
+  // Extract overall test timing to calculate hook duration
+  let totalTestDuration = 0;
+  let overallSuiteDuration = 0;
+  
+  // Look for Jest timing information
+  const timeMatch = output.match(/Time:\s+(\d+(?:\.\d+)?)\s*s/);
+  if (timeMatch) {
+    overallSuiteDuration = parseFloat(timeMatch[1]) * 1000; // Convert to ms
+  }
   
   // First pass: collect test results (pass/fail status) and detect hook failures
   for (let i = 0; i < lines.length; i++) {
@@ -446,6 +469,8 @@ function parseJestOutput(output, config, specificTestName = null) {
     if (testMatch) {
       const [, testName, duration] = testMatch;
       const cleanTestName = testName.trim();
+      const testDuration = parseFloat(duration);
+      totalTestDuration += testDuration;
       
       // Skip empty or invalid test names
       if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
@@ -456,7 +481,7 @@ function parseJestOutput(output, config, specificTestName = null) {
             testName: cleanTestName,
             suite: currentSuite,
             status: 'passed',
-            duration: parseFloat(duration),
+            duration: testDuration,
             error: null,
             source: null,
             workerId: config.workerId,
@@ -504,6 +529,8 @@ function parseJestOutput(output, config, specificTestName = null) {
     if (failedMatch) {
       const [, testName, duration] = failedMatch;
       const cleanTestName = testName.trim();
+      const testDuration = duration ? parseFloat(duration) : 0;
+      totalTestDuration += testDuration;
       
       if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
         if (!specificTestName || cleanTestName === specificTestName) {
@@ -512,7 +539,7 @@ function parseJestOutput(output, config, specificTestName = null) {
             testName: cleanTestName,
             suite: currentSuite,
             status: 'failed',
-            duration: duration ? parseFloat(duration) : 0,
+            duration: testDuration,
             error: null,
             source: null,
             workerId: config.workerId,
@@ -550,7 +577,31 @@ function parseJestOutput(output, config, specificTestName = null) {
   const failedTests = testResults.filter(t => t.status === 'failed');
   parseIndividualErrors(output, failedTests);
   
-  return testResults;
+  // Calculate hook duration based on timing analysis
+  if (overallSuiteDuration > 0 && totalTestDuration >= 0) {
+    // Estimate hook duration as the difference between total suite time and test execution time
+    const estimatedHookDuration = Math.max(0, overallSuiteDuration - totalTestDuration);
+    
+    // For now, attribute most hook overhead to beforeAll
+    // This is a reasonable assumption since beforeAll typically contains setup logic
+    if (estimatedHookDuration > 10) { // Only track if significant (>10ms)
+      hookInfo.beforeAll.duration = Math.round(estimatedHookDuration * 0.8); // 80% to beforeAll
+      hookInfo.beforeAll.status = 'estimated';
+      
+      // Distribute remaining time to other hooks if tests show they might exist
+      const remainingDuration = estimatedHookDuration - hookInfo.beforeAll.duration;
+      if (remainingDuration > 5 && testResults.length > 1) {
+        hookInfo.beforeEach.duration = Math.round(remainingDuration * 0.7);
+        hookInfo.beforeEach.status = 'estimated';
+        hookInfo.afterEach.duration = Math.round(remainingDuration * 0.2);
+        hookInfo.afterEach.status = 'estimated';
+        hookInfo.afterAll.duration = Math.round(remainingDuration * 0.1);
+        hookInfo.afterAll.status = 'estimated';
+      }
+    }
+  }
+  
+  return { testResults, hookInfo };
 }
 
 function parseIndividualErrors(output, failedTests) {
