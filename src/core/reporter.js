@@ -42,6 +42,7 @@ class ReportGenerator {
     
     let passed = 0;
     let failed = 0;
+    let skipped = 0;
     let totalTests = 0;
 
     results.forEach(result => {
@@ -51,6 +52,7 @@ class ReportGenerator {
         totalTests++;
         if (result.status === 'passed') passed++;
         if (result.status === 'failed') failed++;
+        if (result.status === 'skipped') skipped++;
         
         const fileName = path.basename(result.filePath || '');
         if (fileName && !fileResults[fileName]) {
@@ -59,6 +61,7 @@ class ReportGenerator {
             tests: [],
             passed: 0,
             failed: 0,
+            skipped: 0,
             duration: 0
           };
         }
@@ -81,6 +84,7 @@ class ReportGenerator {
             tests: [],
             passed: 0,
             failed: 0,
+            skipped: 0,
             duration: result.duration || 0,
             hooks: result.hookInfo || {
               beforeAll: { duration: 0, status: 'not_found' },
@@ -129,6 +133,8 @@ class ReportGenerator {
               fileResults[fileName].passed = (fileResults[fileName].passed || 0) + 1;
             } else if (testResult.status === 'failed') {
               fileResults[fileName].failed = (fileResults[fileName].failed || 0) + 1;
+            } else if (testResult.status === 'skipped') {
+              fileResults[fileName].skipped = (fileResults[fileName].skipped || 0) + 1;
             }
           });
           
@@ -136,8 +142,10 @@ class ReportGenerator {
           totalTests += result.testResults.length;
           const passedCount = result.testResults.filter(t => t.status === 'passed').length;
           const failedCount = result.testResults.filter(t => t.status === 'failed').length;
+          const skippedCount = result.testResults.filter(t => t.status === 'skipped').length;
           passed += passedCount;
           failed += failedCount;
+          skipped += skippedCount;
         } else {
           // Fallback to file-level counting if no individual test results
           totalTests += result.testCount || 0;
@@ -158,6 +166,7 @@ class ReportGenerator {
         totalTests,
         passed,
         failed,
+        skipped,
         startTime,
         endTime,
         totalDuration,
@@ -247,6 +256,7 @@ class ReportGenerator {
     console.log(`  Total Tests: ${summary.totalTests}`);
     console.log(`  Passed: ${summary.passed}`);
     console.log(`  Failed: ${summary.failed}`);
+    console.log(`  Skipped: ${summary.skipped}`);
     console.log(`  Files: ${summary.files}`);
     
     console.log(`\nMemory Usage:`);
@@ -258,7 +268,7 @@ class ReportGenerator {
     if (testResults.length > 0) {
       console.log('\nTest Details:');
       testResults.forEach(test => {
-        const status = test.status === 'passed' ? '✓' : '✗';
+        const status = test.status === 'passed' ? '✓' : test.status === 'skipped' ? '○' : '✗';
         const duration = this.formatDuration(test.duration);
         console.log(`  ${status} ${test.testName} (${duration}) [Worker: ${test.workerId}]`);
         if (test.error) {
@@ -271,7 +281,8 @@ class ReportGenerator {
       console.log('\nFile Results:');
       Object.entries(fileResults).forEach(([fileName, fileResult]) => {
         if (fileResult.tests) {
-          console.log(`  ${fileName}: ${fileResult.passed} passed, ${fileResult.failed} failed`);
+          const skippedText = fileResult.skipped > 0 ? `, ${fileResult.skipped} skipped` : '';
+          console.log(`  ${fileName}: ${fileResult.passed} passed, ${fileResult.failed} failed${skippedText}`);
         } else {
           const status = fileResult.status === 'passed' ? '✓' : '✗';
           console.log(`  ${status} ${fileName} (${fileResult.testCount} tests) [Worker: ${fileResult.workerId}]`);
@@ -328,6 +339,7 @@ class ReportGenerator {
         .results-table th { background: #f8f9fa; font-weight: 600; color: #2c3e50; }
         .results-table tr.success { background: rgba(39, 174, 96, 0.05); }
         .results-table tr.failure { background: rgba(231, 76, 60, 0.05); }
+        .results-table tr.skipped { background: rgba(158, 158, 158, 0.05); }
         .test-tabs { display: flex; background: #ecf0f1; }
         .tab-button { flex: 1; padding: 15px; border: none; background: transparent; cursor: pointer; font-weight: 500; transition: background 0.3s; }
         .tab-button.active { background: white; border-bottom: 3px solid #3498db; }
@@ -360,6 +372,7 @@ class ReportGenerator {
         .file-stats { display: flex; gap: 15px; font-size: 0.9em; }
         .file-stats .passed { color: #27ae60; }
         .file-stats .failed { color: #e74c3c; }
+        .file-stats .skipped { color: #9e9e9e; }
         .file-stats .duration { color: #7f8c8d; }
         .hook-stats { display: flex; gap: 10px; font-size: 0.8em; margin-top: 8px; flex-wrap: wrap; }
         .hook-info { color: #8e44ad; background: #f8f9fa; padding: 2px 6px; border-radius: 3px; }
@@ -415,7 +428,7 @@ class ReportGenerator {
             <div class="card">
                 <h3>Tests</h3>
                 <div class="big-number">${summary.totalTests}</div>
-                <div class="detail">${summary.passed} passed, ${summary.failed} failed</div>
+                <div class="detail">${summary.passed} passed, ${summary.failed} failed${summary.skipped > 0 ? `, ${summary.skipped} skipped` : ''}</div>
             </div>
             <div class="card">
                 <h3>Performance</h3>
@@ -434,6 +447,7 @@ class ReportGenerator {
             <div class="test-tabs">
                 <button class="tab-button active" onclick="showTab('all')">All Tests (${summary.totalTests})</button>
                 <button class="tab-button" onclick="showTab('failed')">Failed (${summary.failed})</button>
+                <button class="tab-button" onclick="showTab('skipped')">Skipped (${summary.skipped})</button>
                 <button class="tab-button" onclick="showTab('slowest')">Slowest (10)</button>
                 <button class="tab-button" onclick="showTab('fastest')">Fastest (10)</button>
             </div>
@@ -452,8 +466,8 @@ class ReportGenerator {
                         </thead>
                         <tbody>
                         ${testResults.map(test => `
-                            <tr class="${test.status === 'passed' ? 'success' : 'failure'}">
-                                <td><span class="status-icon">${test.status === 'passed' ? '✅' : '❌'}</span></td>
+                            <tr class="${test.status === 'passed' ? 'success' : test.status === 'skipped' ? 'skipped' : 'failure'}">
+                                <td><span class="status-icon">${test.status === 'passed' ? '✅' : test.status === 'skipped' ? '⏭️' : '❌'}</span></td>
                                 <td>
                                     <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
                                     ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
@@ -501,6 +515,37 @@ class ReportGenerator {
                     </table>
                 </div>
             </div>
+            <div id="tab-skipped" class="tab-content">
+                <div class="test-results">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Test Name</th>
+                                <th>File</th>
+                                <th>Duration</th>
+                                <th>PID</th>
+                                <th>Memory</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        ${testResults.filter(test => test.status === 'skipped').map(test => `
+                            <tr class="skipped">
+                                <td><span class="status-icon">⏭️</span></td>
+                                <td>
+                                    <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
+                                    ${test.source ? `<div class="source-info">📍 ${this.escapeHtml(test.source.location)}</div>` : ''}
+                                </td>
+                                <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
+                                <td>${this.formatDuration(test.duration)}</td>
+                                <td><code>${test.pid || ''}</code></td>
+                                <td>${test.memory || 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             <div id="tab-slowest" class="tab-content">
                 <div class="test-results">
                     <table class="results-table">
@@ -516,8 +561,8 @@ class ReportGenerator {
                         </thead>
                         <tbody>
                         ${testResults.slice().sort((a, b) => b.duration - a.duration).slice(0, 10).map(test => `
-                            <tr class="${test.status === 'passed' ? 'success' : 'failure'}">
-                                <td><span class="status-icon">${test.status === 'passed' ? '✅' : '❌'}</span></td>
+                            <tr class="${test.status === 'passed' ? 'success' : test.status === 'skipped' ? 'skipped' : 'failure'}">
+                                <td><span class="status-icon">${test.status === 'passed' ? '✅' : test.status === 'skipped' ? '⏭️' : '❌'}</span></td>
                                 <td>
                                     <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
                                     ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
@@ -548,8 +593,8 @@ class ReportGenerator {
                         </thead>
                         <tbody>
                         ${testResults.slice().sort((a, b) => a.duration - b.duration).slice(0, 10).map(test => `
-                            <tr class="${test.status === 'passed' ? 'success' : 'failure'}">
-                                <td><span class="status-icon">${test.status === 'passed' ? '✅' : '❌'}</span></td>
+                            <tr class="${test.status === 'passed' ? 'success' : test.status === 'skipped' ? 'skipped' : 'failure'}">
+                                <td><span class="status-icon">${test.status === 'passed' ? '✅' : test.status === 'skipped' ? '⏭️' : '❌'}</span></td>
                                 <td>
                                     <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
                                     ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
@@ -579,6 +624,7 @@ class ReportGenerator {
                             <div class="file-stats">
                                 <span class="passed">${fileResult.passed || 0} passed</span>
                                 <span class="failed">${fileResult.failed || 0} failed</span>
+                                ${(fileResult.skipped || 0) > 0 ? `<span class="skipped">${fileResult.skipped} skipped</span>` : ''}
                                 <span class="duration">${this.formatDuration(fileResult.duration || 0)} total</span>
                             </div>
                             ${fileResult.hooks && fileResult.hooks.beforeAll && fileResult.hooks.beforeAll.duration > 0 ? `
@@ -596,8 +642,8 @@ class ReportGenerator {
                         <div class="file-path"><code>${fileResult.filePath || ''}</code></div>
                         <div class="test-summary">
                             ${fileTestResults.map(test => `
-                                <div class="test-item ${test.status === 'passed' ? 'passed' : 'failed'}">
-                                    <span class="status">${test.status === 'passed' ? '✅' : '❌'}</span>
+                                <div class="test-item ${test.status === 'passed' ? 'passed' : test.status === 'skipped' ? 'skipped' : 'failed'}">
+                                    <span class="status">${test.status === 'passed' ? '✅' : test.status === 'skipped' ? '⏭️' : '❌'}</span>
                                     <span class="name">${test.testName}</span>
                                     <span class="duration">${this.formatDuration(test.duration)}</span>
                                     ${test.error ? `<div class="error-message">${this.escapeHtml(test.error)}</div>` : ''}
