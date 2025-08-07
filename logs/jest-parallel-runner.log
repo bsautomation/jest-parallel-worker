@@ -7578,3 +7578,2991 @@ Process ID: 39120
 [2025-07-23T08:03:45.086Z] [7ms] [PID:39120|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/12 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
 [2025-07-23T08:03:45.087Z] [8ms] [PID:39120|MEM:7MB] [INFO] [WORKER-0] Starting work item: file - hooks2.test.js
 [2025-07-23T08:03:45.089Z] [10ms] [PID:39120|MEM:7MB] [INFO] [WORKER-1] Starting work item: file - hooks.test.js
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T05:47:34.571Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T05-47-34-569Z-pybxnj
+Started: 2025-08-01T05:47:34.571Z
+Process ID: 81481
+================================================================================
+[2025-08-01T05:47:34.572Z] [3ms] [PID:81481|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T05:47:34.572Z] [3ms] [PID:81481|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T05:47:34.572Z] [3ms] [PID:81481|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T05:47:34.572Z] [3ms] [PID:81481|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T05:47:34.572Z] [3ms] [PID:81481|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T05:47:34.573Z] [4ms] [PID:81481|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - error-demo.test.js
+[2025-08-01T05:47:36.169Z] [1600ms] [PID:81481|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T05:47:36.169Z] [1600ms] [PID:81481|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T05:47:36.170Z] [1601ms] [PID:81481|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T05:47:36.171Z] [1602ms] [PID:81481|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T05:47:36.171Z] [1602ms] [PID:81481|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 25.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T05:47:36.172Z] [1603ms] [PID:81481|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 1 passed | 3 failed | 0 skipped | Success Rate: 25.0%
+[2025-08-01T05:47:36.187Z] [1618ms] [PID:81481|MEM:8MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T05-47-34-569Z-pybxnj
+Started: 2025-08-01T05:47:34.569Z
+Completed: 2025-08-01T05:47:36.188Z
+Total Duration: 1.6s
+Process ID: 81481
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 1.6s
+  Total Work Time: 1.6s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 1
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should fail with clear error message
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 2ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 10
+    Received: 5
+
+       7 |
+       8 |   test('should fail with clear error message', () => {
+    >  9 |     expect(5).toBe(10);
+         |               ^
+      10 |   });
+      11 |
+      12 |   test('should fail with assertion error', () => {
+
+      at Object.toBe (tests/error-demo.test.js:9:15)
+
+  ✗ should fail with assertion error
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 0ms
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected substring: "world"
+    Received string:    "hello"
+
+      11 |
+      12 |   test('should fail with assertion error', () => {
+    > 13 |     expect('hello').toContain('world');
+         |                     ^
+      14 |   });
+      15 |
+      16 |   test('should fail with object comparison', () => {
+
+      at Object.toContain (tests/error-demo.test.js:13:21)
+
+  ✗ should fail with object comparison
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 2ms
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "age": 25,
+    -   "name": "Jane",
+    +   "age": 30,
+    +   "name": "John",
+      }
+
+      17 |     const actual = { name: 'John', age: 30 };
+      18 |     const expected = { name: 'Jane', age: 25 };
+    > 19 |     expect(actual).toEqual(expected);
+         |                    ^
+      20 |   });
+      21 | });
+      22 |
+
+      at Object.toEqual (tests/error-demo.test.js:19:20)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T05:47:36.189Z
+[2025-08-01T05:47:36.189Z] [1620ms] [PID:81481|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.6s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T05:50:55.865Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T05-50-55-863Z-tacx3w
+Started: 2025-08-01T05:50:55.865Z
+Process ID: 82042
+================================================================================
+[2025-08-01T05:50:55.867Z] [4ms] [PID:82042|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T05:50:55.867Z] [4ms] [PID:82042|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-file mode...
+[2025-08-01T05:50:55.867Z] [4ms] [PID:82042|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T05:50:55.868Z] [5ms] [PID:82042|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - error-demo.test.js
+[2025-08-01T05:50:57.434Z] [1571ms] [PID:82042|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T05:50:57.435Z] [1572ms] [PID:82042|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T05:50:57.435Z] [1572ms] [PID:82042|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T05:50:57.436Z] [1573ms] [PID:82042|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T05:50:57.437Z] [1574ms] [PID:82042|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 25.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T05:50:57.437Z] [1574ms] [PID:82042|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 1 passed | 3 failed | 0 skipped | Success Rate: 25.0%
+[2025-08-01T05:50:57.453Z] [1590ms] [PID:82042|MEM:8MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T05-50-55-863Z-tacx3w
+Started: 2025-08-01T05:50:55.863Z
+Completed: 2025-08-01T05:50:57.454Z
+Total Duration: 1.6s
+Process ID: 82042
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 1.6s
+  Total Work Time: 1.6s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 1
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should fail with clear error message
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 2ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 10
+    Received: 5
+
+       7 |
+       8 |   test('should fail with clear error message', () => {
+    >  9 |     expect(5).toBe(10);
+         |               ^
+      10 |   });
+      11 |
+      12 |   test('should fail with assertion error', () => {
+
+      at Object.toBe (tests/error-demo.test.js:9:15)
+
+  ✗ should fail with assertion error
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 0ms
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected substring: "world"
+    Received string:    "hello"
+
+      11 |
+      12 |   test('should fail with assertion error', () => {
+    > 13 |     expect('hello').toContain('world');
+         |                     ^
+      14 |   });
+      15 |
+      16 |   test('should fail with object comparison', () => {
+
+      at Object.toContain (tests/error-demo.test.js:13:21)
+
+  ✗ should fail with object comparison
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "age": 25,
+    -   "name": "Jane",
+    +   "age": 30,
+    +   "name": "John",
+      }
+
+      17 |     const actual = { name: 'John', age: 30 };
+      18 |     const expected = { name: 'Jane', age: 25 };
+    > 19 |     expect(actual).toEqual(expected);
+         |                    ^
+      20 |   });
+      21 | });
+      22 |
+
+      at Object.toEqual (tests/error-demo.test.js:19:20)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T05:50:57.454Z
+[2025-08-01T05:50:57.454Z] [1591ms] [PID:82042|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.6s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T05:51:10.269Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T05-51-10-268Z-xiy3nf
+Started: 2025-08-01T05:51:10.269Z
+Process ID: 82370
+================================================================================
+[2025-08-01T05:51:10.269Z] [1ms] [PID:82370|MEM:7MB] [INFO] [DISCOVERY] Found 3 test files
+[2025-08-01T05:51:10.272Z] [4ms] [PID:82370|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 14 tests across 3 files
+[2025-08-01T05:51:10.272Z] [4ms] [PID:82370|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-file mode...
+[2025-08-01T05:51:10.273Z] [5ms] [PID:82370|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/14 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T05:51:10.273Z] [5ms] [PID:82370|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - math.test.js
+[2025-08-01T05:51:10.276Z] [8ms] [PID:82370|MEM:7MB] [INFO] [WORKER-1] Starting work item: native-parallel - string.test.js
+[2025-08-01T05:51:10.277Z] [10ms] [PID:82370|MEM:7MB] [INFO] [WORKER-2] Starting work item: native-parallel - error-demo.test.js
+[2025-08-01T05:51:11.970Z] [1702ms] [PID:82370|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 5/14 (36%) | ✓ 5 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 9 running
+[2025-08-01T05:51:11.971Z] [1703ms] [PID:82370|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-01T05:51:11.972Z] [1704ms] [PID:82370|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 36% | Throughput: 5 tests completed
+[2025-08-01T05:51:12.173Z] [1905ms] [PID:82370|MEM:8MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 9/14 (64%) | ✓ 6 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 5 running
+[2025-08-01T05:51:12.173Z] [1905ms] [PID:82370|MEM:8MB] [INFO] [WORKER-2] Completed with code 1
+[2025-08-01T05:51:12.173Z] [1905ms] [PID:82370|MEM:8MB] [INFO] [TEST-METRICS] Success Rate: 66.7% | Completion: 64% | Throughput: 9 tests completed
+[2025-08-01T05:51:12.222Z] [1954ms] [PID:82370|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 14/14 (100%) | ✓ 11 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T05:51:12.222Z] [1954ms] [PID:82370|MEM:7MB] [INFO] [WORKER-1] Completed with code passed
+[2025-08-01T05:51:12.222Z] [1954ms] [PID:82370|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 14/14 (100%) | ✓ 11 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T05:51:12.223Z] [1955ms] [PID:82370|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T05:51:12.223Z] [1955ms] [PID:82370|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 78.6% | Completion: 100% | Throughput: 14 tests completed
+[2025-08-01T05:51:12.223Z] [1955ms] [PID:82370|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 14 total tests | 11 passed | 3 failed | 0 skipped | Success Rate: 78.6%
+[2025-08-01T05:51:12.237Z] [1969ms] [PID:82370|MEM:7MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T05-51-10-268Z-xiy3nf
+Started: 2025-08-01T05:51:10.268Z
+Completed: 2025-08-01T05:51:12.238Z
+Total Duration: 2.0s
+Process ID: 82370
+
+WORKER STATISTICS:
+  Total Workers: 3
+  Completed: 2
+  Failed: 1
+  Average Duration: 1.8s
+  Total Work Time: 5.5s
+
+TEST STATISTICS:
+  Total Tests: 14
+  Passed: 11
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should fail with clear error message
+    File: error-demo.test.js
+    Worker: 2
+    Duration: 1ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 10
+    Received: 5
+
+       7 |
+       8 |   test('should fail with clear error message', () => {
+    >  9 |     expect(5).toBe(10);
+         |               ^
+      10 |   });
+      11 |
+      12 |   test('should fail with assertion error', () => {
+
+      at Object.toBe (tests/error-demo.test.js:9:15)
+
+  ✗ should fail with assertion error
+    File: error-demo.test.js
+    Worker: 2
+    Duration: 1ms
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected substring: "world"
+    Received string:    "hello"
+
+      11 |
+      12 |   test('should fail with assertion error', () => {
+    > 13 |     expect('hello').toContain('world');
+         |                     ^
+      14 |   });
+      15 |
+      16 |   test('should fail with object comparison', () => {
+
+      at Object.toContain (tests/error-demo.test.js:13:21)
+
+  ✗ should fail with object comparison
+    File: error-demo.test.js
+    Worker: 2
+    Duration: 2ms
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "age": 25,
+    -   "name": "Jane",
+    +   "age": 30,
+    +   "name": "John",
+      }
+
+      17 |     const actual = { name: 'John', age: 30 };
+      18 |     const expected = { name: 'Jane', age: 25 };
+    > 19 |     expect(actual).toEqual(expected);
+         |                    ^
+      20 |   });
+      21 | });
+      22 |
+
+      at Object.toEqual (tests/error-demo.test.js:19:20)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T05:51:12.238Z
+[2025-08-01T05:51:12.238Z] [1970ms] [PID:82370|MEM:8MB] [SUCCESS] [COMPLETION] Test execution completed in 2.0s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T05:52:29.353Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T05-52-29-351Z-pc8dlr
+Started: 2025-08-01T05:52:29.353Z
+Process ID: 82927
+================================================================================
+[2025-08-01T05:52:29.353Z] [2ms] [PID:82927|MEM:7MB] [INFO] [DISCOVERY] Found 20 test files
+[2025-08-01T05:52:29.360Z] [9ms] [PID:82927|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 77 tests across 20 files
+[2025-08-01T05:52:29.360Z] [9ms] [PID:82927|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T05:52:29.360Z] [9ms] [PID:82927|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T05:52:29.360Z] [9ms] [PID:82927|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/77 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T05:52:29.360Z] [9ms] [PID:82927|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T05:52:29.362Z] [11ms] [PID:82927|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - concurrent-tests.test.js
+[2025-08-01T05:52:29.365Z] [14ms] [PID:82927|MEM:7MB] [INFO] [WORKER-1] Starting work item: native-parallel - concurrent-timing.test.js
+[2025-08-01T05:52:29.366Z] [15ms] [PID:82927|MEM:7MB] [INFO] [WORKER-2] Starting work item: native-parallel - concurrent-validation.test.js
+[2025-08-01T05:52:29.367Z] [16ms] [PID:82927|MEM:8MB] [INFO] [WORKER-3] Starting work item: native-parallel - custom-runner-test.test.js
+[2025-08-01T05:52:31.637Z] [2286ms] [PID:82927|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/77 (5%) | ✓ 4 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 73 running
+[2025-08-01T05:52:31.637Z] [2286ms] [PID:82927|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-01T05:52:31.637Z] [2286ms] [PID:82927|MEM:7MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - edge-cases.test.js
+[2025-08-01T05:52:31.639Z] [2288ms] [PID:82927|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 5% | Throughput: 4 tests completed
+[2025-08-01T05:52:32.294Z] [2943ms] [PID:82927|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 9/77 (12%) | ✓ 9 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 68 running
+[2025-08-01T05:52:32.294Z] [2943ms] [PID:82927|MEM:7MB] [INFO] [WORKER-1] Completed with code passed
+[2025-08-01T05:52:32.294Z] [2943ms] [PID:82927|MEM:7MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - force-concurrent-demo.test.js
+[2025-08-01T05:52:32.295Z] [2944ms] [PID:82927|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 12% | Throughput: 9 tests completed
+[2025-08-01T05:52:32.795Z] [3444ms] [PID:82927|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 13/77 (17%) | ✓ 13 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 64 running
+[2025-08-01T05:52:32.795Z] [3444ms] [PID:82927|MEM:7MB] [INFO] [WORKER-3] Completed with code passed
+[2025-08-01T05:52:32.795Z] [3444ms] [PID:82927|MEM:7MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - hook-comparison.test.js
+[2025-08-01T05:52:32.796Z] [3445ms] [PID:82927|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 17% | Throughput: 13 tests completed
+[2025-08-01T05:52:32.975Z] [3624ms] [PID:82927|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 17/77 (22%) | ✓ 17 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 60 running
+[2025-08-01T05:52:32.975Z] [3624ms] [PID:82927|MEM:7MB] [INFO] [WORKER-2] Completed with code passed
+[2025-08-01T05:52:32.975Z] [3624ms] [PID:82927|MEM:7MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - hook-demo.test.js
+[2025-08-01T05:52:32.977Z] [3626ms] [PID:82927|MEM:8MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 22% | Throughput: 17 tests completed
+[2025-08-01T05:52:33.908Z] [4557ms] [PID:82927|MEM:8MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 22/77 (29%) | ✓ 22 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 55 running
+[2025-08-01T05:52:33.908Z] [4557ms] [PID:82927|MEM:8MB] [INFO] [WORKER-undefined] Completed with code passed
+[2025-08-01T05:52:33.908Z] [4557ms] [PID:82927|MEM:8MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - hooks-validation.test.js
+[2025-08-01T05:52:33.910Z] [4559ms] [PID:82927|MEM:8MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 29% | Throughput: 22 tests completed
+[2025-08-01T05:52:33.912Z] [4561ms] [PID:82927|MEM:8MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 26/77 (34%) | ✓ 26 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 51 running
+[2025-08-01T05:52:33.912Z] [4561ms] [PID:82927|MEM:8MB] [INFO] [WORKER-undefined] Completed with code passed
+[2025-08-01T05:52:33.912Z] [4561ms] [PID:82927|MEM:8MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - hooks.test.js
+[2025-08-01T05:52:33.914Z] [4563ms] [PID:82927|MEM:8MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 34% | Throughput: 26 tests completed
+[2025-08-01T05:52:34.023Z] [4672ms] [PID:82927|MEM:8MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 26/77 (34%) | ✓ 26 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 51 running
+[2025-08-01T05:52:34.023Z] [4672ms] [PID:82927|MEM:8MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - hooks2.test.js
+[2025-08-01T05:52:34.023Z] [4672ms] [PID:82927|MEM:8MB] [INFO] [WORKER-undefined] Completed with code 1
+[2025-08-01T05:52:34.024Z] [4673ms] [PID:82927|MEM:8MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 34% | Throughput: 26 tests completed
+[2025-08-01T05:52:35.253Z] [5902ms] [PID:82927|MEM:8MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 31/77 (40%) | ✓ 31 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 46 running
+[2025-08-01T05:52:35.254Z] [5903ms] [PID:82927|MEM:8MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - math.test.js
+[2025-08-01T05:52:35.254Z] [5903ms] [PID:82927|MEM:8MB] [INFO] [WORKER-undefined] Completed with code passed
+[2025-08-01T05:52:35.255Z] [5904ms] [PID:82927|MEM:8MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 40% | Throughput: 31 tests completed
+[2025-08-01T05:52:35.277Z] [5926ms] [PID:82927|MEM:8MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 34/77 (44%) | ✓ 34 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 43 running
+[2025-08-01T05:52:35.277Z] [5926ms] [PID:82927|MEM:8MB] [INFO] [WORKER-undefined] Completed with code passed
+[2025-08-01T05:52:35.277Z] [5926ms] [PID:82927|MEM:8MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - parallel-timing.test.js
+[2025-08-01T05:52:35.278Z] [5927ms] [PID:82927|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 44% | Throughput: 34 tests completed
+[2025-08-01T05:52:36.425Z] [7074ms] [PID:82927|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 39/77 (51%) | ✓ 39 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 38 running
+[2025-08-01T05:52:36.426Z] [7075ms] [PID:82927|MEM:7MB] [INFO] [WORKER-undefined] Completed with code passed
+[2025-08-01T05:52:36.426Z] [7075ms] [PID:82927|MEM:7MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - parallel-validation.test.js
+[2025-08-01T05:52:36.427Z] [7076ms] [PID:82927|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 51% | Throughput: 39 tests completed
+[2025-08-01T05:52:37.052Z] [7701ms] [PID:82927|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 43/77 (56%) | ✓ 43 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 34 running
+[2025-08-01T05:52:37.052Z] [7701ms] [PID:82927|MEM:7MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - performance-test.test.js
+[2025-08-01T05:52:37.052Z] [7701ms] [PID:82927|MEM:7MB] [INFO] [WORKER-undefined] Completed with code passed
+[2025-08-01T05:52:37.053Z] [7702ms] [PID:82927|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 56% | Throughput: 43 tests completed
+[2025-08-01T05:52:37.877Z] [8526ms] [PID:82927|MEM:6MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 48/77 (62%) | ✓ 45 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 29 running
+[2025-08-01T05:52:37.877Z] [8526ms] [PID:82927|MEM:6MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - regular-tests.test.js
+[2025-08-01T05:52:37.877Z] [8526ms] [PID:82927|MEM:6MB] [INFO] [WORKER-undefined] Completed with code 1
+[2025-08-01T05:52:37.878Z] [8527ms] [PID:82927|MEM:6MB] [INFO] [TEST-METRICS] Success Rate: 93.8% | Completion: 62% | Throughput: 48 tests completed
+[2025-08-01T05:52:39.064Z] [9713ms] [PID:82927|MEM:6MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 52/77 (68%) | ✓ 49 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 25 running
+[2025-08-01T05:52:39.064Z] [9713ms] [PID:82927|MEM:6MB] [INFO] [WORKER-undefined] Completed with code passed
+[2025-08-01T05:52:39.064Z] [9713ms] [PID:82927|MEM:6MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - sequential-vs-concurrent.test.js
+[2025-08-01T05:52:39.065Z] [9714ms] [PID:82927|MEM:6MB] [INFO] [TEST-METRICS] Success Rate: 94.2% | Completion: 68% | Throughput: 52 tests completed
+[2025-08-01T05:52:39.365Z] [10014ms] [PID:82927|MEM:6MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 56/77 (73%) | ✓ 53 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 21 running
+[2025-08-01T05:52:39.365Z] [10014ms] [PID:82927|MEM:6MB] [INFO] [WORKER-undefined] Completed with code passed
+[2025-08-01T05:52:39.365Z] [10014ms] [PID:82927|MEM:6MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - simple-math.test.js
+[2025-08-01T05:52:39.366Z] [10015ms] [PID:82927|MEM:6MB] [INFO] [TEST-METRICS] Success Rate: 94.6% | Completion: 73% | Throughput: 56 tests completed
+[2025-08-01T05:52:40.436Z] [11085ms] [PID:82927|MEM:6MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 59/77 (77%) | ✓ 56 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 18 running
+[2025-08-01T05:52:40.437Z] [11086ms] [PID:82927|MEM:6MB] [INFO] [WORKER-undefined] Completed with code passed
+[2025-08-01T05:52:40.437Z] [11086ms] [PID:82927|MEM:6MB] [INFO] [WORKER-undefined] Starting work item: native-parallel - string.test.js
+[2025-08-01T05:52:40.438Z] [11087ms] [PID:82927|MEM:6MB] [INFO] [TEST-METRICS] Success Rate: 94.9% | Completion: 77% | Throughput: 59 tests completed
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T08:24:30.434Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T08-24-30-432Z-62dqde
+Started: 2025-08-01T08:24:30.434Z
+Process ID: 26049
+================================================================================
+[2025-08-01T08:24:30.436Z] [4ms] [PID:26049|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T08:24:30.436Z] [4ms] [PID:26049|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-file mode...
+[2025-08-01T08:24:30.437Z] [5ms] [PID:26049|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:24:30.438Z] [6ms] [PID:26049|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - error-demo.test.js
+[2025-08-01T08:24:32.022Z] [1590ms] [PID:26049|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:24:32.023Z] [1591ms] [PID:26049|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T08:24:32.023Z] [1591ms] [PID:26049|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:24:32.024Z] [1592ms] [PID:26049|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T08:24:32.024Z] [1592ms] [PID:26049|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 25.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T08:24:32.025Z] [1593ms] [PID:26049|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 1 passed | 3 failed | 0 skipped | Success Rate: 25.0%
+[2025-08-01T08:24:32.043Z] [1611ms] [PID:26049|MEM:8MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T08-24-30-432Z-62dqde
+Started: 2025-08-01T08:24:30.432Z
+Completed: 2025-08-01T08:24:32.044Z
+Total Duration: 1.6s
+Process ID: 26049
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 1.6s
+  Total Work Time: 1.6s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 1
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should fail with clear error message
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 2ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 10
+    Received: 5
+
+       7 |
+       8 |   test('should fail with clear error message', () => {
+    >  9 |     expect(5).toBe(10);
+         |               ^
+      10 |   });
+      11 |
+      12 |   test('should fail with assertion error', () => {
+
+      at Object.toBe (tests/error-demo.test.js:9:15)
+
+  ✗ should fail with assertion error
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 0ms
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected substring: "world"
+    Received string:    "hello"
+
+      11 |
+      12 |   test('should fail with assertion error', () => {
+    > 13 |     expect('hello').toContain('world');
+         |                     ^
+      14 |   });
+      15 |
+      16 |   test('should fail with object comparison', () => {
+
+      at Object.toContain (tests/error-demo.test.js:13:21)
+
+  ✗ should fail with object comparison
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "age": 25,
+    -   "name": "Jane",
+    +   "age": 30,
+    +   "name": "John",
+      }
+
+      17 |     const actual = { name: 'John', age: 30 };
+      18 |     const expected = { name: 'Jane', age: 25 };
+    > 19 |     expect(actual).toEqual(expected);
+         |                    ^
+      20 |   });
+      21 | });
+      22 |
+
+      at Object.toEqual (tests/error-demo.test.js:19:20)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T08:24:32.044Z
+[2025-08-01T08:24:32.044Z] [1612ms] [PID:26049|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.6s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T08:24:41.997Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T08-24-41-995Z-v8m663
+Started: 2025-08-01T08:24:41.997Z
+Process ID: 26353
+================================================================================
+[2025-08-01T08:24:41.998Z] [3ms] [PID:26353|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T08:24:41.998Z] [3ms] [PID:26353|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-file mode...
+[2025-08-01T08:24:41.999Z] [4ms] [PID:26353|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:24:41.999Z] [4ms] [PID:26353|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - error-demo.test.js
+[2025-08-01T08:24:43.401Z] [1406ms] [PID:26353|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:24:43.402Z] [1407ms] [PID:26353|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T08:24:43.402Z] [1407ms] [PID:26353|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:24:43.403Z] [1408ms] [PID:26353|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T08:24:43.403Z] [1408ms] [PID:26353|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 25.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T08:24:43.403Z] [1408ms] [PID:26353|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 1 passed | 3 failed | 0 skipped | Success Rate: 25.0%
+[2025-08-01T08:24:43.421Z] [1426ms] [PID:26353|MEM:7MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T08-24-41-995Z-v8m663
+Started: 2025-08-01T08:24:41.995Z
+Completed: 2025-08-01T08:24:43.421Z
+Total Duration: 1.4s
+Process ID: 26353
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 1.4s
+  Total Work Time: 1.4s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 1
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should fail with clear error message
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 10
+    Received: 5
+
+       7 |
+       8 |   test('should fail with clear error message', () => {
+    >  9 |     expect(5).toBe(10);
+         |               ^
+      10 |   });
+      11 |
+      12 |   test('should fail with assertion error', () => {
+
+      at Object.toBe (tests/error-demo.test.js:9:15)
+
+  ✗ should fail with assertion error
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 0ms
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected substring: "world"
+    Received string:    "hello"
+
+      11 |
+      12 |   test('should fail with assertion error', () => {
+    > 13 |     expect('hello').toContain('world');
+         |                     ^
+      14 |   });
+      15 |
+      16 |   test('should fail with object comparison', () => {
+
+      at Object.toContain (tests/error-demo.test.js:13:21)
+
+  ✗ should fail with object comparison
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 2ms
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "age": 25,
+    -   "name": "Jane",
+    +   "age": 30,
+    +   "name": "John",
+      }
+
+      17 |     const actual = { name: 'John', age: 30 };
+      18 |     const expected = { name: 'Jane', age: 25 };
+    > 19 |     expect(actual).toEqual(expected);
+         |                    ^
+      20 |   });
+      21 | });
+      22 |
+
+      at Object.toEqual (tests/error-demo.test.js:19:20)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T08:24:43.422Z
+[2025-08-01T08:24:43.422Z] [1427ms] [PID:26353|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.4s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T08:26:07.164Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T08-26-07-162Z-twdy5s
+Started: 2025-08-01T08:26:07.164Z
+Process ID: 26922
+================================================================================
+[2025-08-01T08:26:07.165Z] [3ms] [PID:26922|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T08:26:07.165Z] [3ms] [PID:26922|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-file mode...
+[2025-08-01T08:26:07.165Z] [3ms] [PID:26922|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:26:07.166Z] [4ms] [PID:26922|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - error-demo.test.js
+[2025-08-01T08:26:08.687Z] [1525ms] [PID:26922|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:26:08.687Z] [1525ms] [PID:26922|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T08:26:08.687Z] [1525ms] [PID:26922|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:26:08.688Z] [1526ms] [PID:26922|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T08:26:08.689Z] [1527ms] [PID:26922|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 25.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T08:26:08.689Z] [1527ms] [PID:26922|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 1 passed | 3 failed | 0 skipped | Success Rate: 25.0%
+[2025-08-01T08:26:08.705Z] [1543ms] [PID:26922|MEM:8MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T08-26-07-162Z-twdy5s
+Started: 2025-08-01T08:26:07.162Z
+Completed: 2025-08-01T08:26:08.706Z
+Total Duration: 1.5s
+Process ID: 26922
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 1.5s
+  Total Work Time: 1.5s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 1
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should fail with clear error message
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 10
+    Received: 5
+
+       7 |
+       8 |   test('should fail with clear error message', () => {
+    >  9 |     expect(5).toBe(10);
+         |               ^
+      10 |   });
+      11 |
+      12 |   test('should fail with assertion error', () => {
+
+      at Object.toBe (tests/error-demo.test.js:9:15)
+
+  ✗ should fail with assertion error
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected substring: "world"
+    Received string:    "hello"
+
+      11 |
+      12 |   test('should fail with assertion error', () => {
+    > 13 |     expect('hello').toContain('world');
+         |                     ^
+      14 |   });
+      15 |
+      16 |   test('should fail with object comparison', () => {
+
+      at Object.toContain (tests/error-demo.test.js:13:21)
+
+  ✗ should fail with object comparison
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 2ms
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "age": 25,
+    -   "name": "Jane",
+    +   "age": 30,
+    +   "name": "John",
+      }
+
+      17 |     const actual = { name: 'John', age: 30 };
+      18 |     const expected = { name: 'Jane', age: 25 };
+    > 19 |     expect(actual).toEqual(expected);
+         |                    ^
+      20 |   });
+      21 | });
+      22 |
+
+      at Object.toEqual (tests/error-demo.test.js:19:20)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T08:26:08.706Z
+[2025-08-01T08:26:08.706Z] [1544ms] [PID:26922|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.5s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T08:27:00.771Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T08-27-00-769Z-s0euvm
+Started: 2025-08-01T08:27:00.771Z
+Process ID: 27240
+================================================================================
+[2025-08-01T08:27:00.772Z] [3ms] [PID:27240|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T08:27:00.772Z] [3ms] [PID:27240|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-file mode...
+[2025-08-01T08:27:00.772Z] [3ms] [PID:27240|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:27:00.773Z] [4ms] [PID:27240|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - error-demo.test.js
+[2025-08-01T08:27:02.198Z] [1429ms] [PID:27240|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:27:02.198Z] [1429ms] [PID:27240|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T08:27:02.199Z] [1430ms] [PID:27240|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:27:02.200Z] [1431ms] [PID:27240|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T08:27:02.200Z] [1431ms] [PID:27240|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 25.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T08:27:02.200Z] [1431ms] [PID:27240|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 1 passed | 3 failed | 0 skipped | Success Rate: 25.0%
+[2025-08-01T08:27:02.217Z] [1448ms] [PID:27240|MEM:7MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T08-27-00-769Z-s0euvm
+Started: 2025-08-01T08:27:00.769Z
+Completed: 2025-08-01T08:27:02.218Z
+Total Duration: 1.4s
+Process ID: 27240
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 1.4s
+  Total Work Time: 1.4s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 1
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should fail with clear error message
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 10
+    Received: 5
+
+       7 |
+       8 |   test('should fail with clear error message', () => {
+    >  9 |     expect(5).toBe(10);
+         |               ^
+      10 |   });
+      11 |
+      12 |   test('should fail with assertion error', () => {
+
+      at Object.toBe (tests/error-demo.test.js:9:15)
+
+  ✗ should fail with assertion error
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected substring: "world"
+    Received string:    "hello"
+
+      11 |
+      12 |   test('should fail with assertion error', () => {
+    > 13 |     expect('hello').toContain('world');
+         |                     ^
+      14 |   });
+      15 |
+      16 |   test('should fail with object comparison', () => {
+
+      at Object.toContain (tests/error-demo.test.js:13:21)
+
+  ✗ should fail with object comparison
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 2ms
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "age": 25,
+    -   "name": "Jane",
+    +   "age": 30,
+    +   "name": "John",
+      }
+
+      17 |     const actual = { name: 'John', age: 30 };
+      18 |     const expected = { name: 'Jane', age: 25 };
+    > 19 |     expect(actual).toEqual(expected);
+         |                    ^
+      20 |   });
+      21 | });
+      22 |
+
+      at Object.toEqual (tests/error-demo.test.js:19:20)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T08:27:02.218Z
+[2025-08-01T08:27:02.218Z] [1449ms] [PID:27240|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.4s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T08:27:13.385Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T08-27-13-383Z-9749lx
+Started: 2025-08-01T08:27:13.385Z
+Process ID: 27560
+================================================================================
+[2025-08-01T08:27:13.386Z] [3ms] [PID:27560|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T08:27:13.386Z] [3ms] [PID:27560|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-file mode...
+[2025-08-01T08:27:13.386Z] [3ms] [PID:27560|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:27:13.387Z] [4ms] [PID:27560|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - error-demo.test.js
+[2025-08-01T08:27:14.805Z] [1422ms] [PID:27560|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:27:14.806Z] [1423ms] [PID:27560|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T08:27:14.806Z] [1423ms] [PID:27560|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T08:27:14.807Z] [1424ms] [PID:27560|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T08:27:14.807Z] [1424ms] [PID:27560|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 25.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T08:27:14.807Z] [1424ms] [PID:27560|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 1 passed | 3 failed | 0 skipped | Success Rate: 25.0%
+[2025-08-01T08:27:14.822Z] [1439ms] [PID:27560|MEM:8MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T08-27-13-383Z-9749lx
+Started: 2025-08-01T08:27:13.383Z
+Completed: 2025-08-01T08:27:14.823Z
+Total Duration: 1.4s
+Process ID: 27560
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 1.4s
+  Total Work Time: 1.4s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 1
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should fail with clear error message
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 10
+    Received: 5
+
+       7 |
+       8 |   test('should fail with clear error message', () => {
+    >  9 |     expect(5).toBe(10);
+         |               ^
+      10 |   });
+      11 |
+      12 |   test('should fail with assertion error', () => {
+
+      at Object.toBe (tests/error-demo.test.js:9:15)
+
+  ✗ should fail with assertion error
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: expect(received).toContain(expected) // indexOf
+
+    Expected substring: "world"
+    Received string:    "hello"
+
+      11 |
+      12 |   test('should fail with assertion error', () => {
+    > 13 |     expect('hello').toContain('world');
+         |                     ^
+      14 |   });
+      15 |
+      16 |   test('should fail with object comparison', () => {
+
+      at Object.toContain (tests/error-demo.test.js:13:21)
+
+  ✗ should fail with object comparison
+    File: error-demo.test.js
+    Worker: 0
+    Duration: 2ms
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "age": 25,
+    -   "name": "Jane",
+    +   "age": 30,
+    +   "name": "John",
+      }
+
+      17 |     const actual = { name: 'John', age: 30 };
+      18 |     const expected = { name: 'Jane', age: 25 };
+    > 19 |     expect(actual).toEqual(expected);
+         |                    ^
+      20 |   });
+      21 | });
+      22 |
+
+      at Object.toEqual (tests/error-demo.test.js:19:20)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T08:27:14.824Z
+[2025-08-01T08:27:14.824Z] [1441ms] [PID:27560|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.4s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T09:31:49.536Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T09-31-49-534Z-6sg2bs
+Started: 2025-08-01T09:31:49.536Z
+Process ID: 42732
+================================================================================
+[2025-08-01T09:31:49.537Z] [3ms] [PID:42732|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T09:31:49.538Z] [4ms] [PID:42732|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-test mode...
+[2025-08-01T09:31:49.538Z] [4ms] [PID:42732|MEM:7MB] [INFO] [WORKER-MANAGER] Starting parallel test execution with 4 workers
+[2025-08-01T09:31:49.538Z] [4ms] [PID:42732|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T09:31:49.541Z] [7ms] [PID:42732|MEM:7MB] [INFO] [WORKER-1] Starting work item: test - error-demo.test.js - should fail with clear error message
+[2025-08-01T09:31:49.543Z] [9ms] [PID:42732|MEM:7MB] [INFO] [WORKER-2] Starting work item: test - error-demo.test.js - should fail with assertion error
+[2025-08-01T09:31:49.539Z] [5ms] [PID:42732|MEM:7MB] [INFO] [WORKER-0] Starting work item: test - error-demo.test.js - should pass this test
+[2025-08-01T09:31:49.544Z] [10ms] [PID:42732|MEM:7MB] [INFO] [WORKER-3] Starting work item: test - error-demo.test.js - should fail with object comparison
+[2025-08-01T09:31:51.092Z] [1558ms] [PID:42732|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 1/4 (25%) | ✓ 1 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T09:31:51.093Z] [1559ms] [PID:42732|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-01T09:31:51.094Z] [1560ms] [PID:42732|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 25% | Throughput: 1 tests completed
+[2025-08-01T09:31:51.121Z] [1587ms] [PID:42732|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 2/4 (50%) | ✓ 1 passed | ✗ 1 failed | ○ 0 skipped | ⟳ 2 running
+[2025-08-01T09:31:51.121Z] [1587ms] [PID:42732|MEM:7MB] [INFO] [WORKER-1] Completed with code passed
+[2025-08-01T09:31:51.121Z] [1587ms] [PID:42732|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 50.0% | Completion: 50% | Throughput: 2 tests completed
+[2025-08-01T09:31:51.214Z] [1680ms] [PID:42732|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/4 (75%) | ✓ 1 passed | ✗ 2 failed | ○ 0 skipped | ⟳ 1 running
+[2025-08-01T09:31:51.215Z] [1681ms] [PID:42732|MEM:7MB] [INFO] [WORKER-3] Completed with code passed
+[2025-08-01T09:31:51.216Z] [1682ms] [PID:42732|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 33.3% | Completion: 75% | Throughput: 3 tests completed
+[2025-08-01T09:31:51.311Z] [1777ms] [PID:42732|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T09:31:51.311Z] [1777ms] [PID:42732|MEM:7MB] [INFO] [WORKER-2] Completed with code passed
+[2025-08-01T09:31:51.311Z] [1777ms] [PID:42732|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T09:31:51.312Z] [1778ms] [PID:42732|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T09:31:51.313Z] [1779ms] [PID:42732|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 25.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T09:31:51.313Z] [1779ms] [PID:42732|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 1 passed | 3 failed | 0 skipped | Success Rate: 25.0%
+[2025-08-01T09:31:51.329Z] [1795ms] [PID:42732|MEM:7MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T09-31-49-534Z-6sg2bs
+Started: 2025-08-01T09:31:49.534Z
+Completed: 2025-08-01T09:31:51.330Z
+Total Duration: 1.8s
+Process ID: 42732
+
+WORKER STATISTICS:
+  Total Workers: 4
+  Completed: 4
+  Failed: 0
+  Average Duration: 1.6s
+  Total Work Time: 6.5s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 1
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should fail with clear error message
+    File: error-demo.test.js
+    Worker: 1
+    Duration: 1.3s
+    Error: expect(received).toBe(expected) // Object.is equality
+Expected: 10
+Received: 5
+7 |
+
+  ✗ should fail with object comparison
+    File: error-demo.test.js
+    Worker: 3
+    Duration: 1.3s
+    Error: expect(received).toEqual(expected) // deep equality
+- Expected  - 2
++ Received  + 2
+Object {
+
+  ✗ should fail with assertion error
+    File: error-demo.test.js
+    Worker: 2
+    Duration: 1.2s
+    Error: expect(received).toContain(expected) // indexOf
+Expected substring: "world"
+Received string:    "hello"
+11 |
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T09:31:51.330Z
+[2025-08-01T09:31:51.330Z] [1796ms] [PID:42732|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.8s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T12:39:07.235Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T12-39-07-232Z-gu39q7
+Started: 2025-08-01T12:39:07.235Z
+Process ID: 91363
+================================================================================
+[2025-08-01T12:39:07.237Z] [5ms] [PID:91363|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T12:39:07.237Z] [5ms] [PID:91363|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-test mode...
+[2025-08-01T12:39:07.238Z] [6ms] [PID:91363|MEM:7MB] [INFO] [WORKER-MANAGER] Starting parallel test execution with 4 workers
+[2025-08-01T12:39:07.238Z] [6ms] [PID:91363|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T12:39:07.247Z] [15ms] [PID:91363|MEM:7MB] [INFO] [WORKER-1] Starting work item: test - error-demo.test.js - should fail with clear error message
+[2025-08-01T12:39:07.238Z] [6ms] [PID:91363|MEM:7MB] [INFO] [WORKER-0] Starting work item: test - error-demo.test.js - should pass this test
+[2025-08-01T12:39:07.250Z] [18ms] [PID:91363|MEM:7MB] [INFO] [WORKER-2] Starting work item: test - error-demo.test.js - should fail with assertion error
+[2025-08-01T12:39:07.252Z] [20ms] [PID:91363|MEM:7MB] [INFO] [WORKER-3] Starting work item: test - error-demo.test.js - should fail with object comparison
+[2025-08-01T12:39:07.849Z] [617ms] [PID:91363|MEM:7MB] [WARN] [WORKER-0] Worker timed out while executing test: "should pass this test" in error-demo.test.js (running for 590ms) - Exceeded 600ms timeout limit
+[2025-08-01T12:39:07.850Z] [618ms] [PID:91363|MEM:7MB] [WARN] [WORKER-1] Worker timed out while executing test: "should fail with clear error message" in error-demo.test.js (running for 592ms) - Exceeded 600ms timeout limit
+[2025-08-01T12:39:07.852Z] [620ms] [PID:91363|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 1/4 (25%) | ✓ 0 passed | ✗ 1 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T12:39:07.852Z] [620ms] [PID:91363|MEM:7MB] [INFO] [WORKER-0] Completed with code failed
+[2025-08-01T12:39:07.853Z] [621ms] [PID:91363|MEM:7MB] [WARN] [WORKER-2] Worker timed out while executing test: "should fail with assertion error" in error-demo.test.js (running for 595ms) - Exceeded 600ms timeout limit
+[2025-08-01T12:39:07.853Z] [621ms] [PID:91363|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 2/4 (50%) | ✓ 0 passed | ✗ 2 failed | ○ 0 skipped | ⟳ 2 running
+[2025-08-01T12:39:07.854Z] [622ms] [PID:91363|MEM:7MB] [INFO] [WORKER-1] Completed with code failed
+[2025-08-01T12:39:07.857Z] [625ms] [PID:91363|MEM:7MB] [WARN] [WORKER-3] Worker timed out while executing test: "should fail with object comparison" in error-demo.test.js (running for 599ms) - Exceeded 600ms timeout limit
+[2025-08-01T12:39:07.854Z] [622ms] [PID:91363|MEM:7MB] [WARN] [TIMEOUT-CONTEXT] Other running workers at timeout: Worker 2: "should fail with assertion error" in error-demo.test.js (596ms), Worker 3: "should fail with object comparison" in error-demo.test.js (596ms)
+[2025-08-01T12:39:07.855Z] [623ms] [PID:91363|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/4 (75%) | ✓ 0 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 1 running
+[2025-08-01T12:39:07.855Z] [623ms] [PID:91363|MEM:7MB] [INFO] [WORKER-2] Completed with code failed
+[2025-08-01T12:39:07.857Z] [625ms] [PID:91363|MEM:7MB] [WARN] [TIMEOUT-CONTEXT] Other running workers at timeout: Worker 3: "should fail with object comparison" in error-demo.test.js (599ms)
+[2025-08-01T12:39:07.857Z] [625ms] [PID:91363|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 0.0% | Completion: 25% | Throughput: 1 tests completed
+[2025-08-01T12:39:07.858Z] [626ms] [PID:91363|MEM:7MB] [WARN] [TIMEOUT-CONTEXT] Other running workers at timeout: Worker 3: "should fail with object comparison" in error-demo.test.js (600ms)
+[2025-08-01T12:39:07.865Z] [633ms] [PID:91363|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 0.0% | Completion: 50% | Throughput: 2 tests completed
+[2025-08-01T12:39:07.867Z] [635ms] [PID:91363|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 0 passed | ✗ 4 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T12:39:07.867Z] [635ms] [PID:91363|MEM:7MB] [INFO] [WORKER-3] Completed with code failed
+[2025-08-01T12:39:07.867Z] [635ms] [PID:91363|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 0 passed | ✗ 4 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T12:39:07.878Z] [646ms] [PID:91363|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T12:39:07.878Z] [646ms] [PID:91363|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 0.0% | Completion: 75% | Throughput: 3 tests completed
+[2025-08-01T12:39:07.878Z] [646ms] [PID:91363|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 0.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T12:39:07.878Z] [646ms] [PID:91363|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 0 passed | 4 failed | 0 skipped | Success Rate: 0.0%
+[2025-08-01T12:39:07.901Z] [669ms] [PID:91363|MEM:7MB] [WARN] [TEST-SUMMARY] 4 test(s) failed - check individual test results for details
+[2025-08-01T12:39:07.903Z] [671ms] [PID:91363|MEM:7MB] [ERROR] [EXECUTION] Test execution failed: The "path" argument must be of type string. Received undefined
+
+Session ended: 2025-08-01T12:39:07.903Z
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T13:08:08.906Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T13-08-08-903Z-w9ewk2
+Started: 2025-08-01T13:08:08.906Z
+Process ID: 5263
+================================================================================
+[2025-08-01T13:08:08.907Z] [4ms] [PID:5263|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T13:08:08.907Z] [4ms] [PID:5263|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-test mode...
+[2025-08-01T13:08:08.908Z] [5ms] [PID:5263|MEM:7MB] [INFO] [WORKER-MANAGER] Starting parallel test execution with 4 workers
+[2025-08-01T13:08:08.908Z] [5ms] [PID:5263|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:08:08.925Z] [22ms] [PID:5263|MEM:7MB] [INFO] [WORKER-3] Starting work item: test - beforeall-failure.test.js - should fail due to beforeEach
+[2025-08-01T13:08:08.914Z] [11ms] [PID:5263|MEM:7MB] [INFO] [WORKER-1] Starting work item: test - beforeall-failure.test.js - should also pass if beforeAll worked
+[2025-08-01T13:08:08.918Z] [15ms] [PID:5263|MEM:7MB] [INFO] [WORKER-2] Starting work item: test - beforeall-failure.test.js - should pass normally
+[2025-08-01T13:08:08.908Z] [5ms] [PID:5263|MEM:7MB] [INFO] [WORKER-0] Starting work item: test - beforeall-failure.test.js - should pass if beforeAll worked
+[2025-08-01T13:08:10.495Z] [1592ms] [PID:5263|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 1/4 (25%) | ✓ 0 passed | ✗ 1 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:08:10.495Z] [1592ms] [PID:5263|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-01T13:08:10.495Z] [1592ms] [PID:5263|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 2/4 (50%) | ✓ 0 passed | ✗ 2 failed | ○ 0 skipped | ⟳ 2 running
+[2025-08-01T13:08:10.495Z] [1592ms] [PID:5263|MEM:7MB] [INFO] [WORKER-1] Completed with code passed
+[2025-08-01T13:08:10.496Z] [1593ms] [PID:5263|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 0.0% | Completion: 25% | Throughput: 1 tests completed
+[2025-08-01T13:08:10.496Z] [1593ms] [PID:5263|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 0.0% | Completion: 50% | Throughput: 2 tests completed
+[2025-08-01T13:08:10.501Z] [1598ms] [PID:5263|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/4 (75%) | ✓ 0 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 1 running
+[2025-08-01T13:08:10.501Z] [1598ms] [PID:5263|MEM:7MB] [INFO] [WORKER-3] Completed with code passed
+[2025-08-01T13:08:10.502Z] [1599ms] [PID:5263|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 0.0% | Completion: 75% | Throughput: 3 tests completed
+[2025-08-01T13:08:10.570Z] [1667ms] [PID:5263|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:08:10.570Z] [1667ms] [PID:5263|MEM:7MB] [INFO] [WORKER-2] Completed with code passed
+[2025-08-01T13:08:10.571Z] [1668ms] [PID:5263|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:08:10.572Z] [1669ms] [PID:5263|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T13:08:10.572Z] [1669ms] [PID:5263|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 25.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T13:08:10.572Z] [1669ms] [PID:5263|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 1 passed | 3 failed | 0 skipped | Success Rate: 25.0%
+[2025-08-01T13:08:10.588Z] [1685ms] [PID:5263|MEM:7MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T13-08-08-903Z-w9ewk2
+Started: 2025-08-01T13:08:08.903Z
+Completed: 2025-08-01T13:08:10.589Z
+Total Duration: 1.7s
+Process ID: 5263
+
+WORKER STATISTICS:
+  Total Workers: 4
+  Completed: 4
+  Failed: 0
+  Average Duration: 1.6s
+  Total Work Time: 6.3s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 1
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should pass if beforeAll worked
+    File: beforeall-failure.test.js
+    Worker: 0
+    Duration: 1.4s
+    Error: FAIL examples/beforeall-failure.test.js
+
+  ✗ should also pass if beforeAll worked
+    File: beforeall-failure.test.js
+    Worker: 1
+    Duration: 1.3s
+    Error: FAIL examples/beforeall-failure.test.js
+
+  ✗ should fail due to beforeEach
+    File: beforeall-failure.test.js
+    Worker: 3
+    Duration: 1.2s
+    Error: FAIL examples/beforeall-failure.test.js
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T13:08:10.589Z
+[2025-08-01T13:08:10.590Z] [1687ms] [PID:5263|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.7s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T13:08:25.886Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T13-08-25-884Z-sizrnv
+Started: 2025-08-01T13:08:25.886Z
+Process ID: 5772
+================================================================================
+[2025-08-01T13:08:25.887Z] [3ms] [PID:5772|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T13:08:25.887Z] [3ms] [PID:5772|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T13:08:25.887Z] [3ms] [PID:5772|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T13:08:25.888Z] [4ms] [PID:5772|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:08:25.888Z] [4ms] [PID:5772|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T13:08:25.888Z] [4ms] [PID:5772|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - beforeall-failure.test.js
+[2025-08-01T13:08:27.386Z] [1502ms] [PID:5772|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:08:27.387Z] [1503ms] [PID:5772|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T13:08:27.387Z] [1503ms] [PID:5772|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 1 passed | ✗ 3 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:08:27.388Z] [1504ms] [PID:5772|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T13:08:27.388Z] [1504ms] [PID:5772|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 25.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T13:08:27.388Z] [1504ms] [PID:5772|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 1 passed | 3 failed | 0 skipped | Success Rate: 25.0%
+[2025-08-01T13:08:27.406Z] [1522ms] [PID:5772|MEM:7MB] [WARN] [TEST-SUMMARY] 3 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T13-08-25-884Z-sizrnv
+Started: 2025-08-01T13:08:25.884Z
+Completed: 2025-08-01T13:08:27.407Z
+Total Duration: 1.5s
+Process ID: 5772
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 1.5s
+  Total Work Time: 1.5s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 1
+  Failed: 3
+  Skipped: 0
+
+FAILED TESTS:
+  ✗ should pass if beforeAll worked
+    File: beforeall-failure.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: 3 |   beforeAll(() => {
+      4 |     // This will fail and should be detected by our hook failure logging
+    > 5 |     throw new Error('beforeAll setup failed - database connection error');
+        |           ^
+      6 |   });
+      7 |
+      8 |   test('should pass if beforeAll worked', () => {
+
+      at Object.<anonymous> (examples/beforeall-failure.test.js:5:11)
+
+  ✗ should also pass if beforeAll worked
+    File: beforeall-failure.test.js
+    Worker: 0
+    Duration: 0ms
+    Error: 3 |   beforeAll(() => {
+      4 |     // This will fail and should be detected by our hook failure logging
+    > 5 |     throw new Error('beforeAll setup failed - database connection error');
+        |           ^
+      6 |   });
+      7 |
+      8 |   test('should pass if beforeAll worked', () => {
+
+      at Object.<anonymous> (examples/beforeall-failure.test.js:5:11)
+
+  ✗ should fail due to beforeEach
+    File: beforeall-failure.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: 29 |   beforeEach(() => {
+      30 |     // This will fail and should be detected
+    > 31 |     throw new Error('beforeEach setup failed - mock initialization error');
+         |           ^
+      32 |   });
+      33 |
+      34 |   test('should fail due to beforeEach', () => {
+
+      at Object.<anonymous> (examples/beforeall-failure.test.js:31:11)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T13:08:27.408Z
+[2025-08-01T13:08:27.408Z] [1524ms] [PID:5772|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.5s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T13:17:48.299Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T13-17-48-297Z-8m7gj8
+Started: 2025-08-01T13:17:48.299Z
+Process ID: 11471
+================================================================================
+[2025-08-01T13:17:48.300Z] [3ms] [PID:11471|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-01T13:17:48.300Z] [3ms] [PID:11471|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T13:17:48.300Z] [3ms] [PID:11471|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T13:17:48.301Z] [4ms] [PID:11471|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:17:48.301Z] [4ms] [PID:11471|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T13:17:48.301Z] [4ms] [PID:11471|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - beforeall-timeout.test.js
+[2025-08-01T13:17:53.472Z] [5175ms] [PID:11471|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:17:53.473Z] [5176ms] [PID:11471|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T13:17:53.474Z] [5177ms] [PID:11471|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:17:53.475Z] [5178ms] [PID:11471|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T13:17:53.476Z] [5179ms] [PID:11471|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 0 passed | 0 failed | 0 skipped | Success Rate: 0.0%
+[2025-08-01T13:17:53.498Z] [5201ms] [PID:11471|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 0 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T13-17-48-297Z-8m7gj8
+Started: 2025-08-01T13:17:48.297Z
+Completed: 2025-08-01T13:17:53.498Z
+Total Duration: 5.2s
+Process ID: 11471
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 5.2s
+  Total Work Time: 5.2s
+
+TEST STATISTICS:
+  Total Tests: 0
+  Passed: 0
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T13:17:53.499Z
+[2025-08-01T13:17:53.499Z] [5202ms] [PID:11471|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 5.2s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T13:19:58.248Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T13-19-58-247Z-tjtr1q
+Started: 2025-08-01T13:19:58.248Z
+Process ID: 13054
+================================================================================
+[2025-08-01T13:19:58.249Z] [2ms] [PID:13054|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-01T13:19:58.250Z] [3ms] [PID:13054|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T13:19:58.250Z] [3ms] [PID:13054|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T13:19:58.250Z] [3ms] [PID:13054|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:19:58.250Z] [3ms] [PID:13054|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T13:19:58.250Z] [3ms] [PID:13054|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - beforeall-timeout.test.js
+[2025-08-01T13:20:27.423Z] [29176ms] [PID:13054|MEM:6MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:20:27.424Z] [29177ms] [PID:13054|MEM:6MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T13:20:27.424Z] [29177ms] [PID:13054|MEM:6MB] [INFO] [TEST-STATUS] FINAL: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:20:27.426Z] [29179ms] [PID:13054|MEM:6MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T13:20:27.427Z] [29180ms] [PID:13054|MEM:6MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 0 passed | 0 failed | 0 skipped | Success Rate: 0.0%
+[2025-08-01T13:20:27.448Z] [29201ms] [PID:13054|MEM:6MB] [SUCCESS] [TEST-SUMMARY] All 0 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T13-19-58-247Z-tjtr1q
+Started: 2025-08-01T13:19:58.247Z
+Completed: 2025-08-01T13:20:27.449Z
+Total Duration: 29.2s
+Process ID: 13054
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 29.2s
+  Total Work Time: 29.2s
+
+TEST STATISTICS:
+  Total Tests: 0
+  Passed: 0
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T13:20:27.449Z
+[2025-08-01T13:20:27.449Z] [29202ms] [PID:13054|MEM:6MB] [SUCCESS] [COMPLETION] Test execution completed in 29.2s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T13:21:46.130Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T13-21-46-129Z-v0ir9m
+Started: 2025-08-01T13:21:46.130Z
+Process ID: 16896
+================================================================================
+[2025-08-01T13:21:46.130Z] [1ms] [PID:16896|MEM:7MB] [INFO] [DISCOVERY] Found 1 test files
+[2025-08-01T13:21:46.132Z] [3ms] [PID:16896|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-01T13:21:46.132Z] [3ms] [PID:16896|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T13:21:46.132Z] [3ms] [PID:16896|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T13:21:46.133Z] [4ms] [PID:16896|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:21:46.133Z] [4ms] [PID:16896|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T13:21:46.133Z] [4ms] [PID:16896|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - beforeall-timeout.test.js
+[2025-08-01T13:21:57.295Z] [11166ms] [PID:16896|MEM:6MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:21:57.295Z] [11166ms] [PID:16896|MEM:6MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T13:21:57.296Z] [11167ms] [PID:16896|MEM:6MB] [INFO] [TEST-STATUS] FINAL: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:21:57.297Z] [11168ms] [PID:16896|MEM:6MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T13:21:57.297Z] [11168ms] [PID:16896|MEM:6MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 0 passed | 0 failed | 0 skipped | Success Rate: 0.0%
+[2025-08-01T13:21:57.315Z] [11186ms] [PID:16896|MEM:6MB] [SUCCESS] [TEST-SUMMARY] All 0 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T13-21-46-129Z-v0ir9m
+Started: 2025-08-01T13:21:46.129Z
+Completed: 2025-08-01T13:21:57.316Z
+Total Duration: 11.2s
+Process ID: 16896
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 11.2s
+  Total Work Time: 11.2s
+
+TEST STATISTICS:
+  Total Tests: 0
+  Passed: 0
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T13:21:57.316Z
+[2025-08-01T13:21:57.316Z] [11187ms] [PID:16896|MEM:6MB] [SUCCESS] [COMPLETION] Test execution completed in 11.2s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T13:22:59.065Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T13-22-59-063Z-ldzg8e
+Started: 2025-08-01T13:22:59.065Z
+Process ID: 18145
+================================================================================
+[2025-08-01T13:22:59.066Z] [3ms] [PID:18145|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-01T13:22:59.067Z] [4ms] [PID:18145|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T13:22:59.067Z] [4ms] [PID:18145|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T13:22:59.068Z] [5ms] [PID:18145|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:22:59.068Z] [5ms] [PID:18145|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T13:22:59.069Z] [6ms] [PID:18145|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - beforeall-timeout.test.js
+[2025-08-01T13:23:04.242Z] [5179ms] [PID:18145|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:23:04.242Z] [5179ms] [PID:18145|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T13:23:04.243Z] [5180ms] [PID:18145|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:23:04.244Z] [5181ms] [PID:18145|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T13:23:04.245Z] [5182ms] [PID:18145|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 0 passed | 0 failed | 0 skipped | Success Rate: 0.0%
+[2025-08-01T13:23:04.271Z] [5208ms] [PID:18145|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 0 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T13-22-59-063Z-ldzg8e
+Started: 2025-08-01T13:22:59.063Z
+Completed: 2025-08-01T13:23:04.272Z
+Total Duration: 5.2s
+Process ID: 18145
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 5.2s
+  Total Work Time: 5.2s
+
+TEST STATISTICS:
+  Total Tests: 0
+  Passed: 0
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T13:23:04.273Z
+[2025-08-01T13:23:04.273Z] [5210ms] [PID:18145|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 5.2s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T13:25:31.821Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T13-25-31-819Z-jhbv6s
+Started: 2025-08-01T13:25:31.821Z
+Process ID: 25842
+================================================================================
+[2025-08-01T13:25:31.822Z] [3ms] [PID:25842|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-01T13:25:31.822Z] [3ms] [PID:25842|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T13:25:31.822Z] [3ms] [PID:25842|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T13:25:31.822Z] [3ms] [PID:25842|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:25:31.822Z] [3ms] [PID:25842|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T13:25:31.823Z] [4ms] [PID:25842|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - beforeall-timeout.test.js
+[2025-08-01T13:25:40.014Z] [8195ms] [PID:25842|MEM:6MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:25:40.015Z] [8196ms] [PID:25842|MEM:6MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T13:25:40.016Z] [8197ms] [PID:25842|MEM:6MB] [INFO] [TEST-STATUS] FINAL: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:25:40.017Z] [8198ms] [PID:25842|MEM:6MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T13:25:40.018Z] [8199ms] [PID:25842|MEM:6MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 0 passed | 0 failed | 0 skipped | Success Rate: 0.0%
+[2025-08-01T13:25:40.044Z] [8225ms] [PID:25842|MEM:6MB] [SUCCESS] [TEST-SUMMARY] All 0 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T13-25-31-819Z-jhbv6s
+Started: 2025-08-01T13:25:31.819Z
+Completed: 2025-08-01T13:25:40.045Z
+Total Duration: 8.2s
+Process ID: 25842
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 8.2s
+  Total Work Time: 8.2s
+
+TEST STATISTICS:
+  Total Tests: 0
+  Passed: 0
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T13:25:40.045Z
+[2025-08-01T13:25:40.045Z] [8226ms] [PID:25842|MEM:6MB] [SUCCESS] [COMPLETION] Test execution completed in 8.2s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T13:25:54.367Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T13-25-54-365Z-2lwqix
+Started: 2025-08-01T13:25:54.367Z
+Process ID: 26219
+================================================================================
+[2025-08-01T13:25:54.368Z] [3ms] [PID:26219|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-01T13:25:54.368Z] [3ms] [PID:26219|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T13:25:54.368Z] [3ms] [PID:26219|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T13:25:54.368Z] [3ms] [PID:26219|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T13:25:54.368Z] [3ms] [PID:26219|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T13:25:54.369Z] [4ms] [PID:26219|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - beforeall-timeout.test.js
+[2025-08-01T13:25:58.344Z] [3979ms] [PID:26219|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:25:58.344Z] [3979ms] [PID:26219|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-01T13:25:58.345Z] [3980ms] [PID:26219|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 3 running
+[2025-08-01T13:25:58.346Z] [3981ms] [PID:26219|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T13:25:58.347Z] [3982ms] [PID:26219|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 0 passed | 0 failed | 0 skipped | Success Rate: 0.0%
+[2025-08-01T13:25:58.368Z] [4003ms] [PID:26219|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 0 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T13-25-54-365Z-2lwqix
+Started: 2025-08-01T13:25:54.365Z
+Completed: 2025-08-01T13:25:58.369Z
+Total Duration: 4.0s
+Process ID: 26219
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 4.0s
+  Total Work Time: 4.0s
+
+TEST STATISTICS:
+  Total Tests: 0
+  Passed: 0
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T13:25:58.370Z
+[2025-08-01T13:25:58.370Z] [4005ms] [PID:26219|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 4.0s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T14:37:27.700Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T14-37-27-699Z-wdznte
+Started: 2025-08-01T14:37:27.700Z
+Process ID: 47354
+================================================================================
+[2025-08-01T14:37:27.702Z] [3ms] [PID:47354|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-01T14:37:27.703Z] [4ms] [PID:47354|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T14:37:27.703Z] [4ms] [PID:47354|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T14:37:27.703Z] [4ms] [PID:47354|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:37:27.703Z] [4ms] [PID:47354|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T14:37:27.703Z] [4ms] [PID:47354|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-01T14:37:29.375Z] [1676ms] [PID:47354|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:37:29.375Z] [1676ms] [PID:47354|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-01T14:37:29.376Z] [1677ms] [PID:47354|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:37:29.377Z] [1678ms] [PID:47354|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T14:37:29.377Z] [1678ms] [PID:47354|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 3 tests completed
+[2025-08-01T14:37:29.378Z] [1679ms] [PID:47354|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 3 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-01T14:37:29.395Z] [1696ms] [PID:47354|MEM:8MB] [SUCCESS] [TEST-SUMMARY] All 3 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T14-37-27-699Z-wdznte
+Started: 2025-08-01T14:37:27.699Z
+Completed: 2025-08-01T14:37:29.396Z
+Total Duration: 1.7s
+Process ID: 47354
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 1.7s
+  Total Work Time: 1.7s
+
+TEST STATISTICS:
+  Total Tests: 3
+  Passed: 3
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T14:37:29.396Z
+[2025-08-01T14:37:29.396Z] [1697ms] [PID:47354|MEM:8MB] [SUCCESS] [COMPLETION] Test execution completed in 1.7s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T14:37:45.103Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T14-37-45-101Z-t3mar5
+Started: 2025-08-01T14:37:45.103Z
+Process ID: 47618
+================================================================================
+[2025-08-01T14:37:45.104Z] [3ms] [PID:47618|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T14:37:45.104Z] [3ms] [PID:47618|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T14:37:45.104Z] [3ms] [PID:47618|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T14:37:45.105Z] [4ms] [PID:47618|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:37:45.106Z] [5ms] [PID:47618|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T14:37:45.106Z] [5ms] [PID:47618|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - concurrent-tests.test.js
+[2025-08-01T14:37:46.772Z] [1671ms] [PID:47618|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 4 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:37:46.772Z] [1671ms] [PID:47618|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-01T14:37:46.773Z] [1672ms] [PID:47618|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 4 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:37:46.774Z] [1673ms] [PID:47618|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T14:37:46.774Z] [1673ms] [PID:47618|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T14:37:46.774Z] [1673ms] [PID:47618|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 4 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-01T14:37:46.790Z] [1689ms] [PID:47618|MEM:8MB] [SUCCESS] [TEST-SUMMARY] All 4 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T14-37-45-101Z-t3mar5
+Started: 2025-08-01T14:37:45.101Z
+Completed: 2025-08-01T14:37:46.791Z
+Total Duration: 1.7s
+Process ID: 47618
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 1.7s
+  Total Work Time: 1.7s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 4
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T14:37:46.792Z
+[2025-08-01T14:37:46.792Z] [1691ms] [PID:47618|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.7s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T14:41:03.401Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T14-41-03-400Z-9s160n
+Started: 2025-08-01T14:41:03.401Z
+Process ID: 48154
+================================================================================
+[2025-08-01T14:41:03.402Z] [2ms] [PID:48154|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T14:41:03.403Z] [3ms] [PID:48154|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T14:41:03.403Z] [3ms] [PID:48154|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T14:41:03.403Z] [3ms] [PID:48154|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:41:03.403Z] [3ms] [PID:48154|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T14:41:03.404Z] [4ms] [PID:48154|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - sequential-timing-test.test.js
+[2025-08-01T14:41:05.952Z] [2552ms] [PID:48154|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 4 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:41:05.953Z] [2553ms] [PID:48154|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-01T14:41:05.953Z] [2553ms] [PID:48154|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 4 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:41:05.955Z] [2555ms] [PID:48154|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T14:41:05.955Z] [2555ms] [PID:48154|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T14:41:05.955Z] [2555ms] [PID:48154|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 4 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-01T14:41:05.975Z] [2575ms] [PID:48154|MEM:8MB] [SUCCESS] [TEST-SUMMARY] All 4 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T14-41-03-400Z-9s160n
+Started: 2025-08-01T14:41:03.400Z
+Completed: 2025-08-01T14:41:05.975Z
+Total Duration: 2.6s
+Process ID: 48154
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 2.5s
+  Total Work Time: 2.5s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 4
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T14:41:05.976Z
+[2025-08-01T14:41:05.977Z] [2577ms] [PID:48154|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 2.6s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-01T14:41:51.858Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-01T14-41-51-856Z-q57gx9
+Started: 2025-08-01T14:41:51.858Z
+Process ID: 48475
+================================================================================
+[2025-08-01T14:41:51.859Z] [3ms] [PID:48475|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-01T14:41:51.859Z] [3ms] [PID:48475|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-01T14:41:51.859Z] [3ms] [PID:48475|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-01T14:41:51.860Z] [4ms] [PID:48475|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:41:51.860Z] [4ms] [PID:48475|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-01T14:41:51.860Z] [4ms] [PID:48475|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - sequential-timing-test.test.js
+[2025-08-01T14:41:53.990Z] [2134ms] [PID:48475|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 4 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:41:53.991Z] [2135ms] [PID:48475|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-01T14:41:53.991Z] [2135ms] [PID:48475|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 4 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-01T14:41:53.993Z] [2137ms] [PID:48475|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-01T14:41:53.993Z] [2137ms] [PID:48475|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-01T14:41:53.993Z] [2137ms] [PID:48475|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 4 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-01T14:41:54.011Z] [2155ms] [PID:48475|MEM:8MB] [SUCCESS] [TEST-SUMMARY] All 4 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-01T14-41-51-856Z-q57gx9
+Started: 2025-08-01T14:41:51.856Z
+Completed: 2025-08-01T14:41:54.011Z
+Total Duration: 2.2s
+Process ID: 48475
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 2.1s
+  Total Work Time: 2.1s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 4
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-01T14:41:54.012Z
+[2025-08-01T14:41:54.013Z] [2157ms] [PID:48475|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 2.1s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-02T06:43:50.608Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-02T06-43-50-607Z-ds3hq9
+Started: 2025-08-02T06:43:50.608Z
+Process ID: 65247
+================================================================================
+[2025-08-02T06:43:50.610Z] [3ms] [PID:65247|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-02T06:43:50.610Z] [3ms] [PID:65247|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-02T06:43:50.610Z] [3ms] [PID:65247|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-02T06:43:50.610Z] [3ms] [PID:65247|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-02T06:43:50.610Z] [3ms] [PID:65247|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-02T06:43:50.611Z] [4ms] [PID:65247|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-02T06:43:52.244Z] [1637ms] [PID:65247|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-02T06:43:52.244Z] [1637ms] [PID:65247|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-02T06:43:52.245Z] [1638ms] [PID:65247|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-02T06:43:52.246Z] [1639ms] [PID:65247|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-02T06:43:52.246Z] [1639ms] [PID:65247|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 3 tests completed
+[2025-08-02T06:43:52.246Z] [1639ms] [PID:65247|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 3 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-02T06:43:52.265Z] [1658ms] [PID:65247|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 3 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-02T06-43-50-607Z-ds3hq9
+Started: 2025-08-02T06:43:50.607Z
+Completed: 2025-08-02T06:43:52.265Z
+Total Duration: 1.7s
+Process ID: 65247
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 1.6s
+  Total Work Time: 1.6s
+
+TEST STATISTICS:
+  Total Tests: 3
+  Passed: 3
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-02T06:43:52.266Z
+[2025-08-02T06:43:52.266Z] [1659ms] [PID:65247|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.6s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-02T06:45:04.396Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-02T06-45-04-395Z-m5k47a
+Started: 2025-08-02T06:45:04.396Z
+Process ID: 65549
+================================================================================
+[2025-08-02T06:45:04.398Z] [3ms] [PID:65549|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-02T06:45:04.398Z] [3ms] [PID:65549|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-02T06:45:04.398Z] [3ms] [PID:65549|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-02T06:45:04.398Z] [3ms] [PID:65549|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-02T06:45:04.398Z] [3ms] [PID:65549|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-02T06:45:04.399Z] [4ms] [PID:65549|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-02T06:45:05.925Z] [1530ms] [PID:65549|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-02T06:45:05.925Z] [1530ms] [PID:65549|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-02T06:45:05.926Z] [1531ms] [PID:65549|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-02T06:45:05.926Z] [1531ms] [PID:65549|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-02T06:45:05.927Z] [1532ms] [PID:65549|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 3 tests completed
+[2025-08-02T06:45:05.927Z] [1532ms] [PID:65549|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 3 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-02T06:45:05.943Z] [1548ms] [PID:65549|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 3 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-02T06-45-04-395Z-m5k47a
+Started: 2025-08-02T06:45:04.395Z
+Completed: 2025-08-02T06:45:05.944Z
+Total Duration: 1.5s
+Process ID: 65549
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 1.5s
+  Total Work Time: 1.5s
+
+TEST STATISTICS:
+  Total Tests: 3
+  Passed: 3
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-02T06:45:05.944Z
+[2025-08-02T06:45:05.944Z] [1549ms] [PID:65549|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.5s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-02T06:45:36.398Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-02T06-45-36-396Z-0y2dnt
+Started: 2025-08-02T06:45:36.398Z
+Process ID: 65830
+================================================================================
+[2025-08-02T06:45:36.399Z] [3ms] [PID:65830|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 5 tests across 1 files
+[2025-08-02T06:45:36.399Z] [3ms] [PID:65830|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-02T06:45:36.400Z] [4ms] [PID:65830|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-02T06:45:36.400Z] [4ms] [PID:65830|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/5 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-02T06:45:36.400Z] [4ms] [PID:65830|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-02T06:45:36.400Z] [4ms] [PID:65830|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - concurrent-timing.test.js
+[2025-08-02T06:45:38.981Z] [2585ms] [PID:65830|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 5/5 (100%) | ✓ 5 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-02T06:45:38.982Z] [2586ms] [PID:65830|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-02T06:45:38.983Z] [2587ms] [PID:65830|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 5/5 (100%) | ✓ 5 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-02T06:45:38.985Z] [2589ms] [PID:65830|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-02T06:45:38.986Z] [2590ms] [PID:65830|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 5 tests completed
+[2025-08-02T06:45:38.986Z] [2590ms] [PID:65830|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 5 total tests | 5 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-02T06:45:39.090Z] [2695ms] [PID:65830|MEM:8MB] [SUCCESS] [TEST-SUMMARY] All 5 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-02T06-45-36-396Z-0y2dnt
+Started: 2025-08-02T06:45:36.396Z
+Completed: 2025-08-02T06:45:39.095Z
+Total Duration: 2.7s
+Process ID: 65830
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 2.6s
+  Total Work Time: 2.6s
+
+TEST STATISTICS:
+  Total Tests: 5
+  Passed: 5
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-02T06:45:39.100Z
+[2025-08-02T06:45:39.101Z] [2705ms] [PID:65830|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 2.6s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-04T07:12:59.332Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-04T07-12-59-330Z-gq7q5i
+Started: 2025-08-04T07:12:59.332Z
+Process ID: 10986
+================================================================================
+[2025-08-04T07:12:59.333Z] [3ms] [PID:10986|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 2 tests across 1 files
+[2025-08-04T07:12:59.334Z] [4ms] [PID:10986|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-04T07:12:59.334Z] [4ms] [PID:10986|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-04T07:12:59.334Z] [4ms] [PID:10986|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/2 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-04T07:12:59.334Z] [4ms] [PID:10986|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-04T07:12:59.335Z] [5ms] [PID:10986|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - hook-timing-test.test.js
+[2025-08-04T07:13:01.497Z] [2167ms] [PID:10986|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 2/2 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-04T07:13:01.498Z] [2168ms] [PID:10986|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-04T07:13:01.498Z] [2168ms] [PID:10986|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 2/2 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-04T07:13:01.500Z] [2170ms] [PID:10986|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-04T07:13:01.501Z] [2171ms] [PID:10986|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 2 tests completed
+[2025-08-04T07:13:01.501Z] [2171ms] [PID:10986|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 2 total tests | 2 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-04T07:13:01.527Z] [2197ms] [PID:10986|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 2 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-04T07-12-59-330Z-gq7q5i
+Started: 2025-08-04T07:12:59.330Z
+Completed: 2025-08-04T07:13:01.527Z
+Total Duration: 2.2s
+Process ID: 10986
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 2.2s
+  Total Work Time: 2.2s
+
+TEST STATISTICS:
+  Total Tests: 2
+  Passed: 2
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-04T07:13:01.528Z
+[2025-08-04T07:13:01.528Z] [2198ms] [PID:10986|MEM:8MB] [SUCCESS] [COMPLETION] Test execution completed in 2.2s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-04T07:17:10.853Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-04T07-17-10-851Z-hschto
+Started: 2025-08-04T07:17:10.853Z
+Process ID: 11464
+================================================================================
+[2025-08-04T07:17:10.854Z] [3ms] [PID:11464|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 2 tests across 1 files
+[2025-08-04T07:17:10.854Z] [3ms] [PID:11464|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-04T07:17:10.854Z] [3ms] [PID:11464|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-04T07:17:10.855Z] [4ms] [PID:11464|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/2 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-04T07:17:10.855Z] [4ms] [PID:11464|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-04T07:17:10.855Z] [4ms] [PID:11464|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - hook-timing-test.test.js
+[2025-08-04T07:17:12.975Z] [2124ms] [PID:11464|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 2/2 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-04T07:17:12.975Z] [2124ms] [PID:11464|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-04T07:17:12.976Z] [2125ms] [PID:11464|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 2/2 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-04T07:17:12.978Z] [2127ms] [PID:11464|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-04T07:17:12.978Z] [2127ms] [PID:11464|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 2 tests completed
+[2025-08-04T07:17:12.978Z] [2127ms] [PID:11464|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 2 total tests | 2 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-04T07:17:12.996Z] [2145ms] [PID:11464|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 2 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-04T07-17-10-851Z-hschto
+Started: 2025-08-04T07:17:10.851Z
+Completed: 2025-08-04T07:17:12.997Z
+Total Duration: 2.1s
+Process ID: 11464
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 2.1s
+  Total Work Time: 2.1s
+
+TEST STATISTICS:
+  Total Tests: 2
+  Passed: 2
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-04T07:17:12.998Z
+[2025-08-04T07:17:12.999Z] [2148ms] [PID:11464|MEM:8MB] [SUCCESS] [COMPLETION] Test execution completed in 2.1s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-04T07:19:59.748Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-04T07-19-59-746Z-dvxbwd
+Started: 2025-08-04T07:19:59.748Z
+Process ID: 11829
+================================================================================
+[2025-08-04T07:19:59.749Z] [3ms] [PID:11829|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 2 tests across 1 files
+[2025-08-04T07:19:59.749Z] [3ms] [PID:11829|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-04T07:19:59.749Z] [3ms] [PID:11829|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-04T07:19:59.750Z] [4ms] [PID:11829|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/2 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-04T07:19:59.750Z] [4ms] [PID:11829|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-04T07:19:59.750Z] [4ms] [PID:11829|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - hook-timing-test.test.js
+[2025-08-04T07:20:01.854Z] [2108ms] [PID:11829|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 2/2 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-04T07:20:01.855Z] [2109ms] [PID:11829|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-04T07:20:01.855Z] [2109ms] [PID:11829|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 2/2 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-04T07:20:01.857Z] [2111ms] [PID:11829|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-04T07:20:01.858Z] [2112ms] [PID:11829|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 2 tests completed
+[2025-08-04T07:20:01.858Z] [2112ms] [PID:11829|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 2 total tests | 2 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-04T07:20:01.878Z] [2132ms] [PID:11829|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 2 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-04T07-19-59-746Z-dvxbwd
+Started: 2025-08-04T07:19:59.746Z
+Completed: 2025-08-04T07:20:01.879Z
+Total Duration: 2.1s
+Process ID: 11829
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 2.1s
+  Total Work Time: 2.1s
+
+TEST STATISTICS:
+  Total Tests: 2
+  Passed: 2
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-04T07:20:01.879Z
+[2025-08-04T07:20:01.880Z] [2134ms] [PID:11829|MEM:8MB] [SUCCESS] [COMPLETION] Test execution completed in 2.1s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-05T11:00:35.580Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-05T11-00-35-578Z-jz5y0t
+Started: 2025-08-05T11:00:35.580Z
+Process ID: 74140
+================================================================================
+[2025-08-05T11:00:35.581Z] [3ms] [PID:74140|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-05T11:00:35.582Z] [4ms] [PID:74140|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-05T11:00:35.582Z] [4ms] [PID:74140|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-05T11:00:35.582Z] [4ms] [PID:74140|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-05T11:00:35.582Z] [4ms] [PID:74140|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-05T11:00:35.583Z] [5ms] [PID:74140|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - skipped-tests.test.js
+[2025-08-05T11:00:37.644Z] [2066ms] [PID:74140|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-05T11:00:37.644Z] [2066ms] [PID:74140|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-05T11:00:37.645Z] [2067ms] [PID:74140|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-05T11:00:37.646Z] [2068ms] [PID:74140|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-05T11:00:37.647Z] [2069ms] [PID:74140|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 50.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-05T11:00:37.647Z] [2069ms] [PID:74140|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 2 passed | 0 failed | 2 skipped | Success Rate: 50.0%
+[2025-08-05T11:00:37.666Z] [2088ms] [PID:74140|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 2 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-05T11-00-35-578Z-jz5y0t
+Started: 2025-08-05T11:00:35.578Z
+Completed: 2025-08-05T11:00:37.667Z
+Total Duration: 2.1s
+Process ID: 74140
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 2.1s
+  Total Work Time: 2.1s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 2
+  Failed: 0
+  Skipped: 2
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-05T11:00:37.668Z
+[2025-08-05T11:00:37.668Z] [2090ms] [PID:74140|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 2.1s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-05T14:20:41.462Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-05T14-20-41-460Z-0oi3h5
+Started: 2025-08-05T14:20:41.462Z
+Process ID: 6286
+================================================================================
+[2025-08-05T14:20:41.463Z] [3ms] [PID:6286|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-05T14:20:41.463Z] [3ms] [PID:6286|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-05T14:20:41.463Z] [3ms] [PID:6286|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-05T14:20:41.464Z] [4ms] [PID:6286|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-05T14:20:41.464Z] [4ms] [PID:6286|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-05T14:20:41.464Z] [4ms] [PID:6286|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - skipped-tests.test.js
+[2025-08-05T14:20:43.368Z] [1908ms] [PID:6286|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-05T14:20:43.368Z] [1908ms] [PID:6286|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-05T14:20:43.369Z] [1909ms] [PID:6286|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-05T14:20:43.370Z] [1910ms] [PID:6286|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-05T14:20:43.370Z] [1910ms] [PID:6286|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 50.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-05T14:20:43.371Z] [1911ms] [PID:6286|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 2 passed | 0 failed | 2 skipped | Success Rate: 50.0%
+[2025-08-05T14:20:43.390Z] [1930ms] [PID:6286|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 2 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-05T14-20-41-460Z-0oi3h5
+Started: 2025-08-05T14:20:41.460Z
+Completed: 2025-08-05T14:20:43.391Z
+Total Duration: 1.9s
+Process ID: 6286
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 1.9s
+  Total Work Time: 1.9s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 2
+  Failed: 0
+  Skipped: 2
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-05T14:20:43.392Z
+[2025-08-05T14:20:43.392Z] [1932ms] [PID:6286|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.9s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-05T14:21:22.783Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-05T14-21-22-780Z-q1ycqk
+Started: 2025-08-05T14:21:22.783Z
+Process ID: 6715
+================================================================================
+[2025-08-05T14:21:22.784Z] [4ms] [PID:6715|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-05T14:21:22.784Z] [4ms] [PID:6715|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel mode...
+[2025-08-05T14:21:22.785Z] [5ms] [PID:6715|MEM:7MB] [ERROR] [EXECUTION] Test execution failed: Unknown execution mode: parallel
+
+Session ended: 2025-08-05T14:21:22.785Z
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-05T14:21:31.061Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-05T14-21-31-059Z-qmuuu0
+Started: 2025-08-05T14:21:31.061Z
+Process ID: 6887
+================================================================================
+[2025-08-05T14:21:31.062Z] [3ms] [PID:6887|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 4 tests across 1 files
+[2025-08-05T14:21:31.062Z] [3ms] [PID:6887|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in parallel-file mode...
+[2025-08-05T14:21:31.062Z] [3ms] [PID:6887|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/4 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-05T14:21:31.062Z] [3ms] [PID:6887|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - skipped-tests.test.js
+[2025-08-05T14:21:32.487Z] [1428ms] [PID:6887|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 4/4 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-05T14:21:32.488Z] [1429ms] [PID:6887|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-05T14:21:32.488Z] [1429ms] [PID:6887|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 4/4 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-05T14:21:32.489Z] [1430ms] [PID:6887|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-05T14:21:32.489Z] [1430ms] [PID:6887|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 50.0% | Completion: 100% | Throughput: 4 tests completed
+[2025-08-05T14:21:32.489Z] [1430ms] [PID:6887|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 4 total tests | 2 passed | 0 failed | 2 skipped | Success Rate: 50.0%
+[2025-08-05T14:21:32.503Z] [1444ms] [PID:6887|MEM:8MB] [SUCCESS] [TEST-SUMMARY] All 2 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-05T14-21-31-059Z-qmuuu0
+Started: 2025-08-05T14:21:31.059Z
+Completed: 2025-08-05T14:21:32.503Z
+Total Duration: 1.4s
+Process ID: 6887
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 1.4s
+  Total Work Time: 1.4s
+
+TEST STATISTICS:
+  Total Tests: 4
+  Passed: 2
+  Failed: 0
+  Skipped: 2
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-05T14:21:32.504Z
+[2025-08-05T14:21:32.504Z] [1445ms] [PID:6887|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.4s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-05T14:22:34.551Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-05T14-22-34-549Z-is67t4
+Started: 2025-08-05T14:22:34.551Z
+Process ID: 7173
+================================================================================
+[2025-08-05T14:22:34.552Z] [3ms] [PID:7173|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 6 tests across 1 files
+[2025-08-05T14:22:34.553Z] [4ms] [PID:7173|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-05T14:22:34.553Z] [4ms] [PID:7173|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-05T14:22:34.553Z] [4ms] [PID:7173|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/6 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-05T14:22:34.553Z] [4ms] [PID:7173|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-05T14:22:34.554Z] [5ms] [PID:7173|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - mixed-results.test.js
+[2025-08-05T14:22:36.193Z] [1644ms] [PID:7173|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 6/6 (100%) | ✓ 2 passed | ✗ 2 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-05T14:22:36.193Z] [1644ms] [PID:7173|MEM:7MB] [INFO] [WORKER-0] Completed with code 1
+[2025-08-05T14:22:36.194Z] [1645ms] [PID:7173|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 6/6 (100%) | ✓ 2 passed | ✗ 2 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-05T14:22:36.195Z] [1646ms] [PID:7173|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-05T14:22:36.196Z] [1647ms] [PID:7173|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 33.3% | Completion: 100% | Throughput: 6 tests completed
+[2025-08-05T14:22:36.196Z] [1647ms] [PID:7173|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 6 total tests | 2 passed | 2 failed | 2 skipped | Success Rate: 33.3%
+[2025-08-05T14:22:36.214Z] [1665ms] [PID:7173|MEM:7MB] [WARN] [TEST-SUMMARY] 2 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-05T14-22-34-549Z-is67t4
+Started: 2025-08-05T14:22:34.549Z
+Completed: 2025-08-05T14:22:36.214Z
+Total Duration: 1.7s
+Process ID: 7173
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 0
+  Failed: 1
+  Average Duration: 1.6s
+  Total Work Time: 1.6s
+
+TEST STATISTICS:
+  Total Tests: 6
+  Passed: 2
+  Failed: 2
+  Skipped: 2
+
+FAILED TESTS:
+  ✗ should fail
+    File: mixed-results.test.js
+    Worker: 0
+    Duration: 2ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+       5 |
+       6 |   test('should fail', () => {
+    >  7 |     expect(true).toBe(false);
+         |                  ^
+       8 |   });
+       9 |
+      10 |   test.skip('should be skipped', () => {
+
+      at Object.toBe (examples/mixed-results.test.js:7:18)
+
+  ✗ should also fail
+    File: mixed-results.test.js
+    Worker: 0
+    Duration: 1ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "world"
+    Received: "hello"
+
+      21 |
+      22 |   test('should also fail', () => {
+    > 23 |     expect('hello').toBe('world');
+         |                     ^
+      24 |   });
+      25 | });
+      26 |
+
+      at Object.toBe (examples/mixed-results.test.js:23:21)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-05T14:22:36.215Z
+[2025-08-05T14:22:36.215Z] [1666ms] [PID:7173|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 1.6s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-07T18:14:40.821Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-07T18-14-40-817Z-u43bjm
+Started: 2025-08-07T18:14:40.821Z
+Process ID: 41822
+================================================================================
+[2025-08-07T18:14:40.822Z] [5ms] [PID:41822|MEM:7MB] [INFO] [DISCOVERY] Found 3 test files
+[2025-08-07T18:14:40.829Z] [12ms] [PID:41822|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 11 tests across 3 files
+[2025-08-07T18:14:40.829Z] [12ms] [PID:41822|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-07T18:14:40.829Z] [12ms] [PID:41822|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-07T18:14:40.830Z] [13ms] [PID:41822|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/11 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:14:40.830Z] [13ms] [PID:41822|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-07T18:14:40.830Z] [13ms] [PID:41822|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-07T18:14:40.833Z] [16ms] [PID:41822|MEM:8MB] [INFO] [WORKER-1] Starting work item: native-parallel - mixed-results.test.js
+[2025-08-07T18:14:40.836Z] [19ms] [PID:41822|MEM:8MB] [INFO] [WORKER-2] Starting work item: native-parallel - hook-timing-test.test.js
+[2025-08-07T18:14:45.477Z] [4660ms] [PID:41822|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/11 (27%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 8 running
+[2025-08-07T18:14:45.477Z] [4660ms] [PID:41822|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-07T18:14:45.477Z] [4660ms] [PID:41822|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 27% | Throughput: 3 tests completed
+[2025-08-07T18:14:48.042Z] [7225ms] [PID:41822|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 5/11 (45%) | ✓ 5 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 6 running
+[2025-08-07T18:14:48.042Z] [7225ms] [PID:41822|MEM:7MB] [INFO] [WORKER-2] Completed with code passed
+[2025-08-07T18:14:48.042Z] [7225ms] [PID:41822|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 45% | Throughput: 5 tests completed
+[2025-08-07T18:14:48.072Z] [7255ms] [PID:41822|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 11/11 (100%) | ✓ 7 passed | ✗ 2 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-07T18:14:48.073Z] [7256ms] [PID:41822|MEM:7MB] [INFO] [WORKER-1] Completed with code 1
+[2025-08-07T18:14:48.073Z] [7256ms] [PID:41822|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 11/11 (100%) | ✓ 7 passed | ✗ 2 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-07T18:14:48.074Z] [7257ms] [PID:41822|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-07T18:14:48.075Z] [7258ms] [PID:41822|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 63.6% | Completion: 100% | Throughput: 11 tests completed
+[2025-08-07T18:14:48.075Z] [7258ms] [PID:41822|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 11 total tests | 7 passed | 2 failed | 2 skipped | Success Rate: 63.6%
+[2025-08-07T18:14:48.092Z] [7275ms] [PID:41822|MEM:8MB] [WARN] [TEST-SUMMARY] 2 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-07T18-14-40-817Z-u43bjm
+Started: 2025-08-07T18:14:40.817Z
+Completed: 2025-08-07T18:14:48.092Z
+Total Duration: 7.3s
+Process ID: 41822
+
+WORKER STATISTICS:
+  Total Workers: 3
+  Completed: 2
+  Failed: 1
+  Average Duration: 6.4s
+  Total Work Time: 19.1s
+
+TEST STATISTICS:
+  Total Tests: 11
+  Passed: 7
+  Failed: 2
+  Skipped: 2
+
+FAILED TESTS:
+  ✗ should fail
+    File: mixed-results.test.js
+    Worker: 1
+    Duration: 3ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+       5 |
+       6 |   test('should fail', () => {
+    >  7 |     expect(true).toBe(false);
+         |                  ^
+       8 |   });
+       9 |
+      10 |   test.skip('should be skipped', () => {
+
+      at Object.toBe (examples/mixed-results.test.js:7:18)
+
+  ✗ should also fail
+    File: mixed-results.test.js
+    Worker: 1
+    Duration: 1ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "world"
+    Received: "hello"
+
+      21 |
+      22 |   test('should also fail', () => {
+    > 23 |     expect('hello').toBe('world');
+         |                     ^
+      24 |   });
+      25 | });
+      26 |
+
+      at Object.toBe (examples/mixed-results.test.js:23:21)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-07T18:14:48.093Z
+[2025-08-07T18:14:48.093Z] [7276ms] [PID:41822|MEM:8MB] [SUCCESS] [COMPLETION] Test execution completed in 7.3s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-07T18:15:37.825Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-07T18-15-37-821Z-8m3bwv
+Started: 2025-08-07T18:15:37.825Z
+Process ID: 42285
+================================================================================
+[2025-08-07T18:15:37.826Z] [5ms] [PID:42285|MEM:7MB] [INFO] [DISCOVERY] Found 3 test files
+[2025-08-07T18:15:37.829Z] [8ms] [PID:42285|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 11 tests across 3 files
+[2025-08-07T18:15:37.829Z] [8ms] [PID:42285|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-07T18:15:37.829Z] [8ms] [PID:42285|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-07T18:15:37.830Z] [9ms] [PID:42285|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/11 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:15:37.830Z] [9ms] [PID:42285|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-07T18:15:37.830Z] [9ms] [PID:42285|MEM:8MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-07T18:15:37.834Z] [13ms] [PID:42285|MEM:8MB] [INFO] [WORKER-2] Starting work item: native-parallel - hook-timing-test.test.js
+[2025-08-07T18:15:37.833Z] [12ms] [PID:42285|MEM:8MB] [INFO] [WORKER-1] Starting work item: native-parallel - mixed-results.test.js
+[2025-08-07T18:15:42.808Z] [4987ms] [PID:42285|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/11 (27%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 8 running
+[2025-08-07T18:15:42.808Z] [4987ms] [PID:42285|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-07T18:15:42.808Z] [4987ms] [PID:42285|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 27% | Throughput: 3 tests completed
+[2025-08-07T18:15:43.814Z] [5993ms] [PID:42285|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 9/11 (82%) | ✓ 5 passed | ✗ 2 failed | ○ 2 skipped | ⟳ 2 running
+[2025-08-07T18:15:43.814Z] [5993ms] [PID:42285|MEM:7MB] [INFO] [WORKER-1] Completed with code 1
+[2025-08-07T18:15:43.814Z] [5993ms] [PID:42285|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 55.6% | Completion: 82% | Throughput: 9 tests completed
+[2025-08-07T18:15:45.905Z] [8084ms] [PID:42285|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 11/11 (100%) | ✓ 7 passed | ✗ 2 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-07T18:15:45.905Z] [8084ms] [PID:42285|MEM:7MB] [INFO] [WORKER-2] Completed with code passed
+[2025-08-07T18:15:45.906Z] [8085ms] [PID:42285|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 11/11 (100%) | ✓ 7 passed | ✗ 2 failed | ○ 2 skipped | ⟳ 0 running
+[2025-08-07T18:15:45.907Z] [8086ms] [PID:42285|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-07T18:15:45.908Z] [8087ms] [PID:42285|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 63.6% | Completion: 100% | Throughput: 11 tests completed
+[2025-08-07T18:15:45.908Z] [8087ms] [PID:42285|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 11 total tests | 7 passed | 2 failed | 2 skipped | Success Rate: 63.6%
+[2025-08-07T18:15:45.928Z] [8107ms] [PID:42285|MEM:8MB] [WARN] [TEST-SUMMARY] 2 test(s) failed - check individual test results for details
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-07T18-15-37-821Z-8m3bwv
+Started: 2025-08-07T18:15:37.821Z
+Completed: 2025-08-07T18:15:45.929Z
+Total Duration: 8.1s
+Process ID: 42285
+
+WORKER STATISTICS:
+  Total Workers: 3
+  Completed: 2
+  Failed: 1
+  Average Duration: 6.3s
+  Total Work Time: 19.0s
+
+TEST STATISTICS:
+  Total Tests: 11
+  Passed: 7
+  Failed: 2
+  Skipped: 2
+
+FAILED TESTS:
+  ✗ should fail
+    File: mixed-results.test.js
+    Worker: 1
+    Duration: 1ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+       5 |
+       6 |   test('should fail', () => {
+    >  7 |     expect(true).toBe(false);
+         |                  ^
+       8 |   });
+       9 |
+      10 |   test.skip('should be skipped', () => {
+
+      at Object.toBe (examples/mixed-results.test.js:7:18)
+
+  ✗ should also fail
+    File: mixed-results.test.js
+    Worker: 1
+    Duration: 2ms
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "world"
+    Received: "hello"
+
+      21 |
+      22 |   test('should also fail', () => {
+    > 23 |     expect('hello').toBe('world');
+         |                     ^
+      24 |   });
+      25 | });
+      26 |
+
+      at Object.toBe (examples/mixed-results.test.js:23:21)
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-07T18:15:45.931Z
+[2025-08-07T18:15:45.931Z] [8110ms] [PID:42285|MEM:6MB] [SUCCESS] [COMPLETION] Test execution completed in 8.1s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-07T18:16:04.999Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-07T18-16-04-988Z-5kfofs
+Started: 2025-08-07T18:16:04.999Z
+Process ID: 42737
+================================================================================
+[2025-08-07T18:16:05.009Z] [21ms] [PID:42737|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-07T18:16:05.009Z] [21ms] [PID:42737|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-07T18:16:05.010Z] [22ms] [PID:42737|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-07T18:16:05.011Z] [23ms] [PID:42737|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:05.011Z] [23ms] [PID:42737|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-07T18:16:05.012Z] [24ms] [PID:42737|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-07T18:16:08.482Z] [3495ms] [PID:42737|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:08.483Z] [3495ms] [PID:42737|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-07T18:16:08.483Z] [3495ms] [PID:42737|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:08.484Z] [3496ms] [PID:42737|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-07T18:16:08.484Z] [3496ms] [PID:42737|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 3 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-07T18:16:08.484Z] [3496ms] [PID:42737|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 3 tests completed
+[2025-08-07T18:16:08.500Z] [3512ms] [PID:42737|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 3 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-07T18-16-04-988Z-5kfofs
+Started: 2025-08-07T18:16:04.988Z
+Completed: 2025-08-07T18:16:08.501Z
+Total Duration: 3.5s
+Process ID: 42737
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 3.3s
+  Total Work Time: 3.3s
+
+TEST STATISTICS:
+  Total Tests: 3
+  Passed: 3
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-07T18:16:08.501Z
+[2025-08-07T18:16:08.502Z] [3514ms] [PID:42737|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 3.5s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-07T18:16:41.278Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-07T18-16-41-274Z-ojzt0t
+Started: 2025-08-07T18:16:41.278Z
+Process ID: 42953
+================================================================================
+[2025-08-07T18:16:41.279Z] [5ms] [PID:42953|MEM:7MB] [INFO] [DISCOVERY] Found 1 test files
+[2025-08-07T18:16:41.281Z] [7ms] [PID:42953|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-07T18:16:41.281Z] [7ms] [PID:42953|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-07T18:16:41.281Z] [7ms] [PID:42953|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-07T18:16:41.282Z] [8ms] [PID:42953|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:41.282Z] [8ms] [PID:42953|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-07T18:16:41.282Z] [8ms] [PID:42953|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-07T18:16:45.163Z] [3889ms] [PID:42953|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:45.164Z] [3890ms] [PID:42953|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-07T18:16:45.165Z] [3891ms] [PID:42953|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:45.165Z] [3891ms] [PID:42953|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-07T18:16:45.166Z] [3892ms] [PID:42953|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 3 tests completed
+[2025-08-07T18:16:45.166Z] [3892ms] [PID:42953|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 3 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-07T18:16:45.179Z] [3905ms] [PID:42953|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 3 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-07T18-16-41-274Z-ojzt0t
+Started: 2025-08-07T18:16:41.274Z
+Completed: 2025-08-07T18:16:45.179Z
+Total Duration: 3.9s
+Process ID: 42953
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 3.9s
+  Total Work Time: 3.9s
+
+TEST STATISTICS:
+  Total Tests: 3
+  Passed: 3
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-07T18:16:45.180Z
+[2025-08-07T18:16:45.180Z] [3906ms] [PID:42953|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 3.9s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-07T18:16:45.181Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-07T18-16-45-180Z-t79ox6
+Started: 2025-08-07T18:16:45.181Z
+Process ID: 42953
+================================================================================
+[2025-08-07T18:16:45.181Z] [1ms] [PID:42953|MEM:7MB] [INFO] [DISCOVERY] Found 1 test files
+[2025-08-07T18:16:45.182Z] [2ms] [PID:42953|MEM:8MB] [SUCCESS] [DISCOVERY] Discovered 2 tests across 1 files
+[2025-08-07T18:16:45.183Z] [3ms] [PID:42953|MEM:8MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-07T18:16:45.183Z] [3ms] [PID:42953|MEM:8MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-07T18:16:45.183Z] [3ms] [PID:42953|MEM:8MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/2 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:45.183Z] [3ms] [PID:42953|MEM:8MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-07T18:16:45.183Z] [3ms] [PID:42953|MEM:8MB] [INFO] [WORKER-0] Starting work item: native-parallel - hook-timing-test.test.js
+[2025-08-07T18:16:48.772Z] [3592ms] [PID:42953|MEM:8MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 2/2 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:48.773Z] [3593ms] [PID:42953|MEM:8MB] [INFO] [TEST-STATUS] FINAL: Tests: 2/2 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:48.772Z] [3592ms] [PID:42953|MEM:8MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-07T18:16:48.773Z] [3593ms] [PID:42953|MEM:8MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-07T18:16:48.773Z] [3593ms] [PID:42953|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 2 total tests | 2 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-07T18:16:48.774Z] [3594ms] [PID:42953|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 2 tests completed
+[2025-08-07T18:16:48.774Z] [3594ms] [PID:42953|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 2 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-07T18-16-45-180Z-t79ox6
+Started: 2025-08-07T18:16:45.180Z
+Completed: 2025-08-07T18:16:48.774Z
+Total Duration: 3.6s
+Process ID: 42953
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 3.6s
+  Total Work Time: 3.6s
+
+TEST STATISTICS:
+  Total Tests: 2
+  Passed: 2
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-07T18:16:48.775Z
+[2025-08-07T18:16:48.775Z] [3595ms] [PID:42953|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 3.6s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-07T18:16:48.776Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-07T18-16-48-775Z-t2t9hr
+Started: 2025-08-07T18:16:48.776Z
+Process ID: 42953
+================================================================================
+[2025-08-07T18:16:48.776Z] [1ms] [PID:42953|MEM:7MB] [INFO] [DISCOVERY] Found 1 test files
+[2025-08-07T18:16:48.776Z] [1ms] [PID:42953|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-07T18:16:48.776Z] [1ms] [PID:42953|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-07T18:16:48.776Z] [1ms] [PID:42953|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-07T18:16:48.776Z] [1ms] [PID:42953|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:48.776Z] [1ms] [PID:42953|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-07T18:16:48.777Z] [2ms] [PID:42953|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-07T18:16:51.970Z] [3195ms] [PID:42953|MEM:6MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:51.970Z] [3195ms] [PID:42953|MEM:6MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-07T18:16:51.970Z] [3195ms] [PID:42953|MEM:6MB] [INFO] [TEST-STATUS] FINAL: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:16:51.970Z] [3195ms] [PID:42953|MEM:6MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-07T18:16:51.971Z] [3196ms] [PID:42953|MEM:6MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 3 tests completed
+[2025-08-07T18:16:51.971Z] [3196ms] [PID:42953|MEM:6MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 3 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-07T18:16:51.972Z] [3197ms] [PID:42953|MEM:6MB] [SUCCESS] [TEST-SUMMARY] All 3 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-07T18-16-48-775Z-t2t9hr
+Started: 2025-08-07T18:16:48.775Z
+Completed: 2025-08-07T18:16:51.973Z
+Total Duration: 3.2s
+Process ID: 42953
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 3.2s
+  Total Work Time: 3.2s
+
+TEST STATISTICS:
+  Total Tests: 3
+  Passed: 3
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-07T18:16:51.973Z
+[2025-08-07T18:16:51.974Z] [3199ms] [PID:42953|MEM:6MB] [SUCCESS] [COMPLETION] Test execution completed in 3.2s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-07T18:17:39.313Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-07T18-17-39-309Z-fpyl0x
+Started: 2025-08-07T18:17:39.313Z
+Process ID: 43353
+================================================================================
+[2025-08-07T18:17:39.313Z] [4ms] [PID:43353|MEM:6MB] [INFO] [DISCOVERY] Found 1 test files
+[2025-08-07T18:17:39.316Z] [7ms] [PID:43353|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-07T18:17:39.316Z] [7ms] [PID:43353|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-07T18:17:39.316Z] [7ms] [PID:43353|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-07T18:17:39.317Z] [8ms] [PID:43353|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:17:39.317Z] [8ms] [PID:43353|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-07T18:17:39.317Z] [8ms] [PID:43353|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-07T18:17:43.270Z] [3961ms] [PID:43353|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:17:43.271Z] [3962ms] [PID:43353|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-07T18:17:43.271Z] [3962ms] [PID:43353|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:17:43.272Z] [3963ms] [PID:43353|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-07T18:17:43.272Z] [3963ms] [PID:43353|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 3 tests completed
+[2025-08-07T18:17:43.273Z] [3964ms] [PID:43353|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 3 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-07T18:17:43.286Z] [3977ms] [PID:43353|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 3 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-07T18-17-39-309Z-fpyl0x
+Started: 2025-08-07T18:17:39.309Z
+Completed: 2025-08-07T18:17:43.287Z
+Total Duration: 4.0s
+Process ID: 43353
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 4.0s
+  Total Work Time: 4.0s
+
+TEST STATISTICS:
+  Total Tests: 3
+  Passed: 3
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-07T18:17:43.287Z
+[2025-08-07T18:17:43.287Z] [3978ms] [PID:43353|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 4.0s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-07T18:17:43.289Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-07T18-17-43-288Z-7ypvre
+Started: 2025-08-07T18:17:43.289Z
+Process ID: 43353
+================================================================================
+[2025-08-07T18:17:43.289Z] [1ms] [PID:43353|MEM:7MB] [INFO] [DISCOVERY] Found 1 test files
+[2025-08-07T18:17:43.289Z] [1ms] [PID:43353|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 2 tests across 1 files
+[2025-08-07T18:17:43.289Z] [1ms] [PID:43353|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-07T18:17:43.290Z] [2ms] [PID:43353|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-07T18:17:43.290Z] [2ms] [PID:43353|MEM:8MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/2 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:17:43.290Z] [2ms] [PID:43353|MEM:8MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-07T18:17:43.290Z] [2ms] [PID:43353|MEM:8MB] [INFO] [WORKER-0] Starting work item: native-parallel - hook-timing-test.test.js
+[2025-08-07T18:17:46.930Z] [3642ms] [PID:43353|MEM:8MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 2/2 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:17:46.930Z] [3642ms] [PID:43353|MEM:8MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-07T18:17:46.930Z] [3642ms] [PID:43353|MEM:8MB] [INFO] [TEST-STATUS] FINAL: Tests: 2/2 (100%) | ✓ 2 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:17:46.930Z] [3642ms] [PID:43353|MEM:8MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-07T18:17:46.931Z] [3643ms] [PID:43353|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 2 tests completed
+[2025-08-07T18:17:46.931Z] [3643ms] [PID:43353|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 2 total tests | 2 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-07T18:17:46.931Z] [3643ms] [PID:43353|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 2 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-07T18-17-43-288Z-7ypvre
+Started: 2025-08-07T18:17:43.288Z
+Completed: 2025-08-07T18:17:46.931Z
+Total Duration: 3.6s
+Process ID: 43353
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 3.6s
+  Total Work Time: 3.6s
+
+TEST STATISTICS:
+  Total Tests: 2
+  Passed: 2
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-07T18:17:46.932Z
+[2025-08-07T18:17:46.932Z] [3644ms] [PID:43353|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 3.6s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-07T18:17:46.933Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-07T18-17-46-932Z-3dl9le
+Started: 2025-08-07T18:17:46.933Z
+Process ID: 43353
+================================================================================
+[2025-08-07T18:17:46.933Z] [1ms] [PID:43353|MEM:7MB] [INFO] [DISCOVERY] Found 1 test files
+[2025-08-07T18:17:46.933Z] [1ms] [PID:43353|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-07T18:17:46.934Z] [2ms] [PID:43353|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-07T18:17:46.934Z] [2ms] [PID:43353|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-07T18:17:46.934Z] [2ms] [PID:43353|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:17:46.934Z] [2ms] [PID:43353|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-07T18:17:46.934Z] [2ms] [PID:43353|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-07T18:17:49.951Z] [3019ms] [PID:43353|MEM:6MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:17:49.951Z] [3019ms] [PID:43353|MEM:6MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-07T18:17:49.951Z] [3019ms] [PID:43353|MEM:6MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-07T18:17:49.951Z] [3019ms] [PID:43353|MEM:6MB] [INFO] [TEST-STATUS] FINAL: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:17:49.952Z] [3020ms] [PID:43353|MEM:6MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 3 tests completed
+[2025-08-07T18:17:49.952Z] [3020ms] [PID:43353|MEM:6MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 3 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-07T18:17:49.952Z] [3020ms] [PID:43353|MEM:6MB] [SUCCESS] [TEST-SUMMARY] All 3 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-07T18-17-46-932Z-3dl9le
+Started: 2025-08-07T18:17:46.932Z
+Completed: 2025-08-07T18:17:49.952Z
+Total Duration: 3.0s
+Process ID: 43353
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 3.0s
+  Total Work Time: 3.0s
+
+TEST STATISTICS:
+  Total Tests: 3
+  Passed: 3
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-07T18:17:49.953Z
+[2025-08-07T18:17:49.953Z] [3021ms] [PID:43353|MEM:6MB] [SUCCESS] [COMPLETION] Test execution completed in 3.0s
+
+================================================================================
+NEW EXECUTION SESSION - 2025-08-07T18:20:35.704Z
+================================================================================
+JEST PARALLEL WORKER EXECUTION LOG
+Session ID: jest-parallel-2025-08-07T18-20-35-703Z-0mpgc0
+Started: 2025-08-07T18:20:35.704Z
+Process ID: 46783
+================================================================================
+[2025-08-07T18:20:35.705Z] [2ms] [PID:46783|MEM:7MB] [SUCCESS] [DISCOVERY] Discovered 3 tests across 1 files
+[2025-08-07T18:20:35.706Z] [3ms] [PID:46783|MEM:7MB] [INFO] [EXECUTION] Phase 2: Executing tests in native-parallel mode...
+[2025-08-07T18:20:35.706Z] [3ms] [PID:46783|MEM:7MB] [INFO] [WORKER-MANAGER] Starting native parallel execution (no file rewriting)
+[2025-08-07T18:20:35.706Z] [3ms] [PID:46783|MEM:7MB] [INFO] [TEST-STATUS] INITIALIZED: Tests: 0/3 (0%) | ✓ 0 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:20:35.706Z] [3ms] [PID:46783|MEM:7MB] [INFO] [WORKER-MANAGER] Enabling enhanced intra-file parallelism with Jest's internal workers
+[2025-08-07T18:20:35.707Z] [4ms] [PID:46783|MEM:7MB] [INFO] [WORKER-0] Starting work item: native-parallel - simple-math.test.js
+[2025-08-07T18:20:40.074Z] [4371ms] [PID:46783|MEM:7MB] [INFO] [TEST-STATUS] PROGRESS: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:20:40.075Z] [4372ms] [PID:46783|MEM:7MB] [INFO] [WORKER-0] Completed with code passed
+[2025-08-07T18:20:40.076Z] [4373ms] [PID:46783|MEM:7MB] [INFO] [TEST-STATUS] FINAL: Tests: 3/3 (100%) | ✓ 3 passed | ✗ 0 failed | ○ 0 skipped | ⟳ 0 running
+[2025-08-07T18:20:40.077Z] [4374ms] [PID:46783|MEM:7MB] [INFO] [REPORTING] Phase 3: Generating reports...
+[2025-08-07T18:20:40.077Z] [4374ms] [PID:46783|MEM:7MB] [INFO] [TEST-METRICS] Success Rate: 100.0% | Completion: 100% | Throughput: 3 tests completed
+[2025-08-07T18:20:40.077Z] [4374ms] [PID:46783|MEM:7MB] [INFO] [TEST-SUMMARY] Final Results: 3 total tests | 3 passed | 0 failed | 0 skipped | Success Rate: 100.0%
+[2025-08-07T18:20:40.091Z] [4388ms] [PID:46783|MEM:7MB] [SUCCESS] [TEST-SUMMARY] All 3 tests passed successfully!
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Session ID: jest-parallel-2025-08-07T18-20-35-703Z-0mpgc0
+Started: 2025-08-07T18:20:35.703Z
+Completed: 2025-08-07T18:20:40.092Z
+Total Duration: 4.4s
+Process ID: 46783
+
+WORKER STATISTICS:
+  Total Workers: 1
+  Completed: 1
+  Failed: 0
+  Average Duration: 4.4s
+  Total Work Time: 4.4s
+
+TEST STATISTICS:
+  Total Tests: 3
+  Passed: 3
+  Failed: 0
+  Skipped: 0
+
+================================================================================
+END OF EXECUTION LOG
+================================================================================
+
+Session ended: 2025-08-07T18:20:40.092Z
+[2025-08-07T18:20:40.093Z] [4390ms] [PID:46783|MEM:7MB] [SUCCESS] [COMPLETION] Test execution completed in 4.4s

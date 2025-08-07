@@ -11,29 +11,40 @@ class TestParser {
     this.logger.debug(`Finding test files with pattern: ${testMatch}`);
     
     try {
-      let files;
+      let files = [];
       
-      // Handle array of specific files
+      // Handle array of patterns or files
       if (Array.isArray(testMatch)) {
-        files = testMatch.map(file => path.resolve(file));
-        // Filter out files that don't exist
-        const existingFiles = [];
-        for (const file of files) {
-          try {
-            await fs.access(file);
-            existingFiles.push(file);
-          } catch (error) {
-            this.logger.warn(`Test file not found: ${file}`);
+        for (const pattern of testMatch) {
+          // Check if it looks like a glob pattern
+          if (pattern.includes('*') || pattern.includes('?') || pattern.includes('[')) {
+            // It's a glob pattern
+            const globFiles = await glob(pattern, { 
+              ignore: ['**/node_modules/**'],
+              absolute: true 
+            });
+            files.push(...globFiles);
+          } else {
+            // It's a specific file path
+            const resolvedFile = path.resolve(pattern);
+            try {
+              await fs.access(resolvedFile);
+              files.push(resolvedFile);
+            } catch (error) {
+              this.logger.warn(`Test file not found: ${resolvedFile}`);
+            }
           }
         }
-        files = existingFiles;
       } else {
-        // Handle glob pattern
+        // Handle single glob pattern
         files = await glob(testMatch, { 
           ignore: ['**/node_modules/**'],
           absolute: true 
         });
       }
+      
+      // Remove duplicates
+      files = [...new Set(files)];
       
       this.logger.info(`Found ${files.length} test files`);
       return files;

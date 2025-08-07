@@ -1,0 +1,171 @@
+{
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "completed": 3,
+    "running": 0,
+    "successRate": "100.0",
+    "duration": "4.37s",
+    "durationMs": 4369,
+    "startTime": "2025-08-07T18:20:35.706Z",
+    "endTime": "2025-08-07T18:20:40.075Z",
+    "hooks": {
+      "totalDuration": 153,
+      "beforeAllTotal": 122,
+      "beforeEachTotal": 22,
+      "afterAllTotal": 3,
+      "afterEachTotal": 6
+    }
+  },
+  "fileSummary": [
+    {
+      "filePath": "/Users/kush/jest-parallel-worker/examples/simple-math.test.js",
+      "status": "passed",
+      "testCount": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "duration": "0.004s",
+      "durationMs": 4,
+      "hooks": {
+        "total": 153,
+        "beforeAll": {
+          "duration": 122,
+          "status": "estimated"
+        },
+        "beforeEach": {
+          "duration": 22,
+          "status": "estimated"
+        },
+        "afterAll": {
+          "duration": 3,
+          "status": "estimated"
+        },
+        "afterEach": {
+          "duration": 6,
+          "status": "estimated"
+        }
+      }
+    }
+  ],
+  "fileDetails": {
+    "/Users/kush/jest-parallel-worker/examples/simple-math.test.js": {
+      "filePath": "/Users/kush/jest-parallel-worker/examples/simple-math.test.js",
+      "status": "passed",
+      "testCount": 0,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "tests": [
+        {
+          "name": "should add two numbers correctly",
+          "status": "passed",
+          "duration": "0.003s",
+          "durationMs": 3
+        },
+        {
+          "name": "should multiply two numbers correctly",
+          "status": "passed",
+          "duration": "0.001s",
+          "durationMs": 1
+        },
+        {
+          "name": "should handle division correctly",
+          "status": "passed",
+          "duration": "N/A",
+          "durationMs": 0
+        }
+      ],
+      "startTime": null,
+      "endTime": null,
+      "hooks": {
+        "beforeAll": {
+          "duration": 122,
+          "status": "estimated"
+        },
+        "beforeEach": {
+          "duration": 22,
+          "status": "estimated"
+        },
+        "afterAll": {
+          "duration": 3,
+          "status": "estimated"
+        },
+        "afterEach": {
+          "duration": 6,
+          "status": "estimated"
+        }
+      },
+      "duration": "0.004s",
+      "durationMs": 4
+    }
+  },
+  "results": [
+    {
+      "status": "passed",
+      "testResults": [
+        {
+          "testId": "/Users/kush/jest-parallel-worker/examples/simple-math.test.js:should add two numbers correctly",
+          "testName": "should add two numbers correctly",
+          "suite": "Simple Math Tests",
+          "status": "passed",
+          "duration": 3,
+          "error": null,
+          "source": null,
+          "workerId": 0,
+          "filePath": "/Users/kush/jest-parallel-worker/examples/simple-math.test.js"
+        },
+        {
+          "testId": "/Users/kush/jest-parallel-worker/examples/simple-math.test.js:should multiply two numbers correctly",
+          "testName": "should multiply two numbers correctly",
+          "suite": "Simple Math Tests",
+          "status": "passed",
+          "duration": 1,
+          "error": null,
+          "source": null,
+          "workerId": 0,
+          "filePath": "/Users/kush/jest-parallel-worker/examples/simple-math.test.js"
+        },
+        {
+          "testId": "/Users/kush/jest-parallel-worker/examples/simple-math.test.js:should handle division correctly",
+          "testName": "should handle division correctly",
+          "suite": "Simple Math Tests",
+          "status": "passed",
+          "duration": 0,
+          "error": null,
+          "source": null,
+          "workerId": 0,
+          "filePath": "/Users/kush/jest-parallel-worker/examples/simple-math.test.js"
+        }
+      ],
+      "output": "",
+      "errorOutput": "PASS examples/simple-math.test.js\n  Simple Math Tests\n    ✓ should add two numbers correctly (3 ms)\n    ✓ should multiply two numbers correctly (1 ms)\n    ✓ should handle division correctly\n\nTest Suites: 1 passed, 1 total\nTests:       3 passed, 3 total\nSnapshots:   0 total\nTime:        0.157 s, estimated 1 s\nRan all test suites matching /\\/Users\\/kush\\/jest-parallel-worker\\/examples\\/simple-math.test.js/i.\n",
+      "duration": 3682,
+      "workerId": 0,
+      "filePath": "/Users/kush/jest-parallel-worker/examples/simple-math.test.js",
+      "exitCode": 0,
+      "strategy": "file-parallelism",
+      "jestWorkers": 2,
+      "hookInfo": {
+        "beforeAll": {
+          "duration": 122,
+          "status": "estimated"
+        },
+        "beforeEach": {
+          "duration": 22,
+          "status": "estimated"
+        },
+        "afterAll": {
+          "duration": 3,
+          "status": "estimated"
+        },
+        "afterEach": {
+          "duration": 6,
+          "status": "estimated"
+        }
+      }
+    }
+  ]
+}
