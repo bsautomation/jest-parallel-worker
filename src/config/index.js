@@ -6,30 +6,24 @@ const path = require('path');
  */
 class ConfigLoader {
   /**
-   * Load configuration from various sources
-   * @param {string} configPath - Optional specific config file path
+   * Load configuration from standard Jest config files only
    * @returns {Object} Configuration object
    */
-  static loadConfig(configPath) {
+  static loadConfig() {
+    // Try to load from jest.config.js or jest.config.json
     const possiblePaths = [
-      configPath,
-      'jest-parallel.config.js',
-      'jest-parallel.config.json',
-      '.jest-parallelrc',
-      '.jest-parallelrc.js',
-      '.jest-parallelrc.json'
-    ].filter(Boolean);
+      'jest.config.js',
+      'jest.config.json'
+    ];
 
-    // Try to load from config files
     for (const configFile of possiblePaths) {
       const fullPath = path.resolve(configFile);
       if (fs.existsSync(fullPath)) {
         try {
-          if (configFile.endsWith('.json') || configFile.startsWith('.jest-parallelrc')) {
+          if (configFile.endsWith('.json')) {
             const content = fs.readFileSync(fullPath, 'utf8');
             return JSON.parse(content);
           } else if (configFile.endsWith('.js')) {
-            // Clear require cache to allow reloading
             delete require.cache[require.resolve(fullPath)];
             return require(fullPath);
           }
@@ -39,13 +33,13 @@ class ConfigLoader {
       }
     }
 
-    // Check package.json for jest-parallel config
+    // Check package.json for 'jest' config
     const packageJsonPath = path.resolve('package.json');
     if (fs.existsSync(packageJsonPath)) {
       try {
         const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-        if (packageJson['jest-parallel']) {
-          return packageJson['jest-parallel'];
+        if (packageJson['jest']) {
+          return packageJson['jest'];
         }
       } catch (error) {
         console.warn('Warning: Failed to read package.json:', error.message);
