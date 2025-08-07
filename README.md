@@ -55,10 +55,13 @@ npm install -g jest-parallel-worker
 ### CLI Usage
 ```bash
 # Run tests with native parallel execution (recommended)
-npx jest-parallel --mode native-parallel --testMatch 'tests/**/*.test.js'
+npx jest-parallel run --mode native-parallel --testMatch 'tests/**/*.test.js'
 
 # Run with custom configuration
-npx jest-parallel --mode native-parallel --maxWorkers 4 --timeout 30000 --testMatch 'src/**/*.test.js'
+npx jest-parallel run --mode native-parallel --maxWorkers 4 --timeout 30 --testMatch 'src/**/*.test.js'
+
+# Run specific test file with options
+npx jest-parallel run --testMatch 'path/to/test.js' --mode native-parallel --maxWorkers 5 --timeout 10 --reporter both --verbose
 
 # Check environment compatibility
 npx jest-parallel check
@@ -111,7 +114,7 @@ Example `jest.config.js`:
 module.exports = {
   testMatch: ['tests/**/*.test.js', 'src/**/__tests__/*.js'],
   maxWorkers: 4,
-  timeout: 30000,
+  timeout: 30000, // 30 seconds in milliseconds (config files use milliseconds)
   verbose: true
 };
 ```
@@ -319,13 +322,16 @@ const modes = JestParallelSDK.getModes();
 {
   testMatch: string | string[],     // Test file patterns
   mode: string,                     // Execution mode
-  maxWorkers: number,               // Maximum worker processes
-  timeout: number,                  // Timeout in milliseconds
+  maxWorkers: number,               // Maximum worker processes (default: CPU cores)
+  timeout: number,                  // Timeout in milliseconds (minimum: 60000ms = 1 minute)
   forceConcurrent: boolean,         // Force concurrent execution
   verbose: boolean,                 // Verbose output
   outputDir: string,                // Report output directory
   reporter: 'console'|'html'|'both' // Reporter type
 }
+```
+
+**Note**: When using the CLI, timeout is specified in **minutes** (e.g., `--timeout 10` = 10 minutes), but in configuration files and SDK, it's in milliseconds.
 ```
 
 ### Lifecycle Hooks

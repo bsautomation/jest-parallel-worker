@@ -59,7 +59,7 @@ program
   .option('--testMatch <patterns...>', 'Test file patterns to match', ['tests/**/*.test.js'])
   .option('--mode <mode>', 'Execution mode', 'native-parallel')
   .option('--maxWorkers <number>', 'Maximum number of worker processes', parseInt)
-  .option('--timeout <milliseconds>', 'Timeout in milliseconds', parseInt)
+  .option('--timeout <minutes>', 'Timeout in minutes (minimum: 1 minute)', parseFloat)
   .option('--forceConcurrent', 'Force concurrent execution', false)
   .option('--verbose', 'Verbose output', false)
   .option('--outputDir <dir>', 'Output directory for reports', 'reports')

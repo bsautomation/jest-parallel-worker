@@ -75,12 +75,19 @@ class ConfigLoader {
   static mergeConfigs(cliOptions = {}, fileConfig = {}) {
     const defaultConfig = ConfigLoader.getDefaultConfig();
     
+    // Convert timeout from minutes to milliseconds if provided via CLI
+    const processedCliOptions = { ...cliOptions };
+    if (processedCliOptions.timeout !== undefined && processedCliOptions.timeout !== null) {
+      // CLI timeout is in minutes, convert to milliseconds
+      processedCliOptions.timeout = processedCliOptions.timeout * 60 * 1000;
+    }
+    
     // Merge with precedence: CLI > file > defaults
     return {
       ...defaultConfig,
       ...fileConfig,
       ...Object.fromEntries(
-        Object.entries(cliOptions).filter(([_, value]) => value !== undefined && value !== null)
+        Object.entries(processedCliOptions).filter(([_, value]) => value !== undefined && value !== null)
       )
     };
   }
@@ -106,8 +113,8 @@ class ConfigLoader {
       errors.push('maxWorkers must be a number >= 1');
     }
     
-    if (config.timeout && (typeof config.timeout !== 'number' || config.timeout < 1000)) {
-      errors.push('timeout must be a number >= 1000ms');
+    if (config.timeout && (typeof config.timeout !== 'number' || config.timeout < 6000)) {
+      errors.push('timeout must be a number >= 0.1 minute (6000ms)');
     }
     
     const validReporters = ['console', 'html', 'both'];
