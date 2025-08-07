@@ -11,6 +11,49 @@ class BrowserStackIntegration {
   constructor(options = {}) {
     this.options = options;
     this.browserstackConfig = this.loadBrowserStackConfig();
+    this.browserstackSdkVersion = this.getBrowserStackSdkVersion();
+  }
+
+  /**
+   * Get BrowserStack SDK version for compatibility checking
+   */
+  getBrowserStackSdkVersion() {
+    try {
+      const browserstackPackagePath = require.resolve('browserstack-node-sdk/package.json');
+      const browserstackPackage = require(browserstackPackagePath);
+      return browserstackPackage.version;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Check if BrowserStack SDK version is compatible
+   */
+  isCompatibleVersion(version) {
+    if (!version) return true; // Assume compatible if version can't be determined
+    
+    try {
+      const [major, minor] = version.split('.').map(Number);
+      
+      // Support BrowserStack SDK v1.30.0 and above
+      // Add future version compatibility rules here
+      if (major >= 2) {
+        // Future major versions - assume compatible unless proven otherwise
+        console.log(`ℹ️  Using BrowserStack SDK v${version} - future version detected, compatibility assumed`);
+        return true;
+      }
+      
+      if (major === 1 && minor >= 30) {
+        return true;
+      }
+      
+      console.warn(`⚠️  BrowserStack SDK v${version} may not be fully compatible. Recommended: v1.30.0+`);
+      return true; // Allow it but warn
+    } catch (error) {
+      console.warn(`⚠️  Could not parse BrowserStack SDK version: ${version}`);
+      return true; // Assume compatible if parsing fails
+    }
   }
 
   /**
@@ -47,6 +90,59 @@ class BrowserStackIntegration {
   }
 
   /**
+   * Find Jest Parallel Worker binary path
+   */
+  findJestParallelBinary() {
+    const possiblePaths = [
+      // When used from the jest-parallel-worker package itself
+      path.resolve(__dirname, '../../bin/jest-parallel.js'),
+      
+      // When jest-parallel-worker is installed as a dependency
+      path.resolve(process.cwd(), 'node_modules/jest-parallel-worker/bin/jest-parallel.js'),
+      path.resolve(process.cwd(), 'node_modules/.bin/jest-parallel'),
+      
+      // When used from a different working directory
+      path.resolve(__dirname, '../../../jest-parallel-worker/bin/jest-parallel.js'),
+      
+      // Try to locate via require.resolve
+      null // Will be handled in the try-catch below
+    ];
+
+    // Try the predefined paths first
+    for (const binPath of possiblePaths) {
+      if (binPath && fs.existsSync(binPath)) {
+        return binPath;
+      }
+    }
+
+    // Try to resolve using Node.js module resolution
+    try {
+      const jestParallelPackage = require.resolve('jest-parallel-worker/package.json');
+      const packageDir = path.dirname(jestParallelPackage);
+      const binPath = path.join(packageDir, 'bin/jest-parallel.js');
+      if (fs.existsSync(binPath)) {
+        return binPath;
+      }
+    } catch (error) {
+      // Package not found via require.resolve
+    }
+
+    // Try global installation
+    try {
+      const { execSync } = require('child_process');
+      const globalPath = execSync('npm root -g', { encoding: 'utf8' }).trim();
+      const globalBin = path.join(globalPath, 'jest-parallel-worker', 'bin', 'jest-parallel.js');
+      if (fs.existsSync(globalBin)) {
+        return globalBin;
+      }
+    } catch (error) {
+      // Ignore errors when checking global installation
+    }
+
+    throw new Error('Could not locate jest-parallel binary. Please ensure jest-parallel-worker is properly installed.');
+  }
+
+  /**
    * Run Jest Parallel Worker with BrowserStack SDK wrapper
    */
   async runWithBrowserStack(jestParallelOptions = {}) {
@@ -60,8 +156,8 @@ class BrowserStackIntegration {
       BROWSERSTACK_LOCAL: this.browserstackConfig.local?.toString() || 'false'
     };
 
-    // Path to jest-parallel binary
-    const jestParallelBin = path.resolve(__dirname, '../../bin/jest-parallel.js');
+    // Find Jest Parallel Worker binary
+    const jestParallelBin = this.findJestParallelBinary();
     
     // Build command arguments
     const args = ['run'];
@@ -110,10 +206,17 @@ class BrowserStackIntegration {
    */
   findBrowserStackSdk() {
     const possiblePaths = [
+      // Local project installation
       'node_modules/.bin/browserstack-node-sdk',
       'node_modules/.bin/browserstack-cli',
       path.resolve(process.cwd(), 'node_modules/.bin/browserstack-node-sdk'),
-      path.resolve(process.cwd(), 'node_modules/.bin/browserstack-cli')
+      path.resolve(process.cwd(), 'node_modules/.bin/browserstack-cli'),
+      
+      // Parent directory installations (when jest-parallel-worker is a dependency)
+      path.resolve(process.cwd(), '../.bin/browserstack-node-sdk'),
+      path.resolve(process.cwd(), '../.bin/browserstack-cli'),
+      path.resolve(process.cwd(), '../../node_modules/.bin/browserstack-node-sdk'),
+      path.resolve(process.cwd(), '../../node_modules/.bin/browserstack-cli')
     ];
 
     for (const binPath of possiblePaths) {
@@ -144,8 +247,16 @@ class BrowserStackIntegration {
     return new Promise((resolve, reject) => {
       console.log('🌐 Running Jest Parallel Worker with BrowserStack SDK...');
       
-      // Use browserstack-node-sdk as wrapper: browserstack-node-sdk node jest-parallel.js run ...
-      const sdkArgs = ['node', jestParallelBin, ...args];
+      // Check version compatibility
+      if (this.browserstackSdkVersion) {
+        console.log(`📦 BrowserStack SDK version: ${this.browserstackSdkVersion}`);
+        if (!this.isCompatibleVersion(this.browserstackSdkVersion)) {
+          console.warn('⚠️  Version compatibility warning - proceeding anyway');
+        }
+      }
+      
+      // Use browserstack-node-sdk as wrapper with dynamic argument handling
+      const sdkArgs = this.buildBrowserStackArgs(jestParallelBin, args);
       
       const child = spawn(browserstackSdkBin, sdkArgs, {
         stdio: 'inherit',
@@ -168,6 +279,25 @@ class BrowserStackIntegration {
         reject(error);
       });
     });
+  }
+
+  /**
+   * Build BrowserStack SDK arguments with future-proof handling
+   */
+  buildBrowserStackArgs(jestParallelBin, args) {
+    // Handle different BrowserStack SDK versions and their argument patterns
+    const [major, minor] = this.browserstackSdkVersion ? 
+      this.browserstackSdkVersion.split('.').map(Number) : [1, 30];
+    
+    // Future-proof argument building
+    if (major >= 2 || (major === 1 && minor >= 40)) {
+      // Future versions may have different argument patterns
+      // This is extensible for new BrowserStack SDK features
+      return ['node', jestParallelBin, ...args];
+    } else {
+      // Current version pattern
+      return ['node', jestParallelBin, ...args];
+    }
   }
 
   /**

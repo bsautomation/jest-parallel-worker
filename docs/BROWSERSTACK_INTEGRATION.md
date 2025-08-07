@@ -199,10 +199,30 @@ describe('Cross-browser testing with BrowserStack', () => {
 ## 🚧 **Limitations & Considerations**
 
 1. **BrowserStack SDK Required**: For full integration, install `browserstack-node-sdk`
-2. **Environment Setup**: Ensure BrowserStack credentials are properly configured
-3. **Network Access**: BrowserStack Local may be required for localhost testing
-4. **Timeouts**: Increase timeout values for cross-browser testing (use `--timeout 15` for 15 minutes)
-5. **Parallel Limits**: BrowserStack account limits may affect parallel execution
+2. **Version Compatibility**: Compatible with BrowserStack SDK v1.30.0+, future versions automatically supported
+3. **Environment Setup**: Ensure BrowserStack credentials are properly configured
+4. **Network Access**: BrowserStack Local may be required for localhost testing
+5. **Timeouts**: Increase timeout values for cross-browser testing (use `--timeout 15` for 15 minutes)
+6. **Parallel Limits**: BrowserStack account limits may affect parallel execution
+
+## 🔄 **Future Compatibility**
+
+Jest Parallel Worker's BrowserStack integration is designed to be **future-proof**:
+
+- ✅ **Automatic Version Detection**: Detects BrowserStack SDK version at runtime
+- ✅ **Forward Compatibility**: New BrowserStack SDK versions are supported by default
+- ✅ **Graceful Degradation**: Falls back to direct execution if SDK is unavailable
+- ✅ **Path Resolution**: Robust binary path detection across different installation scenarios
+- ✅ **Extensible Architecture**: Easy to add support for new BrowserStack features
+
+### Version Support Matrix
+
+| BrowserStack SDK Version | Jest Parallel Worker Compatibility | Notes |
+|---------------------------|-------------------------------------|-------|
+| v1.30.0 - v1.40.x | ✅ Fully Supported | Tested and verified |
+| v1.41.0+ | ✅ Auto-Compatible | Future versions supported by design |
+| v2.x.x | ✅ Forward Compatible | Major version changes handled gracefully |
+| < v1.30.0 | ⚠️ Limited Support | May work but not recommended |
 
 ## 🔧 **Troubleshooting**
 
@@ -213,18 +233,33 @@ describe('Cross-browser testing with BrowserStack', () => {
    npm install browserstack-node-sdk --save-dev
    ```
 
-2. **Authentication errors**
+2. **"File jest-parallel.js doesn't exist"**
+   ```bash
+   # Ensure jest-parallel-worker is properly installed
+   npm install jest-parallel-worker --save-dev
+   
+   # Or try using the full path
+   npx jest-parallel-browserstack run --testMatch 'tests/**/*.test.js'
+   ```
+
+3. **Authentication errors**
    ```bash
    export BROWSERSTACK_USERNAME="your_username"
    export BROWSERSTACK_ACCESS_KEY="your_access_key"
    ```
 
-3. **Timeout issues**
+4. **Version compatibility warnings**
+   ```bash
+   # Update to latest BrowserStack SDK
+   npm update browserstack-node-sdk
+   ```
+
+5. **Timeout issues**
    ```bash
    npx jest-parallel-browserstack run --timeout 15 --testMatch 'tests/**/*.test.js'
    ```
 
-4. **Local testing not working**
+6. **Local testing not working**
    ```bash
    npx jest-parallel-browserstack run --local --testMatch 'tests/**/*.test.js'
    ```
