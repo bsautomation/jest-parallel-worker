@@ -101,25 +101,25 @@ const results = await sdk.runWithHooks({
 });
 ```
 
-### Configuration File
-Create a `jest-parallel.config.js` file:
+### Configuration
+Jest Parallel Worker uses **standard Jest configuration files only**:
+- `jest.config.js` or `jest.config.json`
+- The `jest` section in your `package.json`
+
+Example `jest.config.js`:
 ```javascript
 module.exports = {
   testMatch: ['tests/**/*.test.js', 'src/**/__tests__/*.js'],
-  mode: 'native-parallel',
   maxWorkers: 4,
   timeout: 30000,
-  outputDir: 'test-reports',
-  reporter: 'both', // 'console', 'html', or 'both'
   verbose: true
 };
 ```
-Or add configuration to your `package.json`:
+Or in your `package.json`:
 ```json
 {
-  "jest-parallel": {
+  "jest": {
     "testMatch": ["tests/**/*.test.js"],
-    "mode": "native-parallel",
     "maxWorkers": 4
   }
 }
