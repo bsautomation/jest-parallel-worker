@@ -1,4 +1,6 @@
-const { JestParallelRunner } = require('./core/runner');
+const { ConfigLoader } = require('./config');
+const { Runner } = require('./core/runner');
+const { BrowserStackIntegration } = require('./integrations/browserstack');
 const { TestParser } = require('./core/parser');
 const { WorkerManager } = require('./core/worker-manager');
 const { ReportGenerator } = require('./core/reporter');
@@ -184,6 +186,30 @@ class JestParallelSDK {
     }
     
     return errors;
+  }
+
+  /**
+   * Run tests with BrowserStack integration
+   * @param {Object} browserstackOptions - BrowserStack configuration options
+   * @param {Object} jestParallelOptions - Jest Parallel Worker options (optional, uses current config if not provided)
+   * @returns {Promise} Test execution results
+   */
+  async runWithBrowserStack(browserstackOptions = {}, jestParallelOptions = null) {
+    const browserStackIntegration = new BrowserStackIntegration(browserstackOptions);
+    const finalOptions = jestParallelOptions || this.options;
+    
+    return await browserStackIntegration.runWithBrowserStack(finalOptions);
+  }
+
+  /**
+   * Static method to run tests with BrowserStack
+   * @param {Object} browserstackOptions - BrowserStack configuration options
+   * @param {Object} jestParallelOptions - Jest Parallel Worker options
+   * @returns {Promise} Test execution results
+   */
+  static async runTestsWithBrowserStack(browserstackOptions = {}, jestParallelOptions = {}) {
+    const browserStackIntegration = new BrowserStackIntegration(browserstackOptions);
+    return await browserStackIntegration.runWithBrowserStack(jestParallelOptions);
   }
 }
 

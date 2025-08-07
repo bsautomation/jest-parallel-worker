@@ -14,6 +14,7 @@ A powerful Node.js SDK that extends Jest to run tests in parallel at the test le
 - **⚡ Performance Optimized**: Significant speed improvements over sequential test execution
 - **🎯 Hook Compatible**: Proper beforeAll/afterAll hook behavior with file-level isolation
 - **🔄 Jest Compatible**: Works with existing Jest test suites without modification
+- **🌐 BrowserStack Integration**: Native support for cross-browser testing with BrowserStack
 
 ## 🤔 Why Choose Jest Parallel Worker Over Standard Jest?
 
@@ -346,6 +347,22 @@ await sdk.runWithHooks({
 });
 ```
 
+### BrowserStack Integration
+```javascript
+// Run tests with BrowserStack
+const results = await sdk.runWithBrowserStack({
+  buildName: 'Feature Tests',
+  projectName: 'My App',
+  local: true
+});
+
+// Or use static method
+const results = await JestParallelSDK.runTestsWithBrowserStack(
+  { buildName: 'CI Tests', projectName: 'My App' },
+  { testMatch: 'tests/**/*.test.js', mode: 'native-parallel' }
+);
+```
+
 ## 📈 Reporting
 
 ### HTML Reports
@@ -376,7 +393,10 @@ npm test
 npm run test:sdk
 
 # Run examples
-npx jest-parallel --testMatch 'examples/**/*.test.js' --mode native-parallel
+npx jest-parallel run --testMatch 'examples/**/*.test.js' --mode native-parallel
+
+# Run with BrowserStack
+npx jest-parallel-browserstack run --testMatch 'examples/**/*.test.js' --mode native-parallel
 ```
 
 ### Project Structure

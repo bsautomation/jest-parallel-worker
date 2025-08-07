@@ -4,7 +4,8 @@
   "description": "A Jest SDK for parallel test execution with enhanced reporting and performance optimization",
   "main": "src/index.js",
   "bin": {
-    "jest-parallel": "./bin/jest-parallel.js"
+    "jest-parallel": "./bin/jest-parallel.js",
+    "jest-parallel-browserstack": "./bin/jest-parallel-browserstack.js"
   },
   "files": [
     "src/",
@@ -41,10 +42,14 @@
     "chalk": "^4.1.2",
     "commander": "^11.0.0",
     "expect": "^30.0.5",
-    "glob": "^10.3.3"
+    "glob": "^10.3.3",
+    "js-yaml": "^4.1.0"
   },
   "peerDependencies": {
     "jest": ">=29.0.0"
+  },
+  "optionalDependencies": {
+    "browserstack-node-sdk": "^1.40.0"
   },
   "engines": {
     "node": ">=14.0.0"
