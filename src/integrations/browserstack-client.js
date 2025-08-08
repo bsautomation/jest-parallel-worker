@@ -16,8 +16,8 @@ class BrowserStackClient {
     
     // Try to load BrowserStack SDK
     try {
-      const BrowserStackSDK = require('browserstack-node-sdk');
-      this.sdk = new BrowserStackSDK(this.options);
+      const { BrowserStackSdk } = require('browserstack-node-sdk');
+      this.sdk = new BrowserStackSdk(this.options);
     } catch (error) {
       console.warn('BrowserStack SDK not available:', error.message);
       this.sdk = null;
