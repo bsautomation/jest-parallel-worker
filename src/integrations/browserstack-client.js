@@ -7,6 +7,7 @@ class BrowserStackClient {
       source: 'jest-parallel-worker',
       buildName: process.env.BUILD_NAME || options.buildName || 'jest-parallel-build',
       projectName: process.env.PROJECT_NAME || options.projectName || 'jest-parallel-tests',
+      testObservability: true, // Enable Test Observability specifically
       ...options
     };
     
@@ -14,7 +15,7 @@ class BrowserStackClient {
     this.buildId = null;
     this.isInitialized = false;
     
-    // Try to load BrowserStack SDK
+    // Try to load BrowserStack SDK for Test Reporting
     try {
       const { BrowserStackSdk } = require('browserstack-node-sdk');
       this.sdk = new BrowserStackSdk(this.options);
@@ -55,7 +56,7 @@ class BrowserStackClient {
       return {
         success: true,
         buildId: this.buildId,
-        dashboardUrl: `https://automate.browserstack.com/dashboard/v2/builds/${this.buildId}`
+        dashboardUrl: `https://automation.browserstack.com/dashboard/${this.buildId}`
       };
     } catch (error) {
       return { success: false, error: error.message };
@@ -63,18 +64,20 @@ class BrowserStackClient {
   }
 
   /**
-   * Create a new build in BrowserStack
+   * Create a new build in BrowserStack Test Reporting
    */
   async createBuild() {
     try {
       const buildInfo = {
         name: this.options.buildName,
         project: this.options.projectName,
+        framework: 'jest',
+        source: 'jest-parallel-worker',
         start_time: new Date().toISOString(),
-        tags: ['jest-parallel-worker', 'parallel-testing']
+        tags: ['jest-parallel-worker', 'parallel-testing', 'test-reporting']
       };
 
-      // Use the SDK to create build
+      // Use the SDK to create Test Reporting build
       if (this.sdk && typeof this.sdk.createBuild === 'function') {
         const buildResponse = await this.sdk.createBuild(buildInfo);
         return buildResponse.build_id || buildResponse.id || this.generateFallbackBuildId();
@@ -83,7 +86,7 @@ class BrowserStackClient {
         return this.generateFallbackBuildId();
       }
     } catch (error) {
-      console.warn('Failed to create BrowserStack build, using fallback:', error.message);
+      console.warn('Failed to create BrowserStack Test Reporting build, using fallback:', error.message);
       return this.generateFallbackBuildId();
     }
   }
@@ -104,7 +107,7 @@ class BrowserStackClient {
     }
 
     try {
-      // Format test results for BrowserStack
+      // Format test results for BrowserStack Test Reporting
       const formattedResults = testResults.map(result => ({
         buildId: this.buildId,
         testPath: result.filePath || result.testPath,
@@ -112,7 +115,9 @@ class BrowserStackClient {
         status: result.status,
         duration: result.duration || 0,
         error: result.error || null,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        framework: 'jest',
+        source: 'jest-parallel-worker'
       }));
 
       // Send results to BrowserStack if SDK supports it
@@ -172,7 +177,7 @@ class BrowserStackClient {
       return {
         success: true,
         buildId: this.buildId,
-        dashboardUrl: `https://automate.browserstack.com/dashboard/v2/builds/${this.buildId}`
+        dashboardUrl: `https://automation.browserstack.com/dashboard/${this.buildId}`
       };
     } catch (error) {
       return { success: false, error: error.message };
@@ -209,7 +214,7 @@ class BrowserStackClient {
       buildId: this.buildId,
       isInitialized: this.isInitialized,
       isAvailable: this.isAvailable(),
-      dashboardUrl: this.buildId ? `https://automate.browserstack.com/dashboard/v2/builds/${this.buildId}` : null,
+      dashboardUrl: this.buildId ? `https://automation.browserstack.com/dashboard/${this.buildId}` : null,
       options: this.options
     };
   }
