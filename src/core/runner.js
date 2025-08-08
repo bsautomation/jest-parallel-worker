@@ -4,6 +4,7 @@ const { ReportGenerator } = require('./reporter');
 const { ExecutionLogger } = require('./execution-logger');
 const { Logger } = require('../utils/logger');
 const CustomTestRunner = require('../custom-test-runner');
+const { BrowserStackIntegration } = require('../integrations');
 
 class JestParallelRunner {
   constructor(options) {
@@ -17,6 +18,8 @@ class JestParallelRunner {
       intraFileParallelism: true, // Default to true for native-parallel mode
       customRunner: false, // Default to false
       runnerConcurrency: 4, // Default concurrency for custom runner
+      browserstackEnabled: process.env.BROWSERSTACK_ENABLED === 'true' || 
+                           (process.env.BROWSERSTACK_USERNAME && process.env.BROWSERSTACK_ACCESS_KEY),
       ...options
     };
     
@@ -29,6 +32,15 @@ class JestParallelRunner {
     
     // Initialize logger - use provided logger or create default one
     this.logger = options.logger || new Logger('jest-parallel-runner');
+    
+    // Initialize BrowserStack integration
+    this.browserstack = new BrowserStackIntegration({
+      enabled: this.options.browserstackEnabled,
+      buildName: this.options.buildName,
+      projectName: this.options.projectName,
+      logger: this.logger
+    });
+    
     this.parser = new TestParser(this.logger);
     this.workerManager = new WorkerManager(this.options, this.logger, this.executionLogger);
     this.reportGenerator = new ReportGenerator(this.options, this.logger);
@@ -37,6 +49,13 @@ class JestParallelRunner {
   async run() {
     const startTime = Date.now();
     await this.executionLogger.info('STARTUP', `Starting Jest Parallel Worker in ${this.options.mode} mode`);
+    
+    // Initialize BrowserStack integration
+    const browserstackResult = await this.browserstack.initialize();
+    if (browserstackResult.enabled) {
+      await this.executionLogger.info('BROWSERSTACK', 
+        `BrowserStack integration enabled - Build: ${browserstackResult.buildId}`);
+    }
     
     try {
       // Step 1: Find and parse test files
@@ -103,6 +122,11 @@ class JestParallelRunner {
       
       const reportData = await this.reportGenerator.generateReports(results, summary, this.options.mode);
       
+      // Report test results to BrowserStack
+      if (browserstackResult.enabled) {
+        this.reportToBrowserStack(results);
+      }
+      
       // Step 4: Generate execution summary and cleanup
       await this.executionLogger.generateExecutionSummary({
         results,
@@ -114,6 +138,18 @@ class JestParallelRunner {
       await this.executionLogger.cleanup();
       
       await this.executionLogger.success('COMPLETION', `Test execution completed in ${this.formatDuration(endTime - startTime)}`);
+      
+      // Finalize BrowserStack build
+      let browserstackBuildUrl = null;
+      if (browserstackResult.enabled) {
+        const finalizeResult = await this.browserstack.finalize(reportData.summary);
+        if (finalizeResult.success) {
+          browserstackBuildUrl = finalizeResult.dashboardUrl;
+          await this.executionLogger.success('BROWSERSTACK', 
+            `Build finalized: ${finalizeResult.dashboardUrl}`);
+        }
+        await this.browserstack.cleanup();
+      }
       
       // Return summary for programmatic use
       return {
@@ -128,14 +164,57 @@ class JestParallelRunner {
         },
         mode: this.options.mode,
         files: reportData.files || [],
-        tests: reportData.tests || []
+        tests: reportData.tests || [],
+        browserstackBuildUrl
       };
       
     } catch (error) {
       await this.executionLogger.error('EXECUTION', `Test execution failed: ${error.message}`);
       this.workerManager.cleanup();
       await this.executionLogger.cleanup();
+      
+      // Cleanup BrowserStack on error
+      if (browserstackResult.enabled) {
+        await this.browserstack.cleanup();
+      }
+      
       throw error;
+    }
+  }
+
+  /**
+   * Report test results to BrowserStack
+   */
+  reportToBrowserStack(results) {
+    if (!this.browserstack.getStatus().enabled) {
+      return;
+    }
+
+    try {
+      // Extract individual test results from the results array
+      const testResults = [];
+      
+      results.forEach(fileResult => {
+        if (fileResult.testResults && Array.isArray(fileResult.testResults)) {
+          fileResult.testResults.forEach(test => {
+            testResults.push({
+              filePath: fileResult.filePath,
+              testName: test.testName || test.name,
+              status: test.status,
+              duration: test.duration || 0,
+              error: test.error,
+              workerId: fileResult.workerId
+            });
+          });
+        }
+      });
+
+      if (testResults.length > 0) {
+        this.browserstack.reportTestResults(testResults);
+        this.logger.debug(`📊 Reported ${testResults.length} test results to BrowserStack`);
+      }
+    } catch (error) {
+      this.logger.warn(`⚠️  Failed to report test results to BrowserStack: ${error.message}`);
     }
   }
 

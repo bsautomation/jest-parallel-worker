@@ -25,7 +25,9 @@
     "worker",
     "performance",
     "test-runner",
-    "automation"
+    "automation",
+    "browserstack",
+    "test-reporting"
   ],
   "author": "Jest Parallel Worker Team",
   "license": "MIT",
@@ -45,6 +47,9 @@
   },
   "peerDependencies": {
     "jest": ">=29.0.0"
+  },
+  "optionalDependencies": {
+    "browserstack-node-sdk": "^1.40.7"
   },
   "engines": {
     "node": ">=14.0.0"

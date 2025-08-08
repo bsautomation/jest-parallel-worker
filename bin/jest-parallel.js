@@ -65,13 +65,35 @@ program
   .option('--outputDir <dir>', 'Output directory for reports', 'reports')
   .option('--reporter <type>', 'Reporter type (console, html, both)', 'both')
   .option('--config <path>', 'Path to configuration file')
+  .option('--browserstack', 'Enable BrowserStack Test Reporting', false)
+  .option('--bs-build <name>', 'BrowserStack build name')
+  .option('--bs-project <name>', 'BrowserStack project name')
   .action(async (options) => {
     try {
+      // Set BrowserStack environment variables if enabled
+      if (options.browserstack) {
+        process.env.BROWSERSTACK_ENABLED = 'true';
+        if (options.bsBuild) process.env.BUILD_NAME = options.bsBuild;
+        if (options.bsProject) process.env.PROJECT_NAME = options.bsProject;
+        
+        console.log(chalk.blue('🌐 BrowserStack Test Reporting enabled'));
+        if (options.bsBuild) console.log(chalk.gray(`📦 Build: ${options.bsBuild}`));
+        if (options.bsProject) console.log(chalk.gray(`📁 Project: ${options.bsProject}`));
+        console.log();
+      }
+      
       // Load configuration from file
       const fileConfig = ConfigLoader.loadConfig(options.config);
       
       // Merge configurations (CLI options override file config)
       const finalConfig = ConfigLoader.mergeConfigs(options, fileConfig);
+      
+      // Add BrowserStack configuration
+      if (options.browserstack) {
+        finalConfig.browserstackEnabled = true;
+        finalConfig.buildName = options.bsBuild;
+        finalConfig.projectName = options.bsProject;
+      }
       
       // Validate configuration
       const errors = ConfigLoader.validateConfig(finalConfig);
@@ -104,6 +126,11 @@ program
       
       if (summary.timeSaved) {
         console.log(chalk.blue(`⚡ Time saved: ${summary.timeSaved}ms (${summary.timeSavedPercentage?.toFixed(1)}%)`));
+      }
+      
+      // Show BrowserStack dashboard link if available
+      if (results.browserstackBuildUrl) {
+        console.log(chalk.blue(`🌐 BrowserStack Dashboard: ${results.browserstackBuildUrl}`));
       }
       
       // Exit with appropriate code

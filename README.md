@@ -10,6 +10,7 @@ A powerful Node.js SDK that extends Jest to run tests in parallel at the test le
 
 - **🏃‍♂️ Multiple Execution Modes**: Run tests with Jest's native parallel capabilities or custom parallel strategies
 - **📊 Comprehensive Reporting**: HTML reports with detailed metrics, visualizations, and performance statistics
+- **🌐 BrowserStack Integration**: Automatic test result reporting to BrowserStack Test Reporting with build management
 - **🔧 SDK Integration**: Use as a CLI tool or integrate programmatically into your Node.js applications
 - **⚡ Performance Optimized**: Significant speed improvements over sequential test execution
 - **🎯 Hook Compatible**: Proper beforeAll/afterAll hook behavior with file-level isolation
@@ -60,8 +61,11 @@ npx jest-parallel run --mode native-parallel --testMatch 'tests/**/*.test.js'
 # Run with custom configuration
 npx jest-parallel run --mode native-parallel --maxWorkers 4 --timeout 30 --testMatch 'src/**/*.test.js'
 
-# Run specific test file with options
-npx jest-parallel run --testMatch 'path/to/test.js' --mode native-parallel --maxWorkers 5 --timeout 10 --reporter both --verbose
+# Run with BrowserStack Test Reporting
+npx jest-parallel run --browserstack --bs-build "Release v1.0" --bs-project "My App"
+
+# Complete example with all options
+npx jest-parallel run --testMatch 'path/to/test.js' --mode native-parallel --maxWorkers 5 --timeout 10 --reporter both --verbose --browserstack
 
 # Check environment compatibility
 npx jest-parallel check
@@ -398,6 +402,52 @@ jest-parallel-worker/
 ├── examples/                 # Example test files
 └── tests/                    # SDK unit tests
 ```
+
+## 🌐 BrowserStack Integration
+
+Jest Parallel Worker includes built-in support for BrowserStack Test Reporting, allowing you to automatically push test results to your BrowserStack dashboard.
+
+### Quick Setup
+
+1. **Install BrowserStack SDK**:
+   ```bash
+   npm install browserstack-node-sdk
+   ```
+
+2. **Set Environment Variables**:
+   ```bash
+   export BROWSERSTACK_USERNAME="your_username"
+   export BROWSERSTACK_ACCESS_KEY="your_access_key"
+   ```
+
+3. **Run Tests with BrowserStack**:
+   ```bash
+   npx jest-parallel run --browserstack --bs-build "My Build" --bs-project "My Project"
+   ```
+
+### Features
+
+- ✅ **Automatic Result Reporting**: Test results are automatically sent to BrowserStack
+- ✅ **Build Management**: Creates and manages BrowserStack builds
+- ✅ **Real-time Updates**: Results are reported as tests complete
+- ✅ **Error Details**: Full error messages and stack traces
+- ✅ **Dashboard Links**: Direct links to BrowserStack dashboard
+
+### Configuration
+
+Create a `browserstack.yml` file:
+
+```yaml
+userName: ${BROWSERSTACK_USERNAME}
+accessKey: ${BROWSERSTACK_ACCESS_KEY}
+buildName: ${BUILD_NAME:-Jest Parallel Build}
+projectName: ${PROJECT_NAME:-Jest Parallel Project}
+testReporting:
+  enabled: true
+```
+
+For complete setup instructions, see [BROWSERSTACK_INTEGRATION.md](BROWSERSTACK_INTEGRATION.md).
+
 ## 🤝 Contributing
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/new-feature`
