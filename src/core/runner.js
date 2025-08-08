@@ -9,7 +9,7 @@ const {
   reportTestResult, 
   endBSReporting, 
   isBrowserStackAvailable 
-} = require('../../bs-reporter');
+} = require('../bs-reporter');
 
 class JestParallelRunner {
   constructor(options) {

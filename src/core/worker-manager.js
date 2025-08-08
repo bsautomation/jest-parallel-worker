@@ -1,7 +1,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const os = require('os');
-const { reportTestResult } = require('../../bs-reporter');
+const { reportTestResult } = require('../bs-reporter');
 
 class WorkerManager {
   constructor(options, logger, executionLogger) {
