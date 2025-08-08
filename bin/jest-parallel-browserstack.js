@@ -33,14 +33,24 @@ function findBrowserStackCommand() {
 }
 
 /**
- * Find Jest Parallel Worker binary with better external package support
+ * Find the Jest Parallel Worker binary
+ * @returns {string|null} Path to the binary or null for npx usage
  */
 function findJestParallelBinary() {
-  // First try to find the binary in standard locations
+  // Check if we're in an external package installation
+  const isExternalPackage = __dirname.includes('node_modules/jest-parallel-worker');
+  
+  // For external packages, always use npx for maximum compatibility
+  if (isExternalPackage) {
+    console.log('🔍 External package detected - using npx for maximum compatibility');
+    return null; // This will trigger npx usage
+  }
+  
   const possiblePaths = [
-    path.join(__dirname, 'jest-parallel.js'), // Same package
-    path.join(process.cwd(), 'node_modules', '.bin', 'jest-parallel'), // Local installation
-    path.join(__dirname, '..', 'bin', 'jest-parallel.js'), // Development
+    // Try local project installation
+    path.join(process.cwd(), 'node_modules', '.bin', 'jest-parallel'),
+    // Development environment
+    path.join(__dirname, '..', 'bin', 'jest-parallel.js'),
   ];
 
   for (const binPath of possiblePaths) {
@@ -50,8 +60,8 @@ function findJestParallelBinary() {
     }
   }
 
-  // For external packages, always use npx resolution
-  console.log('🔍 Using npx resolution for external package compatibility');
+  // Fallback to npx for universal compatibility
+  console.log('🔍 Using npx resolution for universal compatibility');
   return null; // This will trigger npx usage
 }
 

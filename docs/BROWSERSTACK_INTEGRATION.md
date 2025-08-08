@@ -275,42 +275,52 @@ Jest Parallel Worker's BrowserStack integration is designed to be **future-proof
    npm install browserstack-node-sdk --save-dev
    ```
 
-2. **"File jest-parallel.js doesn't exist"**
+2. **"File jest-parallel.js doesn't exist" (Fixed in Latest Version)**
+   
+   **Error Example:**
+   ```
+   Error: File /Users/user/project/node_modules/jest-parallel-worker/bin/jest-parallel.js doesn't exist
+   ```
+   
+   **🎉 Solution (Fixed)**: This issue has been resolved in the latest version through automatic external package detection:
+   
    ```bash
-   # Solution 1: Ensure jest-parallel-worker is properly installed
+   # ✅ Now works automatically - uses npx resolution for external packages
+   npx jest-parallel-browserstack run --testMatch "tests/**/*.test.js" --timeout 10
+   ```
+   
+   **Technical Details**: The command now automatically detects external package installations and uses npx resolution instead of direct file paths, ensuring maximum compatibility.
+   
+   **Legacy Alternatives** (if needed):
+   ```bash
+   # Alternative 1: Ensure jest-parallel-worker is properly installed
    npm install jest-parallel-worker --save-dev
    
-   # Solution 2: Use jest-parallel-browserstack (recommended for external packages)
-   npx jest-parallel-browserstack run --testMatch "tests/**/*.test.js" --timeout 10
-   
-   # Solution 3: Use SDK integration (most reliable)
+   # Alternative 2: Use SDK integration (most reliable for complex setups)
    # Create a script file instead of direct CLI usage
    ```
    
-   **For external package usage, create a script:**
+   **For complex setups, create a script:**
    ```javascript
    // browserstack-test.js
-   const { JestParallelSDK } = require('jest-parallel-worker');
+   const { runWithBrowserStack } = require('jest-parallel-worker/src/integrations/browserstack');
    
    async function runTests() {
-     const results = await JestParallelSDK.runTestsWithBrowserStack(
-       {
-         buildName: 'CI Tests',
-         projectName: 'My App',
-         local: false
-       },
-       {
-         testMatch: 'tests/**/*.test.js',
-         mode: 'native-parallel',
-         maxWorkers: 4
-       }
-     );
-     
-     console.log(`Tests completed: ${results.summary.passed}/${results.summary.totalTests} passed`);
-     process.exit(results.summary.failed > 0 ? 1 : 0);
+     try {
+       await runWithBrowserStack([
+         'run',
+         '--testMatch', 'tests/**/*.test.js',
+         '--mode', 'native-parallel',
+         '--timeout', '10'
+       ]);
+       console.log('✅ Tests completed successfully!');
+     } catch (error) {
+       console.error('❌ Tests failed:', error);
+       process.exit(1);
+     }
    }
    
-   runTests().catch(console.error);
+   runTests();
    ```
    
    Then run: `npx browserstack-node-sdk node browserstack-test.js`
