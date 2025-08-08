@@ -7,13 +7,13 @@
     "completed": 3,
     "running": 0,
     "successRate": "100.0",
-    "duration": "3.81s",
-    "durationMs": 3815,
-    "startTime": "2025-08-07T18:49:22.413Z",
-    "endTime": "2025-08-07T18:49:26.228Z",
+    "duration": "3.88s",
+    "durationMs": 3875,
+    "startTime": "2025-08-08T05:28:33.199Z",
+    "endTime": "2025-08-08T05:28:37.074Z",
     "hooks": {
-      "totalDuration": 121,
-      "beforeAllTotal": 97,
+      "totalDuration": 122,
+      "beforeAllTotal": 98,
       "beforeEachTotal": 17,
       "afterAllTotal": 2,
       "afterEachTotal": 5
@@ -30,9 +30,9 @@
       "duration": "0.003s",
       "durationMs": 3,
       "hooks": {
-        "total": 121,
+        "total": 122,
         "beforeAll": {
-          "duration": 97,
+          "duration": 98,
           "status": "estimated"
         },
         "beforeEach": {
@@ -82,7 +82,7 @@
       "endTime": null,
       "hooks": {
         "beforeAll": {
-          "duration": 97,
+          "duration": 98,
           "status": "estimated"
         },
         "beforeEach": {
@@ -141,8 +141,8 @@
         }
       ],
       "output": "",
-      "errorOutput": "PASS examples/simple-math.test.js\n  Simple Math Tests\n    ✓ should add two numbers correctly (2 ms)\n    ✓ should multiply two numbers correctly (1 ms)\n    ✓ should handle division correctly\n\nTest Suites: 1 passed, 1 total\nTests:       3 passed, 3 total\nSnapshots:   0 total\nTime:        0.124 s, estimated 1 s\nRan all test suites matching /\\/Users\\/kush\\/jest-parallel-worker\\/examples\\/simple-math.test.js/i.\n",
-      "duration": 3223,
+      "errorOutput": "PASS examples/simple-math.test.js\n  Simple Math Tests\n    ✓ should add two numbers correctly (2 ms)\n    ✓ should multiply two numbers correctly (1 ms)\n    ✓ should handle division correctly\n\nTest Suites: 1 passed, 1 total\nTests:       3 passed, 3 total\nSnapshots:   0 total\nTime:        0.125 s, estimated 1 s\nRan all test suites matching /\\/Users\\/kush\\/jest-parallel-worker\\/examples\\/simple-math.test.js/i.\n",
+      "duration": 3257,
       "workerId": 0,
       "filePath": "/Users/kush/jest-parallel-worker/examples/simple-math.test.js",
       "exitCode": 0,
@@ -150,7 +150,7 @@
       "jestWorkers": 2,
       "hookInfo": {
         "beforeAll": {
-          "duration": 97,
+          "duration": 98,
           "status": "estimated"
         },
         "beforeEach": {

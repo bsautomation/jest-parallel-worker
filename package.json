@@ -5,8 +5,7 @@
   "main": "src/index.js",
   "bin": {
     "jest-parallel": "./bin/jest-parallel.js",
-    "jest-parallel-browserstack": "./bin/jest-parallel-browserstack.js",
-    "jest-parallel-bstack": "./bin/browserstack-wrapper.js"
+    "jest-parallel-browserstack": "./bin/jest-parallel-browserstack.js"
   },
   "files": [
     "src/",

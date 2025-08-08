@@ -143,25 +143,12 @@ Use browserstack-node-sdk directly:
 # Install BrowserStack SDK
 npm install browserstack-node-sdk --save-dev
 
-# Method 1: Use the universal wrapper (recommended)
-npx browserstack-node-sdk npx jest-parallel run --testMatch 'tests/**/*.test.js' --mode native-parallel
+# Method 1: Use the jest-parallel-browserstack command (recommended)
+npx jest-parallel-browserstack run --testMatch 'tests/**/*.test.js' --mode native-parallel
 
 # Method 2: Use SDK integration via script (most reliable for external packages)
 # Create browserstack-test.js (see troubleshooting section)
 npx browserstack-node-sdk node browserstack-test.js
-```
-
-## 🔧 **Approach 4: Universal Wrapper (External Package Solution)**
-
-For external package installations where binary path resolution is problematic:
-
-```bash
-# Use the universal wrapper that handles path resolution automatically
-npx jest-parallel-bstack run --testMatch 'tests/**/*.test.js' --mode native-parallel --timeout 10
-
-# With environment variables
-BROWSERSTACK_USERNAME=your_username BROWSERSTACK_ACCESS_KEY=your_key \
-npx jest-parallel-bstack run --testMatch 'tests/**/*.test.js' --mode native-parallel
 ```
 
 ## 🛠️ **Configuration Options**
@@ -293,8 +280,8 @@ Jest Parallel Worker's BrowserStack integration is designed to be **future-proof
    # Solution 1: Ensure jest-parallel-worker is properly installed
    npm install jest-parallel-worker --save-dev
    
-   # Solution 2: Use the universal wrapper (recommended for external packages)
-   npx jest-parallel-bstack run --testMatch 'tests/**/*.test.js' --mode native-parallel
+   # Solution 2: Use jest-parallel-browserstack (recommended for external packages)
+   npx jest-parallel-browserstack run --testMatch "tests/**/*.test.js" --timeout 10
    
    # Solution 3: Use SDK integration (most reliable)
    # Create a script file instead of direct CLI usage
