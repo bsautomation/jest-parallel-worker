@@ -1,14 +1,52 @@
-# BrowserStack Integration for Jest Parallel Worker
+# 🌐 **BrowserStack Integration for Jest Parallel Worker**
 
-This guide explains how to integrate Jest Parallel Worker with BrowserStack for cross-browser testing.
+Complete guide for running Jest Parallel Worker tests with BrowserStack cross-browser testing.
 
-## 🚀 Quick Start
+## 🚀 **Quick Start (Recommended)**
 
-### 1. Install Dependencies
+### **Primary Command: jest-parallel-browserstack**
 
 ```bash
+# Install dependencies
 npm install jest-parallel-worker browserstack-node-sdk --save-dev
+
+# Set credentials
+export BROWSERSTACK_USERNAME="your_username"
+export BROWSERSTACK_ACCESS_KEY="your_access_key"
+
+# Run tests (works exactly like browserstack-node-sdk)
+npx jest-parallel-browserstack run --testMatch "tests/**/*.test.js" --timeout 10
 ```
+
+**This is the recommended approach for external packages and production use.**
+
+## 🔧 **Integration Methods**
+
+### **🥇 Method 1: jest-parallel-browserstack (Primary - Recommended)**
+
+Drop-in replacement for browserstack-node-sdk with Jest Parallel Worker:
+
+```bash
+# Basic usage (works exactly like browserstack-node-sdk)
+npx jest-parallel-browserstack run --testMatch "tests/**/*.test.js"
+
+# With advanced options
+npx jest-parallel-browserstack run \
+  --testMatch "tests/**/*.test.js" \
+  --mode native-parallel \
+  --timeout 15 \
+  --maxWorkers 4 \
+  --verbose
+
+# Command equivalence:
+# jest-parallel-browserstack [args] === browserstack-node-sdk node jest-parallel [args]
+```
+
+**Benefits:**
+- ✅ **External Package Ready**: Perfect for npm/yarn installations
+- ✅ **Familiar Workflow**: Same as browserstack-node-sdk usage
+- ✅ **Automatic Detection**: Finds all required binaries automatically
+- ✅ **Error Handling**: Helpful troubleshooting and setup guidance
 
 ### 2. Setup BrowserStack Configuration
 
