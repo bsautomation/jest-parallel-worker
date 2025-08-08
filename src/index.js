@@ -34,7 +34,7 @@ class JestParallelSDK {
    */
   async run(customOptions = {}) {
     const finalOptions = { ...this.options, ...customOptions };
-    const runner = new JestParallelRunner(finalOptions);
+    const runner = new Runner(finalOptions);
     return await runner.run();
   }
 
@@ -56,7 +56,7 @@ class JestParallelSDK {
     try {
       await beforeAll();
 
-      const runner = new JestParallelRunner({
+      const runner = new Runner({
         ...this.options,
         onProgress,
         onTestComplete: afterEach,
@@ -219,7 +219,7 @@ module.exports = {
   JestParallelSDK,
   
   // Core components
-  JestParallelRunner,
+  Runner: Runner, // Main test runner
   TestParser,
   WorkerManager,
   ReportGenerator,

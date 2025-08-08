@@ -139,7 +139,9 @@ class BrowserStackIntegration {
       // Ignore errors when checking global installation
     }
 
-    throw new Error('Could not locate jest-parallel binary. Please ensure jest-parallel-worker is properly installed.');
+    // Return a placeholder path - buildBrowserStackArgs will handle npx resolution
+    console.warn('⚠️  Could not locate jest-parallel binary directly, using npx resolution');
+    return 'jest-parallel'; // This will trigger npx resolution in buildBrowserStackArgs
   }
 
   /**
@@ -289,14 +291,20 @@ class BrowserStackIntegration {
     const [major, minor] = this.browserstackSdkVersion ? 
       this.browserstackSdkVersion.split('.').map(Number) : [1, 30];
     
-    // Future-proof argument building
-    if (major >= 2 || (major === 1 && minor >= 40)) {
-      // Future versions may have different argument patterns
-      // This is extensible for new BrowserStack SDK features
-      return ['node', jestParallelBin, ...args];
+    // Use npx resolution instead of direct file paths to avoid path issues
+    // This is more reliable when jest-parallel-worker is installed as a dependency
+    const useNpxResolution = !fs.existsSync(jestParallelBin);
+    
+    if (useNpxResolution) {
+      console.log('📦 Using npx resolution for better compatibility');
+      return ['npx', 'jest-parallel', ...args];
     } else {
-      // Current version pattern
-      return ['node', jestParallelBin, ...args];
+      // Future-proof argument building for direct paths
+      if (major >= 2 || (major === 1 && minor >= 40)) {
+        return ['node', jestParallelBin, ...args];
+      } else {
+        return ['node', jestParallelBin, ...args];
+      }
     }
   }
 
@@ -332,4 +340,40 @@ class BrowserStackIntegration {
   }
 }
 
-module.exports = { BrowserStackIntegration };
+/**
+ * Standalone function to run Jest Parallel Worker with BrowserStack
+ * Useful for scripts and external integrations
+ */
+async function runWithBrowserStack(args = []) {
+  const integration = new BrowserStackIntegration();
+  
+  // Convert CLI args to options object
+  const options = {};
+  
+  for (let i = 0; i < args.length; i++) {
+    switch (args[i]) {
+      case '--testMatch':
+        options.testMatch = args[++i];
+        break;
+      case '--mode':
+        options.mode = args[++i];
+        break;
+      case '--timeout':
+        options.timeout = parseFloat(args[++i]);
+        break;
+      case '--maxWorkers':
+        options.maxWorkers = parseInt(args[++i]);
+        break;
+      case '--verbose':
+        options.verbose = true;
+        break;
+      case '--local':
+        options.local = true;
+        break;
+    }
+  }
+  
+  return await integration.runWithBrowserStack(options);
+}
+
+module.exports = { BrowserStackIntegration, runWithBrowserStack };

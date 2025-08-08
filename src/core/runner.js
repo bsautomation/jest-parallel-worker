@@ -246,4 +246,4 @@ class JestParallelRunner {
   }
 }
 
-module.exports = { JestParallelRunner };
+module.exports = { Runner: JestParallelRunner, JestParallelRunner };

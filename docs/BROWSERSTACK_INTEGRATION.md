@@ -105,8 +105,25 @@ Use browserstack-node-sdk directly:
 # Install BrowserStack SDK
 npm install browserstack-node-sdk --save-dev
 
-# Use BrowserStack SDK to wrap Jest Parallel Worker
-npx browserstack-node-sdk node ./node_modules/.bin/jest-parallel run --testMatch 'tests/**/*.test.js' --mode native-parallel
+# Method 1: Use the universal wrapper (recommended)
+npx browserstack-node-sdk npx jest-parallel run --testMatch 'tests/**/*.test.js' --mode native-parallel
+
+# Method 2: Use SDK integration via script (most reliable for external packages)
+# Create browserstack-test.js (see troubleshooting section)
+npx browserstack-node-sdk node browserstack-test.js
+```
+
+## 🔧 **Approach 4: Universal Wrapper (External Package Solution)**
+
+For external package installations where binary path resolution is problematic:
+
+```bash
+# Use the universal wrapper that handles path resolution automatically
+npx jest-parallel-bstack run --testMatch 'tests/**/*.test.js' --mode native-parallel --timeout 10
+
+# With environment variables
+BROWSERSTACK_USERNAME=your_username BROWSERSTACK_ACCESS_KEY=your_key \
+npx jest-parallel-bstack run --testMatch 'tests/**/*.test.js' --mode native-parallel
 ```
 
 ## 🛠️ **Configuration Options**
@@ -235,12 +252,43 @@ Jest Parallel Worker's BrowserStack integration is designed to be **future-proof
 
 2. **"File jest-parallel.js doesn't exist"**
    ```bash
-   # Ensure jest-parallel-worker is properly installed
+   # Solution 1: Ensure jest-parallel-worker is properly installed
    npm install jest-parallel-worker --save-dev
    
-   # Or try using the full path
-   npx jest-parallel-browserstack run --testMatch 'tests/**/*.test.js'
+   # Solution 2: Use the universal wrapper (recommended for external packages)
+   npx jest-parallel-bstack run --testMatch 'tests/**/*.test.js' --mode native-parallel
+   
+   # Solution 3: Use SDK integration (most reliable)
+   # Create a script file instead of direct CLI usage
    ```
+   
+   **For external package usage, create a script:**
+   ```javascript
+   // browserstack-test.js
+   const { JestParallelSDK } = require('jest-parallel-worker');
+   
+   async function runTests() {
+     const results = await JestParallelSDK.runTestsWithBrowserStack(
+       {
+         buildName: 'CI Tests',
+         projectName: 'My App',
+         local: false
+       },
+       {
+         testMatch: 'tests/**/*.test.js',
+         mode: 'native-parallel',
+         maxWorkers: 4
+       }
+     );
+     
+     console.log(`Tests completed: ${results.summary.passed}/${results.summary.totalTests} passed`);
+     process.exit(results.summary.failed > 0 ? 1 : 0);
+   }
+   
+   runTests().catch(console.error);
+   ```
+   
+   Then run: `npx browserstack-node-sdk node browserstack-test.js`
 
 3. **Authentication errors**
    ```bash
