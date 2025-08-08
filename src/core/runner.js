@@ -2,6 +2,7 @@ const { TestParser } = require('./parser');
 const { WorkerManager } = require('./worker-manager');
 const { ReportGenerator } = require('./reporter');
 const { ExecutionLogger } = require('./execution-logger');
+const { Logger } = require('../utils/logger');
 const CustomTestRunner = require('../custom-test-runner');
 
 class JestParallelRunner {
@@ -26,7 +27,8 @@ class JestParallelRunner {
       enableFile: true
     });
     
-    this.logger = options.logger;
+    // Initialize logger - use provided logger or create default one
+    this.logger = options.logger || new Logger('jest-parallel-runner');
     this.parser = new TestParser(this.logger);
     this.workerManager = new WorkerManager(this.options, this.logger, this.executionLogger);
     this.reportGenerator = new ReportGenerator(this.options, this.logger);
@@ -115,12 +117,18 @@ class JestParallelRunner {
       
       // Return summary for programmatic use
       return {
-        passed: reportData.summary.passed,
-        failed: reportData.summary.failed,
-        total: reportData.summary.totalTests,
-        duration: reportData.summary.totalDuration,
-        timeSaved: reportData.summary.timeSaved,
-        mode: this.options.mode
+        summary: {
+          passed: reportData.summary.passed,
+          failed: reportData.summary.failed,
+          skipped: reportData.summary.skipped,
+          totalTests: reportData.summary.totalTests,
+          totalDuration: reportData.summary.totalDuration,
+          timeSaved: reportData.summary.timeSaved,
+          timeSavedPercentage: reportData.summary.timeSavedPercentage
+        },
+        mode: this.options.mode,
+        files: reportData.files || [],
+        tests: reportData.tests || []
       };
       
     } catch (error) {

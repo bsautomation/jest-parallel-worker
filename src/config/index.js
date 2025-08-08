@@ -1,0 +1,135 @@
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Configuration loader for Jest Parallel Worker
+ */
+class ConfigLoader {
+  /**
+   * Load configuration from standard Jest config files only
+   * @returns {Object} Configuration object
+   */
+  static loadConfig() {
+    // Try to load from jest.config.js or jest.config.json
+    const possiblePaths = [
+      'jest.config.js',
+      'jest.config.json'
+    ];
+
+    for (const configFile of possiblePaths) {
+      const fullPath = path.resolve(configFile);
+      if (fs.existsSync(fullPath)) {
+        try {
+          if (configFile.endsWith('.json')) {
+            const content = fs.readFileSync(fullPath, 'utf8');
+            return JSON.parse(content);
+          } else if (configFile.endsWith('.js')) {
+            delete require.cache[require.resolve(fullPath)];
+            return require(fullPath);
+          }
+        } catch (error) {
+          console.warn(`Warning: Failed to load config from ${configFile}:`, error.message);
+        }
+      }
+    }
+
+    // Check package.json for 'jest' config
+    const packageJsonPath = path.resolve('package.json');
+    if (fs.existsSync(packageJsonPath)) {
+      try {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        if (packageJson['jest']) {
+          return packageJson['jest'];
+        }
+      } catch (error) {
+        console.warn('Warning: Failed to read package.json:', error.message);
+      }
+    }
+
+    return {};
+  }
+
+  /**
+   * Get default configuration
+   * @returns {Object} Default configuration
+   */
+  static getDefaultConfig() {
+    return {
+      mode: 'native-parallel',
+      testMatch: 'tests/**/*.test.js',
+      maxWorkers: require('os').cpus().length,
+      timeout: 30000,
+      forceConcurrent: false,
+      verbose: false,
+      outputDir: 'reports',
+      reporter: 'both'
+    };
+  }
+
+  /**
+   * Merge configurations with precedence: CLI > config file > defaults
+   * @param {Object} cliOptions - CLI provided options
+   * @param {Object} fileConfig - Configuration from file
+   * @returns {Object} Merged configuration
+   */
+  static mergeConfigs(cliOptions = {}, fileConfig = {}) {
+    const defaultConfig = ConfigLoader.getDefaultConfig();
+    
+    // Convert timeout from minutes to milliseconds if provided via CLI
+    const processedCliOptions = { ...cliOptions };
+    if (processedCliOptions.timeout !== undefined && processedCliOptions.timeout !== null) {
+      // CLI timeout is in minutes, convert to milliseconds
+      processedCliOptions.timeout = processedCliOptions.timeout * 60 * 1000;
+    }
+    
+    // Merge with precedence: CLI > file > defaults
+    return {
+      ...defaultConfig,
+      ...fileConfig,
+      ...Object.fromEntries(
+        Object.entries(processedCliOptions).filter(([_, value]) => value !== undefined && value !== null)
+      )
+    };
+  }
+
+  /**
+   * Validate configuration object
+   * @param {Object} config - Configuration to validate
+   * @returns {Array} Array of validation errors (empty if valid)
+   */
+  static validateConfig(config) {
+    const errors = [];
+    
+    if (!config.testMatch) {
+      errors.push('testMatch is required');
+    }
+    
+    const validModes = ['native-parallel', 'parallel-test', 'parallel-file', 'jest-parallel'];
+    if (!validModes.includes(config.mode)) {
+      errors.push(`Invalid mode: ${config.mode}. Valid modes: ${validModes.join(', ')}`);
+    }
+    
+    if (config.maxWorkers && (typeof config.maxWorkers !== 'number' || config.maxWorkers < 1)) {
+      errors.push('maxWorkers must be a number >= 1');
+    }
+    
+    if (config.timeout && (typeof config.timeout !== 'number' || config.timeout < 6000)) {
+      errors.push('timeout must be a number >= 0.1 minute (6000ms)');
+    }
+    
+    const validReporters = ['console', 'html', 'both'];
+    if (config.reporter && !validReporters.includes(config.reporter)) {
+      errors.push(`Invalid reporter: ${config.reporter}. Valid reporters: ${validReporters.join(', ')}`);
+    }
+    
+    return errors;
+  }
+}
+
+module.exports = {
+  ConfigLoader,
+  loadConfig: ConfigLoader.loadConfig,
+  getDefaultConfig: ConfigLoader.getDefaultConfig,
+  mergeConfigs: ConfigLoader.mergeConfigs,
+  validateConfig: ConfigLoader.validateConfig
+};

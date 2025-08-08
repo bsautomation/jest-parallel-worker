@@ -6,11 +6,9 @@ class WorkerManager {
   constructor(options, logger, executionLogger) {
     this.maxWorkers = options.maxWorkers || 4;
     
-    // Convert timeout from minutes to milliseconds
-    // If timeout is provided in options, assume it's in minutes and convert to ms
-    // If not provided, default to 5 minutes
-    const timeoutMinutes = options.timeout ? parseFloat(options.timeout) : 5;
-    this.timeout = Math.round(timeoutMinutes * 60 * 1000); // Convert minutes to milliseconds
+    // Timeout should already be in milliseconds from config processing
+    // Default to 5 minutes (300000ms) if not provided
+    this.timeout = options.timeout || (5 * 60 * 1000);
     
     this.logger = logger;
     this.executionLogger = executionLogger;
@@ -39,7 +37,7 @@ class WorkerManager {
     this.lastStatusUpdate = 0;
     this.statusUpdateInterval = 1000; // Update every 1 second
     
-    this.logger.debug(`WorkerManager initialized with ${this.maxWorkers} max workers and ${timeoutMinutes} minute(s) timeout (${this.timeout}ms)`);
+    this.logger.debug(`WorkerManager initialized with ${this.maxWorkers} max workers and ${this.timeout}ms timeout`);
   }
 
   // Helper method to format duration in human-readable format
