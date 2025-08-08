@@ -43,6 +43,9 @@
     "expect": "^30.0.5",
     "glob": "^10.3.3"
   },
+  "optionalDependencies": {
+    "browserstack-node-sdk": "^1.0.0"
+  },
   "peerDependencies": {
     "jest": ">=29.0.0"
   },
@@ -51,5 +54,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "browserstack-node-sdk": "^1.40.7"
   }
 }

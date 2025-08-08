@@ -1,6 +1,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const os = require('os');
+const { reportTestResult } = require('../../bs-reporter');
 
 class WorkerManager {
   constructor(options, logger, executionLogger) {
@@ -65,9 +66,29 @@ class WorkerManager {
     this.logTestStatus('INITIALIZED');
   }
   
-  updateTestStatus(testResults) {
+  async updateTestStatus(testResults) {
     if (!testResults || !Array.isArray(testResults)) {
+      console.log('🔍 Debug: No test results or not an array');
       return;
+    }
+    
+    console.log(`🔍 Debug: Updating test status for ${testResults.length} tests`);
+    console.log('🔍 Debug: Test results structure:', JSON.stringify(testResults.slice(0, 2), null, 2));
+    
+    // Report individual test results to BrowserStack
+    for (const test of testResults) {
+      const testName = test.name || test.testName;
+      if (testName && test.status) {
+        console.log(`🔍 Debug: Reporting test "${testName}" with status "${test.status}"`);
+        await reportTestResult({
+          name: testName,
+          status: test.status,
+          reason: test.error || test.message || '',
+          duration: test.duration
+        });
+      } else {
+        console.log(`🔍 Debug: Skipping test with missing data:`, test);
+      }
     }
     
     // Count results from the latest batch
@@ -604,7 +625,7 @@ class WorkerManager {
       errorOutput += data.toString();
     });
 
-    const handleCompletion = (code, isTimeout = false) => {
+    const handleCompletion = async (code, isTimeout = false) => {
       if (hasCompleted) return;
       hasCompleted = true;
 
@@ -691,7 +712,7 @@ class WorkerManager {
         
         // Log detailed file completion status for concurrent file worker
         if (result.testResults && Array.isArray(result.testResults)) {
-          this.updateTestStatus(result.testResults);
+          await this.updateTestStatus(result.testResults);
           
           const fileName = path.basename(result.filePath || 'Unknown File');
           const passedCount = result.testResults.filter(t => t.status === 'passed').length;

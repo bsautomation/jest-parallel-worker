@@ -4,6 +4,12 @@ const { ReportGenerator } = require('./reporter');
 const { ExecutionLogger } = require('./execution-logger');
 const { Logger } = require('../utils/logger');
 const CustomTestRunner = require('../custom-test-runner');
+const { 
+  initBSReporting, 
+  reportTestResult, 
+  endBSReporting, 
+  isBrowserStackAvailable 
+} = require('../../bs-reporter');
 
 class JestParallelRunner {
   constructor(options) {
@@ -32,11 +38,22 @@ class JestParallelRunner {
     this.parser = new TestParser(this.logger);
     this.workerManager = new WorkerManager(this.options, this.logger, this.executionLogger);
     this.reportGenerator = new ReportGenerator(this.options, this.logger);
+    
+    // BrowserStack integration status
+    this.browserstackEnabled = false;
   }
 
   async run() {
     const startTime = Date.now();
     await this.executionLogger.info('STARTUP', `Starting Jest Parallel Worker in ${this.options.mode} mode`);
+    
+    // Initialize BrowserStack reporting if available
+    if (isBrowserStackAvailable()) {
+      this.browserstackEnabled = await initBSReporting();
+      if (this.browserstackEnabled) {
+        await this.executionLogger.info('BROWSERSTACK', 'BrowserStack integration enabled');
+      }
+    }
     
     try {
       // Step 1: Find and parse test files
@@ -113,6 +130,11 @@ class JestParallelRunner {
       this.workerManager.cleanup();
       await this.executionLogger.cleanup();
       
+      // End BrowserStack session
+      if (this.browserstackEnabled) {
+        await endBSReporting();
+      }
+      
       await this.executionLogger.success('COMPLETION', `Test execution completed in ${this.formatDuration(endTime - startTime)}`);
       
       // Return summary for programmatic use
@@ -135,6 +157,12 @@ class JestParallelRunner {
       await this.executionLogger.error('EXECUTION', `Test execution failed: ${error.message}`);
       this.workerManager.cleanup();
       await this.executionLogger.cleanup();
+      
+      // End BrowserStack session on error
+      if (this.browserstackEnabled) {
+        await endBSReporting();
+      }
+      
       throw error;
     }
   }
