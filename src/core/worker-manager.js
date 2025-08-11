@@ -844,7 +844,7 @@ class WorkerManager {
         // Log the start and end of output for debugging
         if (trimmedOutput.length > 100) {
           this.logger.debug(`Output starts with: ${trimmedOutput.substring(0, 100)}...`);
-          this.logger.debug(`Output ends with: ...${trimmedOutput.substring(trimmedOutput.length - 100)}`);
+          this.logger.debug(`Output ends with: ...${trimmedOutput}`);
         } else {
           this.logger.debug(`Full output: ${trimmedOutput}`);
         }

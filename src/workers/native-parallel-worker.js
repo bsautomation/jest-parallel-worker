@@ -2,6 +2,76 @@
 // Uses Jest's native capabilities for parallel execution
 const path = require('path');
 const { spawn } = require('child_process');
+const fs = require('fs');
+
+// Function to detect existing Jest configuration files
+function findJestConfig() {
+  const configFiles = [
+    'jest.config.js',
+    'jest.config.ts',
+    'jest.config.mjs',
+    'jest.config.cjs',
+    'jest.config.json',
+    'jest.json'
+  ];
+  
+  // Check for Jest config files in project root
+  for (const configFile of configFiles) {
+    const configPath = path.join(process.cwd(), configFile);
+    if (fs.existsSync(configPath)) {
+      console.log(`📋 Found Jest config: ${configFile}`);
+      return configPath;
+    }
+  }
+  
+  // Check for Jest config in package.json
+  try {
+    const packageJsonPath = path.join(process.cwd(), 'package.json');
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      if (packageJson.jest) {
+        console.log(`📋 Found Jest config in package.json`);
+        return null; // Jest will automatically use package.json config
+      }
+    }
+  } catch (error) {
+    console.warn(`⚠️ Error reading package.json: ${error.message}`);
+  }
+  
+  console.log(`📋 No Jest config found, using Jest defaults with minimal overrides`);
+  return null;
+}
+
+// Function to create a minimal fallback Jest config when needed
+function createFallbackJestConfig() {
+  const fallbackConfigPath = path.join(process.cwd(), 'jest.config.fallback.json');
+  
+  // Only create if it doesn't exist
+  if (!fs.existsSync(fallbackConfigPath)) {
+    const fallbackConfig = {
+      testEnvironment: 'node',
+      moduleFileExtensions: ['js', 'json', 'node'],
+      testRunner: 'jest-circus/runner',
+      verbose: true,
+      forceExit: true,
+      detectOpenHandles: true,
+      testMatch: [
+        '**/__tests__/**/*.(js|jsx)',
+        '**/*.(test|spec).(js|jsx)'
+      ]
+    };
+    
+    try {
+      fs.writeFileSync(fallbackConfigPath, JSON.stringify(fallbackConfig, null, 2));
+      console.log(`📋 Created fallback Jest config: jest.config.fallback.json`);
+    } catch (error) {
+      console.warn(`⚠️ Could not create fallback config: ${error.message}`);
+      return null;
+    }
+  }
+  
+  return fallbackConfigPath;
+}
 
 async function runTestsNatively(config) {
   const startTime = Date.now();
@@ -123,20 +193,25 @@ async function runFileWithConcurrentTransformation(config, startTime) {
       console.log(`   - Temp file exists: ${require('fs').existsSync(tempFilePath)}`);
       console.log(`   - Resolved temp file exists: ${require('fs').existsSync(path.resolve(tempFilePath))}`);
       
+      // Detect and use existing Jest configuration
+      let jestConfigPath = findJestConfig();
+      
+      // If no user config found, create a minimal fallback
+      if (!jestConfigPath) {
+        jestConfigPath = createFallbackJestConfig();
+      }
+      
       const jestArgs = [
         // Use absolute path to the temporary file
         path.resolve(tempFilePath),
+        // Use detected or fallback Jest configuration
+        ...(jestConfigPath ? ['--config', jestConfigPath] : []),
         '--verbose',
         '--no-coverage',
         '--passWithNoTests', // Allow exiting with code 0 when no tests found
         '--forceExit',
         '--detectOpenHandles',
         '--maxConcurrency', maxConcurrency.toString(),
-        // Add test environment configuration for BrowserStack compatibility
-        '--testEnvironment', 'node',
-        '--moduleFileExtensions', 'js', 'json', 'node', // Fix: separate values
-        '--transform', '{}',
-        '--testRunner', 'jest-circus/runner',
         // Ensure Jest looks in the correct directory
         '--rootDir', process.cwd(),
         // Add more specific patterns for the target file
@@ -234,17 +309,41 @@ async function runFileWithConcurrentTransformation(config, startTime) {
           
           // Check if BrowserStack had configuration issues
           if (output.includes('Cannot read properties of null') || 
+              output.includes('Cannot convert undefined or null to object') ||
               errorOutput.includes('Cannot read properties of null') ||
+              errorOutput.includes('Cannot convert undefined or null to object') ||
               output.includes('TypeError:') || 
+              errorOutput.includes('TypeError:') ||
               output.includes('No tests found, exiting with code 1') ||
               output.includes('No files found in /') ||
               output.includes("Make sure Jest's configuration does not exclude this directory") ||
               output.includes('SDK run started with id:') && code !== 0) {
             
-            let errorMessage = 'BrowserStack SDK configuration error. Please check:\n1. BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY environment variables\n2. browserstack.yml configuration file\n3. BrowserStack Node SDK installation\n4. Jest working directory and file paths';
+            let errorMessage = 'BrowserStack SDK configuration error in concurrent mode. Common issues:\n' +
+                             '1. BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY environment variables missing or invalid\n' +
+                             '2. browserstack.yml configuration file missing or misconfigured\n' +
+                             '3. BrowserStack Node SDK version compatibility issues\n' +
+                             '4. Jest working directory or file path resolution problems\n' +
+                             '5. Object property access errors in SDK setup (TypeError: Cannot convert undefined or null to object)';
+            
+            if (output.includes('Cannot convert undefined or null to object') || errorOutput.includes('Cannot convert undefined or null to object')) {
+              errorMessage = 'BrowserStack SDK internal error: Cannot convert undefined or null to object.\n' +
+                            'This is a known issue with BrowserStack Node SDK when configuration is incomplete.\n' +
+                            'Solutions:\n' +
+                            '1. Verify BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY are set correctly\n' +
+                            '2. Ensure browserstack.yml exists and is properly formatted\n' +
+                            '3. Consider downgrading BrowserStack Node SDK to v1.39.0 (known stable version)\n' +
+                            '4. Run tests without --browserstack-sdk flag for local execution';
+            }
             
             if (output.includes('No tests found') || output.includes('No files found')) {
-              errorMessage = 'BrowserStack SDK Jest configuration error. Jest cannot find test files.\nThis may be due to:\n1. Incorrect working directory\n2. Jest configuration excluding test files\n3. Missing package.json in the target directory\n4. TestMatch patterns not matching any files in rootDir';
+              errorMessage = 'BrowserStack SDK Jest configuration error in concurrent mode. Jest cannot find test files.\n' +
+                            'This may be due to:\n' +
+                            '1. Incorrect working directory in BrowserStack execution context\n' +
+                            '2. Jest configuration excluding test files when run through BrowserStack SDK\n' +
+                            '3. Missing package.json in the target directory\n' +
+                            '4. TestMatch patterns not matching any files in rootDir\n' +
+                            '5. BrowserStack SDK changing the execution context or file paths';
             }
             
             console.log(`🚨 BrowserStack concurrent configuration error detected`);
@@ -435,9 +534,19 @@ async function runFileWithParallelism(config, startTime) {
     console.log(`   - File exists: ${require('fs').existsSync(config.filePath)}`);
     console.log(`   - Resolved file exists: ${require('fs').existsSync(path.resolve(config.filePath))}`);
     
+    // Detect and use existing Jest configuration
+    let jestConfigPath = findJestConfig();
+    
+    // If no user config found, create a minimal fallback
+    if (!jestConfigPath) {
+      jestConfigPath = createFallbackJestConfig();
+    }
+    
     const jestArgs = [
       // Use the full absolute file path for more reliable test discovery
       path.resolve(config.filePath),
+      // Use detected or fallback Jest configuration
+      ...(jestConfigPath ? ['--config', jestConfigPath] : []),
       '--verbose',
       '--no-coverage',
       '--passWithNoTests', // Allow exiting with code 0 when no tests found
@@ -447,11 +556,6 @@ async function runFileWithParallelism(config, startTime) {
       // Override testMatch to include any test files regardless of location
       '--testMatch', '**/*.test.js',
       '--testMatch', '**/*.spec.js',
-      // Add test environment configuration for BrowserStack compatibility
-      '--testEnvironment', 'node',
-      '--moduleFileExtensions', 'js', 'json', 'node', // Fix: separate values
-      '--transform', '{}',
-      '--testRunner', 'jest-circus/runner',
       // Ensure Jest looks in the correct directory
       '--rootDir', process.cwd(),
       // Add more specific patterns for the target file
@@ -471,34 +575,62 @@ async function runFileWithParallelism(config, startTime) {
     let command = 'npx';
     let commandArgs = ['jest', ...jestArgs];
     
-    // If BrowserStack is enabled, try to use browserstack-node-sdk
+    // If BrowserStack is enabled, create a safer execution environment
     if (browserstackEnabled) {
       try {
         // Check if browserstack-node-sdk is available
         require.resolve('browserstack-node-sdk');
         
-        // Use browserstack-node-sdk to run Jest
-        command = 'npx';
-        commandArgs = ['browserstack-node-sdk', 'jest', ...jestArgs];
+        console.log(`🌐 BrowserStack SDK detected, preparing safe execution environment...`);
         
-        console.log(`🌐 Running tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
+        // Create a BrowserStack-safe configuration by ensuring proper environment setup
+        const browserstackSafeEnv = {
+          ...process.env,
+          // Ensure required BrowserStack environment variables are properly set
+          BROWSERSTACK_USERNAME: process.env.BROWSERSTACK_USERNAME || '',
+          BROWSERSTACK_ACCESS_KEY: process.env.BROWSERSTACK_ACCESS_KEY || '',
+          // Disable BrowserStack SDK's automatic Jest configuration injection
+          BROWSERSTACK_SDK_DEBUG: 'false',
+          // Set proper Node options to avoid memory issues
+          NODE_OPTIONS: '--max-old-space-size=4096 --no-warnings',
+          // Ensure clean Jest environment
+          NODE_ENV: 'test'
+        };
+        
+        // Only use BrowserStack SDK if environment variables are properly configured
+        if (browserstackSafeEnv.BROWSERSTACK_USERNAME && browserstackSafeEnv.BROWSERSTACK_ACCESS_KEY) {
+          // Use browserstack-node-sdk to run Jest with safe environment
+          command = 'npx';
+          commandArgs = ['browserstack-node-sdk', 'jest', ...jestArgs];
+          
+          console.log(`🌐 Running tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
+        } else {
+          console.warn(`⚠️ BrowserStack environment variables not configured, falling back to regular Jest execution`);
+          browserstackEnabled = false; // Disable BrowserStack for this execution
+        }
+        
       } catch (error) {
-        console.warn(`⚠️ BrowserStack enabled but browserstack-node-sdk not found, falling back to regular Jest execution`);
-        // Keep original jest execution
+        console.warn(`⚠️ BrowserStack enabled but browserstack-node-sdk not found or has errors: ${error.message}`);
+        console.warn(`⚠️ Falling back to regular Jest execution`);
+        browserstackEnabled = false; // Disable BrowserStack for this execution
       }
     }
     
     const worker = spawn(command, commandArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { 
+      env: browserstackEnabled ? {
         ...process.env,
-        NODE_OPTIONS: '--max-old-space-size=4096',
-        // Pass BrowserStack configuration to the test environment
-        ...(browserstackEnabled && {
-          BROWSERSTACK_BUILD_NAME: process.env.BUILD_NAME || config.buildName || 'Jest Parallel Build',
-          BROWSERSTACK_PROJECT_NAME: process.env.PROJECT_NAME || config.projectName || 'Jest Parallel Tests',
-          BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID,
-        })
+        NODE_OPTIONS: '--max-old-space-size=4096 --no-warnings',
+        BROWSERSTACK_BUILD_NAME: process.env.BUILD_NAME || config.buildName || 'Jest Parallel Build',
+        BROWSERSTACK_PROJECT_NAME: process.env.PROJECT_NAME || config.projectName || 'Jest Parallel Tests',
+        BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID,
+        // Ensure BrowserStack SDK doesn't interfere with Jest's configuration
+        BROWSERSTACK_SDK_DEBUG: 'false',
+        NODE_ENV: 'test'
+      } : { 
+        ...process.env,
+        NODE_OPTIONS: '--max-old-space-size=4096 --no-warnings',
+        NODE_ENV: 'test'
       },
       cwd: process.cwd()
     });
@@ -570,17 +702,41 @@ async function runFileWithParallelism(config, startTime) {
         
         // If JSON parsing failed, check if BrowserStack had configuration issues
         if (output.includes('Cannot read properties of null') || 
+            output.includes('Cannot convert undefined or null to object') ||
             errorOutput.includes('Cannot read properties of null') ||
+            errorOutput.includes('Cannot convert undefined or null to object') ||
             output.includes('TypeError:') || 
+            errorOutput.includes('TypeError:') ||
             output.includes('No tests found, exiting with code 1') ||
             output.includes('No files found in /') ||
             output.includes("Make sure Jest's configuration does not exclude this directory") ||
             output.includes('SDK run started with id:') && code !== 0) {
           
-          let errorMessage = 'BrowserStack SDK configuration error. Please check:\n1. BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY environment variables\n2. browserstack.yml configuration file\n3. BrowserStack Node SDK installation\n4. Jest working directory and file paths';
+          let errorMessage = 'BrowserStack SDK configuration error detected. Common issues:\n' +
+                           '1. BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY environment variables missing or invalid\n' +
+                           '2. browserstack.yml configuration file missing or misconfigured\n' +
+                           '3. BrowserStack Node SDK version compatibility issues\n' +
+                           '4. Jest working directory or file path resolution problems\n' +
+                           '5. Object property access errors in SDK setup (TypeError: Cannot convert undefined or null to object)';
+          
+          if (output.includes('Cannot convert undefined or null to object') || errorOutput.includes('Cannot convert undefined or null to object')) {
+            errorMessage = 'BrowserStack SDK internal error: Cannot convert undefined or null to object.\n' +
+                          'This is a known issue with BrowserStack Node SDK when configuration is incomplete.\n' +
+                          'Solutions:\n' +
+                          '1. Verify BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY are set correctly\n' +
+                          '2. Ensure browserstack.yml exists and is properly formatted\n' +
+                          '3. Consider downgrading BrowserStack Node SDK to v1.39.0 (known stable version)\n' +
+                          '4. Run tests without --browserstack-sdk flag for local execution';
+          }
           
           if (output.includes('No tests found') || output.includes('No files found')) {
-            errorMessage = 'BrowserStack SDK Jest configuration error. Jest cannot find test files.\nThis may be due to:\n1. Incorrect working directory\n2. Jest configuration excluding test files\n3. Missing package.json in the target directory\n4. TestMatch patterns not matching any files in rootDir';
+            errorMessage = 'BrowserStack SDK Jest configuration error. Jest cannot find test files.\n' +
+                          'This may be due to:\n' +
+                          '1. Incorrect working directory in BrowserStack execution context\n' +
+                          '2. Jest configuration excluding test files when run through BrowserStack SDK\n' +
+                          '3. Missing package.json in the target directory\n' +
+                          '4. TestMatch patterns not matching any files in rootDir\n' +
+                          '5. BrowserStack SDK changing the execution context or file paths';
           }
           
           console.log(`🚨 BrowserStack configuration error detected`);
