@@ -4,6 +4,27 @@ const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
 
+// Function to log Jest output to file instead of console
+function logJestOutput(message) {
+  const logFile = path.join(process.cwd(), 'logs', 'jest-parallel-worker.log');
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] ${message}\n`;
+  
+  try {
+    // Ensure logs directory exists
+    const logDir = path.dirname(logFile);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    
+    // Append to log file
+    fs.appendFileSync(logFile, logMessage);
+  } catch (error) {
+    // Fallback to console if file logging fails
+    console.error(`Failed to write to log file: ${error.message}`);
+  }
+}
+
 // Function to detect existing Jest configuration files
 function findJestConfig() {
   const configFiles = [
@@ -292,15 +313,15 @@ async function runFileWithConcurrentTransformation(config, startTime) {
           console.warn(`⚠️ Failed to cleanup temp file: ${cleanupError.message}`);
         }
         
-        // Log first and last 200 chars of output for debugging
+        // Log first and last 200 chars of output for debugging (to log file only)
         if (output.length > 0) {
-          console.log(`📤 Concurrent output start: ${output.substring(0, 200)}...`);
-          console.log(`📤 Concurrent output end: ...${output.substring(Math.max(0, output.length - 200))}`);
+          logJestOutput(`📤 Concurrent output start: ${output.substring(0, 200)}...`);
+          logJestOutput(`📤 Concurrent output end: ...${output.substring(Math.max(0, output.length - 200))}`);
         }
         
         if (errorOutput.length > 0) {
-          console.log(`📤 Concurrent error output start: ${errorOutput.substring(0, 200)}...`);
-          console.log(`📤 Concurrent error output end: ...${errorOutput.substring(Math.max(0, errorOutput.length - 200))}`);
+          logJestOutput(`📤 Concurrent error output start: ${errorOutput.substring(0, 200)}...`);
+          logJestOutput(`📤 Concurrent error output end: ...${errorOutput.substring(Math.max(0, errorOutput.length - 200))}`);
         }
         
         // Special handling for BrowserStack SDK output in concurrent mode
@@ -655,15 +676,15 @@ async function runFileWithParallelism(config, startTime) {
       console.log(`📏 Output length: ${output.length} characters`);
       console.log(`📏 Error output length: ${errorOutput.length} characters`);
       
-      // Log first and last 200 chars of output for debugging
+      // Log first and last 200 chars of output for debugging (to log file only)
       if (output.length > 0) {
-        console.log(`📤 Output start: ${output.substring(0, 200)}...`);
-        console.log(`📤 Output end: ...${output.substring(Math.max(0, output.length - 200))}`);
+        logJestOutput(`📤 Output start: ${output}...`);
+        logJestOutput(`📤 Output end: ...${output}`);
       }
       
       if (errorOutput.length > 0) {
-        console.log(`📤 Error output start: ${errorOutput.substring(0, 200)}...`);
-        console.log(`📤 Error output end: ...${errorOutput.substring(Math.max(0, errorOutput.length - 200))}`);
+        logJestOutput(`📤 Error output start: ${errorOutput}...`);
+        logJestOutput(`📤 Error output end: ...${errorOutput}`);
       }
       
       // Special handling for BrowserStack SDK output
