@@ -115,10 +115,11 @@ async function runFileWithConcurrentTransformation(config, startTime) {
       );
       
       const jestArgs = [
-        tempFilePath,
+        // Use absolute path to the temporary file
+        path.resolve(tempFilePath),
         '--verbose',
         '--no-coverage',
-        '--passWithNoTests=false',
+        '--passWithNoTests', // Allow exiting with code 0 when no tests found
         '--forceExit',
         '--detectOpenHandles',
         '--maxConcurrency', maxConcurrency.toString(),
@@ -126,7 +127,9 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         '--testEnvironment', 'node',
         '--moduleFileExtensions', 'js,json,node',
         '--transform', '{}',
-        '--testRunner', 'jest-circus/runner'
+        '--testRunner', 'jest-circus/runner',
+        // Ensure Jest looks in the correct directory
+        '--rootDir', process.cwd()
       ];
       
       // Check if BrowserStack integration is enabled for concurrent execution
@@ -189,6 +192,40 @@ async function runFileWithConcurrentTransformation(config, startTime) {
           }
         } catch (cleanupError) {
           // Ignore cleanup errors
+        }
+        
+        // Special handling for BrowserStack SDK output in concurrent mode
+        if (browserstackEnabled) {
+          // Check if BrowserStack had configuration issues
+          if (output.includes('Cannot read properties of null') || 
+              errorOutput.includes('Cannot read properties of null') ||
+              output.includes('TypeError:') || 
+              output.includes('No tests found, exiting with code 1') ||
+              output.includes('No files found in /') ||
+              output.includes("Make sure Jest's configuration does not exclude this directory") ||
+              output.includes('SDK run started with id:') && code !== 0) {
+            
+            let errorMessage = 'BrowserStack SDK configuration error. Please check:\n1. BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY environment variables\n2. browserstack.yml configuration file\n3. BrowserStack Node SDK installation\n4. Jest working directory and file paths';
+            
+            if (output.includes('No tests found') || output.includes('No files found')) {
+              errorMessage = 'BrowserStack SDK Jest configuration error. Jest cannot find test files.\nThis may be due to:\n1. Incorrect working directory\n2. Jest configuration excluding test files\n3. Missing package.json in the target directory';
+            }
+            
+            resolve({
+              status: 'failed',
+              testResults: [],
+              output: `${errorMessage}\n\nOriginal output:\n${output}`,
+              errorOutput,
+              duration: Date.now() - startTime,
+              workerId: config.workerId,
+              filePath: config.filePath,
+              exitCode: code,
+              strategy: 'enhanced-file-parallelism-concurrent-browserstack-error',
+              error: 'BrowserStack SDK configuration error',
+              tempFile: tempFilePath
+            });
+            return;
+          }
         }
         
         // Debug output to understand what happened
@@ -328,11 +365,11 @@ async function runFileWithParallelism(config, startTime) {
     );
     
     const jestArgs = [
-      // Use the full file path for more reliable test discovery
-      config.filePath,
+      // Use the full absolute file path for more reliable test discovery
+      path.resolve(config.filePath),
       '--verbose',
       '--no-coverage',
-      '--passWithNoTests=false',
+      '--passWithNoTests', // Allow exiting with code 0 when no tests found
       '--forceExit',
       '--detectOpenHandles',
       '--maxWorkers', maxWorkersForFile.toString(),
@@ -343,7 +380,9 @@ async function runFileWithParallelism(config, startTime) {
       '--testEnvironment', 'node',
       '--moduleFileExtensions', 'js,json,node',
       '--transform', '{}',
-      '--testRunner', 'jest-circus/runner'
+      '--testRunner', 'jest-circus/runner',
+      // Ensure Jest looks in the correct directory
+      '--rootDir', process.cwd()
       // No --runInBand to enable Jest's internal parallelism
     ];
     
@@ -433,12 +472,21 @@ async function runFileWithParallelism(config, startTime) {
         if (output.includes('Cannot read properties of null') || 
             errorOutput.includes('Cannot read properties of null') ||
             output.includes('TypeError:') || 
+            output.includes('No tests found, exiting with code 1') ||
+            output.includes('No files found in /') ||
+            output.includes("Make sure Jest's configuration does not exclude this directory") ||
             output.includes('SDK run started with id:') && code !== 0) {
+          
+          let errorMessage = 'BrowserStack SDK configuration error. Please check:\n1. BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY environment variables\n2. browserstack.yml configuration file\n3. BrowserStack Node SDK installation\n4. Jest working directory and file paths';
+          
+          if (output.includes('No tests found') || output.includes('No files found')) {
+            errorMessage = 'BrowserStack SDK Jest configuration error. Jest cannot find test files.\nThis may be due to:\n1. Incorrect working directory\n2. Jest configuration excluding test files\n3. Missing package.json in the target directory';
+          }
           
           resolve({
             status: 'failed',
             testResults: [],
-            output: `BrowserStack SDK configuration error. Please check:\n1. BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY environment variables\n2. browserstack.yml configuration file\n3. BrowserStack Node SDK installation\n\nOriginal output:\n${output}`,
+            output: `${errorMessage}\n\nOriginal output:\n${output}`,
             errorOutput,
             duration: Date.now() - startTime,
             workerId: config.workerId,
