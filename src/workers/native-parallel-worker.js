@@ -390,15 +390,66 @@ async function runFileWithParallelism(config, startTime) {
       if (hasResolved) return;
       hasResolved = true;
       
-      const parseResult = parseJestOutput(errorOutput, config);
+      // Special handling for BrowserStack SDK output
+      let processedOutput = output;
+      let processedErrorOutput = errorOutput;
+      
+      if (browserstackEnabled) {
+        // BrowserStack SDK adds colored logs that can interfere with Jest output parsing
+        // Try to extract clean Jest output from the mixed output
+        try {
+          // Look for JSON result in the output
+          const jsonMatch = output.match(/(\{"status":"[^"]+","testResults":\[.*?\].*?\})/);
+          if (jsonMatch) {
+            const jsonResult = JSON.parse(jsonMatch[1]);
+            // If we found valid JSON output, use it directly
+            resolve({
+              ...jsonResult,
+              duration: Date.now() - startTime,
+              workerId: config.workerId,
+              filePath: config.filePath,
+              exitCode: code,
+              strategy: 'file-parallelism-browserstack',
+              jestWorkers: maxWorkersForFile,
+              browserstackOutput: output
+            });
+            return;
+          }
+        } catch (jsonError) {
+          console.warn('⚠️ Failed to parse BrowserStack output JSON:', jsonError.message);
+        }
+        
+        // If JSON parsing failed, check if BrowserStack had configuration issues
+        if (output.includes('Cannot read properties of null') || 
+            errorOutput.includes('Cannot read properties of null') ||
+            output.includes('TypeError:') || 
+            output.includes('SDK run started with id:') && code !== 0) {
+          
+          resolve({
+            status: 'failed',
+            testResults: [],
+            output: `BrowserStack SDK configuration error. Please check:\n1. BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY environment variables\n2. browserstack.yml configuration file\n3. BrowserStack Node SDK installation\n\nOriginal output:\n${output}`,
+            errorOutput,
+            duration: Date.now() - startTime,
+            workerId: config.workerId,
+            filePath: config.filePath,
+            exitCode: code,
+            strategy: 'file-parallelism-browserstack-error',
+            error: 'BrowserStack SDK configuration error'
+          });
+          return;
+        }
+      }
+      
+      const parseResult = parseJestOutput(processedErrorOutput, config);
       const testResults = parseResult.testResults || parseResult; // Handle both old and new return formats  
       const hookInfo = parseResult.hookInfo || {};
       
       resolve({
         status: code === 0 ? 'passed' : 'failed',
         testResults,
-        output,
-        errorOutput,
+        output: processedOutput,
+        errorOutput: processedErrorOutput,
         duration: Date.now() - startTime,
         workerId: config.workerId,
         filePath: config.filePath,
