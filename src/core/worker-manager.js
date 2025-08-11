@@ -877,7 +877,7 @@ class WorkerManager {
         }
       } catch (error) {
         this.logger.error(`Native parallel worker ${workerId} output parsing failed:`, error.message);
-        this.logger.debug(`Raw output (first 1000 chars): ${output.substring(0, 1000)}`);
+        this.logger.debug(`Raw output (first 1000 chars): ${output}`);
         this.logger.debug(`Raw stderr: ${errorOutput.substring(0, 1000)}`);
         const failedResult = {
           filePath: workItem.filePath,

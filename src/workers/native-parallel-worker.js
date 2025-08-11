@@ -121,7 +121,12 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         '--passWithNoTests=false',
         '--forceExit',
         '--detectOpenHandles',
-        '--maxConcurrency', maxConcurrency.toString()
+        '--maxConcurrency', maxConcurrency.toString(),
+        // Add test environment configuration for BrowserStack compatibility
+        '--testEnvironment', 'node',
+        '--moduleFileExtensions', 'js,json,node',
+        '--transform', '{}',
+        '--testRunner', 'jest-circus/runner'
       ];
       
       // Check if BrowserStack integration is enabled for concurrent execution
@@ -333,7 +338,12 @@ async function runFileWithParallelism(config, startTime) {
       '--maxWorkers', maxWorkersForFile.toString(),
       // Override testMatch to include any test files regardless of location
       '--testMatch', '**/*.test.js',
-      '--testMatch', '**/*.spec.js'
+      '--testMatch', '**/*.spec.js',
+      // Add test environment configuration for BrowserStack compatibility
+      '--testEnvironment', 'node',
+      '--moduleFileExtensions', 'js,json,node',
+      '--transform', '{}',
+      '--testRunner', 'jest-circus/runner'
       // No --runInBand to enable Jest's internal parallelism
     ];
     
