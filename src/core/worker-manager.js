@@ -835,20 +835,96 @@ class WorkerManager {
       }
       
       try {
-        // Clean the output - look for complete JSON object
+        this.logger.debug(`Native parallel worker ${workerId} output processing - Length: ${output.length}`);
+        
+        // Enhanced JSON parsing with better error detection
         const trimmedOutput = output.trim();
         let jsonToparse = trimmedOutput;
         
-        // If output doesn't end with '}', try to find the last complete JSON object
-        if (!trimmedOutput.endsWith('}')) {
-          const lastBraceIndex = trimmedOutput.lastIndexOf('}');
-          if (lastBraceIndex > 0) {
-            jsonToparse = trimmedOutput.substring(0, lastBraceIndex + 1);
-            this.logger.debug(`Truncated output detected, using first ${jsonToparse.length} chars`);
+        // Log the start and end of output for debugging
+        if (trimmedOutput.length > 100) {
+          this.logger.debug(`Output starts with: ${trimmedOutput.substring(0, 100)}...`);
+          this.logger.debug(`Output ends with: ...${trimmedOutput.substring(trimmedOutput.length - 100)}`);
+        } else {
+          this.logger.debug(`Full output: ${trimmedOutput}`);
+        }
+        
+        // Check if output looks like JSON
+        if (!trimmedOutput.startsWith('{')) {
+          // Look for JSON in the output (might be mixed with console logs)
+          // Try to find the complete JSON by looking for the full structure with proper nesting
+          const lines = trimmedOutput.split('\n');
+          let jsonCandidate = '';
+          let braceCount = 0;
+          let inJson = false;
+          
+          for (const line of lines) {
+            if (line.trim().startsWith('{"status":')) {
+              inJson = true;
+              jsonCandidate = line.trim();
+              braceCount = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+            } else if (inJson) {
+              jsonCandidate += line;
+              braceCount += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+              
+              if (braceCount === 0) {
+                // Found complete JSON
+                break;
+              }
+            }
+          }
+          
+          if (jsonCandidate && braceCount === 0) {
+            jsonToparse = jsonCandidate;
+            this.logger.debug(`Found complete JSON by line parsing: ${jsonCandidate.substring(0, 200)}...`);
+          } else {
+            // Fallback to regex-based approach
+            const jsonMatches = trimmedOutput.match(/\{"status":"[^"]+","testResults":\[[^\]]*\][^}]*\}/g);
+            if (jsonMatches && jsonMatches.length > 0) {
+              // Take the last (most complete) JSON match
+              jsonToparse = jsonMatches[jsonMatches.length - 1];
+              this.logger.debug(`Found complete JSON via regex: ${jsonToparse.substring(0, 200)}...`);
+            } else {
+              // Final fallback: look for any JSON-like structure that might be truncated
+              const jsonStart = trimmedOutput.indexOf('{"status":');
+              if (jsonStart >= 0) {
+                const possibleJson = trimmedOutput.substring(jsonStart);
+                const lastCompleteJson = possibleJson.lastIndexOf('}');
+                if (lastCompleteJson > 0) {
+                  jsonToparse = possibleJson.substring(0, lastCompleteJson + 1);
+                  this.logger.debug(`Extracted JSON from position ${jsonStart}: ${jsonToparse.substring(0, 200)}...`);
+                } else {
+                  this.logger.warn(`Found JSON start but no complete end. Output length: ${trimmedOutput.length}`);
+                  throw new Error(`Incomplete JSON found: ${possibleJson.substring(0, 100)}...`);
+                }
+              } else {
+                this.logger.warn(`Output doesn't appear to contain valid JSON. First 300 chars: ${trimmedOutput.substring(0, 300)}`);
+                throw new Error(`Output doesn't contain valid JSON: ${trimmedOutput.substring(0, 100)}...`);
+              }
+            }
           }
         }
         
+        // If output doesn't end with '}', try to find the last complete JSON object
+        if (!jsonToparse.endsWith('}')) {
+          const lastBraceIndex = jsonToparse.lastIndexOf('}');
+          if (lastBraceIndex > 0) {
+            const originalLength = jsonToparse.length;
+            jsonToparse = jsonToparse.substring(0, lastBraceIndex + 1);
+            this.logger.debug(`Truncated incomplete JSON from ${originalLength} to ${jsonToparse.length} chars`);
+          } else {
+            this.logger.warn(`No closing brace found in JSON output`);
+          }
+        }
+        
+        // Additional validation before parsing
+        if (jsonToparse.length < 10) {
+          throw new Error(`JSON too short to be valid: "${jsonToparse}"`);
+        }
+        
+        this.logger.debug(`About to parse JSON of length ${jsonToparse.length}`);
         const result = JSON.parse(jsonToparse);
+        this.logger.debug(`Successfully parsed JSON result with status: ${result.status}`);
         
         this.results.push(result);
         
@@ -877,15 +953,30 @@ class WorkerManager {
         }
       } catch (error) {
         this.logger.error(`Native parallel worker ${workerId} output parsing failed:`, error.message);
-        this.logger.debug(`Raw output (first 1000 chars): ${output}`);
-        this.logger.debug(`Raw stderr: ${errorOutput.substring(0, 1000)}`);
+        this.logger.debug(`Raw output (first 1000 chars): ${output.substring(0, 1000)}`);
+        this.logger.debug(`Raw stderr (first 500 chars): ${errorOutput.substring(0, 500)}`);
+        
+        // Try to extract useful information even if JSON parsing fails
+        let errorSummary = 'Unknown error';
+        if (output.includes('No tests found')) {
+          errorSummary = 'No tests found - check file paths and Jest configuration';
+        } else if (output.includes('Cannot find module')) {
+          errorSummary = 'Module not found - check dependencies';
+        } else if (output.includes('SyntaxError')) {
+          errorSummary = 'Syntax error in test file';
+        } else if (output.includes('TypeError')) {
+          errorSummary = 'Type error during test execution';
+        }
+        
         const failedResult = {
           filePath: workItem.filePath,
           status: 'failed',
-          error: `Worker output parsing failed: ${error.message}`,
+          error: `Worker output parsing failed: ${error.message}. ${errorSummary}`,
           duration: 0,
           workerId,
-          testResults: []
+          testResults: [],
+          rawOutput: output.substring(0, 500), // Include sample for debugging
+          rawError: errorOutput.substring(0, 500)
         };
         this.results.push(failedResult);
         

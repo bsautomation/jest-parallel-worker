@@ -114,6 +114,15 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         require('os').cpus().length // Don't exceed CPU cores
       );
       
+      // Enhanced logging for Jest directory and file discovery
+      console.log(`🔍 Jest Concurrent Configuration Debug:`);
+      console.log(`   - Target file: ${config.filePath}`);
+      console.log(`   - Temp file: ${tempFilePath}`);
+      console.log(`   - Resolved temp path: ${path.resolve(tempFilePath)}`);
+      console.log(`   - Current working directory: ${process.cwd()}`);
+      console.log(`   - Temp file exists: ${require('fs').existsSync(tempFilePath)}`);
+      console.log(`   - Resolved temp file exists: ${require('fs').existsSync(path.resolve(tempFilePath))}`);
+      
       const jestArgs = [
         // Use absolute path to the temporary file
         path.resolve(tempFilePath),
@@ -125,12 +134,21 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         '--maxConcurrency', maxConcurrency.toString(),
         // Add test environment configuration for BrowserStack compatibility
         '--testEnvironment', 'node',
-        '--moduleFileExtensions', 'js,json,node',
+        '--moduleFileExtensions', 'js', 'json', 'node', // Fix: separate values
         '--transform', '{}',
         '--testRunner', 'jest-circus/runner',
         // Ensure Jest looks in the correct directory
-        '--rootDir', process.cwd()
+        '--rootDir', process.cwd(),
+        // Add more specific patterns for the target file
+        '--testPathPattern', path.basename(tempFilePath),
+        // Disable cache to avoid stale issues
+        '--no-cache'
       ];
+      
+      console.log(`🚀 Jest concurrent command args: ${jestArgs.join(' ')}`);
+      console.log(`📂 Working directory: ${process.cwd()}`);
+      console.log(`🎯 Target temp file basename: ${path.basename(tempFilePath)}`);
+      console.log(`📁 Target temp file directory: ${path.dirname(tempFilePath)}`);
       
       // Check if BrowserStack integration is enabled for concurrent execution
       const browserstackEnabled = process.env.BROWSERSTACK_SDK_ENABLED === 'true' || config.browserstackSdk;
@@ -185,17 +203,35 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         if (hasResolved) return;
         hasResolved = true;
         
+        console.log(`📊 Jest concurrent execution completed with exit code: ${code}`);
+        console.log(`📏 Output length: ${output.length} characters`);
+        console.log(`📏 Error output length: ${errorOutput.length} characters`);
+        
         // Clean up the temporary file
         try {
           if (tempFilePath) {
             await fs.unlink(tempFilePath);
+            console.log(`🗑️ Cleaned up temporary file: ${tempFilePath}`);
           }
         } catch (cleanupError) {
-          // Ignore cleanup errors
+          console.warn(`⚠️ Failed to cleanup temp file: ${cleanupError.message}`);
+        }
+        
+        // Log first and last 200 chars of output for debugging
+        if (output.length > 0) {
+          console.log(`📤 Concurrent output start: ${output.substring(0, 200)}...`);
+          console.log(`📤 Concurrent output end: ...${output.substring(Math.max(0, output.length - 200))}`);
+        }
+        
+        if (errorOutput.length > 0) {
+          console.log(`📤 Concurrent error output start: ${errorOutput.substring(0, 200)}...`);
+          console.log(`📤 Concurrent error output end: ...${errorOutput.substring(Math.max(0, errorOutput.length - 200))}`);
         }
         
         // Special handling for BrowserStack SDK output in concurrent mode
         if (browserstackEnabled) {
+          console.log(`🌐 BrowserStack SDK concurrent mode detected, parsing output...`);
+          
           // Check if BrowserStack had configuration issues
           if (output.includes('Cannot read properties of null') || 
               errorOutput.includes('Cannot read properties of null') ||
@@ -208,8 +244,10 @@ async function runFileWithConcurrentTransformation(config, startTime) {
             let errorMessage = 'BrowserStack SDK configuration error. Please check:\n1. BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY environment variables\n2. browserstack.yml configuration file\n3. BrowserStack Node SDK installation\n4. Jest working directory and file paths';
             
             if (output.includes('No tests found') || output.includes('No files found')) {
-              errorMessage = 'BrowserStack SDK Jest configuration error. Jest cannot find test files.\nThis may be due to:\n1. Incorrect working directory\n2. Jest configuration excluding test files\n3. Missing package.json in the target directory';
+              errorMessage = 'BrowserStack SDK Jest configuration error. Jest cannot find test files.\nThis may be due to:\n1. Incorrect working directory\n2. Jest configuration excluding test files\n3. Missing package.json in the target directory\n4. TestMatch patterns not matching any files in rootDir';
             }
+            
+            console.log(`🚨 BrowserStack concurrent configuration error detected`);
             
             resolve({
               status: 'failed',
@@ -230,29 +268,54 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         
         // Debug output to understand what happened
         if (code !== 0) {
-          console.error('Jest execution failed with code:', code);
-          console.error('Error output:', errorOutput);
-          console.error('Standard output:', output);
+          console.error('Jest concurrent execution failed with code:', code);
+          console.error('Error output sample:', errorOutput.substring(0, 500));
+          console.error('Standard output sample:', output.substring(0, 500));
         }
         
-        const parseResult = parseJestOutput(errorOutput, config);
-        const testResults = parseResult.testResults || parseResult; // Handle both old and new return formats
-        const hookInfo = parseResult.hookInfo || {};
+        console.log(`🔍 Parsing Jest concurrent output...`);
         
-        resolve({
-          status: code === 0 ? 'passed' : 'failed',
-          testResults,
-          output,
-          errorOutput,
-          duration: Date.now() - startTime,
-          workerId: config.workerId,
-          filePath: config.filePath,
-          exitCode: code,
-          strategy: 'enhanced-file-parallelism-concurrent',
-          concurrency: maxConcurrency,
-          tempFile: tempFilePath,
-          hookInfo: hookInfo
-        });
+        try {
+          const parseResult = parseJestOutput(errorOutput, config);
+          const testResults = parseResult.testResults || parseResult; // Handle both old and new return formats
+          const hookInfo = parseResult.hookInfo || {};
+          
+          console.log(`✅ Parsed ${testResults.length} concurrent test results`);
+          
+          resolve({
+            status: code === 0 ? 'passed' : 'failed',
+            testResults,
+            output,
+            errorOutput,
+            duration: Date.now() - startTime,
+            workerId: config.workerId,
+            filePath: config.filePath,
+            exitCode: code,
+            strategy: 'enhanced-file-parallelism-concurrent',
+            concurrency: maxConcurrency,
+            tempFile: tempFilePath,
+            hookInfo: hookInfo
+          });
+        } catch (parseError) {
+          console.error(`❌ Error parsing Jest concurrent output: ${parseError.message}`);
+          console.error(`📊 Concurrent parse error stack: ${parseError.stack}`);
+          
+          // Return a safe result even if parsing fails
+          resolve({
+            status: code === 0 ? 'passed' : 'failed',
+            testResults: [],
+            output,
+            errorOutput,
+            duration: Date.now() - startTime,
+            workerId: config.workerId,
+            filePath: config.filePath,
+            exitCode: code,
+            strategy: 'enhanced-file-parallelism-concurrent-parse-error',
+            concurrency: maxConcurrency,
+            tempFile: tempFilePath,
+            error: `Concurrent output parsing failed: ${parseError.message}`
+          });
+        }
       };
       
       worker.on('close', handleExit);
@@ -364,6 +427,14 @@ async function runFileWithParallelism(config, startTime) {
       config.maxWorkers || 4 // Don't exceed configured max
     );
     
+    // Enhanced logging for Jest directory and file discovery
+    console.log(`🔍 Jest Configuration Debug:`);
+    console.log(`   - Target file: ${config.filePath}`);
+    console.log(`   - Resolved path: ${path.resolve(config.filePath)}`);
+    console.log(`   - Current working directory: ${process.cwd()}`);
+    console.log(`   - File exists: ${require('fs').existsSync(config.filePath)}`);
+    console.log(`   - Resolved file exists: ${require('fs').existsSync(path.resolve(config.filePath))}`);
+    
     const jestArgs = [
       // Use the full absolute file path for more reliable test discovery
       path.resolve(config.filePath),
@@ -378,13 +449,22 @@ async function runFileWithParallelism(config, startTime) {
       '--testMatch', '**/*.spec.js',
       // Add test environment configuration for BrowserStack compatibility
       '--testEnvironment', 'node',
-      '--moduleFileExtensions', 'js,json,node',
+      '--moduleFileExtensions', 'js', 'json', 'node', // Fix: separate values
       '--transform', '{}',
       '--testRunner', 'jest-circus/runner',
       // Ensure Jest looks in the correct directory
-      '--rootDir', process.cwd()
+      '--rootDir', process.cwd(),
+      // Add more specific patterns for the target file
+      '--testPathPattern', path.basename(config.filePath),
+      // Disable cache to avoid stale issues
+      '--no-cache'
       // No --runInBand to enable Jest's internal parallelism
     ];
+    
+    console.log(`🚀 Jest command args: ${jestArgs.join(' ')}`);
+    console.log(`📂 Working directory: ${process.cwd()}`);
+    console.log(`🎯 Target file basename: ${path.basename(config.filePath)}`);
+    console.log(`📁 Target file directory: ${path.dirname(config.filePath)}`);
     
     // Check if BrowserStack integration is enabled
     const browserstackEnabled = process.env.BROWSERSTACK_SDK_ENABLED === 'true' || config.browserstackSdk;
@@ -439,17 +519,35 @@ async function runFileWithParallelism(config, startTime) {
       if (hasResolved) return;
       hasResolved = true;
       
+      console.log(`📊 Jest execution completed with exit code: ${code}`);
+      console.log(`📏 Output length: ${output.length} characters`);
+      console.log(`📏 Error output length: ${errorOutput.length} characters`);
+      
+      // Log first and last 200 chars of output for debugging
+      if (output.length > 0) {
+        console.log(`📤 Output start: ${output.substring(0, 200)}...`);
+        console.log(`📤 Output end: ...${output.substring(Math.max(0, output.length - 200))}`);
+      }
+      
+      if (errorOutput.length > 0) {
+        console.log(`📤 Error output start: ${errorOutput.substring(0, 200)}...`);
+        console.log(`📤 Error output end: ...${errorOutput.substring(Math.max(0, errorOutput.length - 200))}`);
+      }
+      
       // Special handling for BrowserStack SDK output
       let processedOutput = output;
       let processedErrorOutput = errorOutput;
       
       if (browserstackEnabled) {
+        console.log(`🌐 BrowserStack SDK mode detected, parsing output...`);
+        
         // BrowserStack SDK adds colored logs that can interfere with Jest output parsing
         // Try to extract clean Jest output from the mixed output
         try {
           // Look for JSON result in the output
           const jsonMatch = output.match(/(\{"status":"[^"]+","testResults":\[.*?\].*?\})/);
           if (jsonMatch) {
+            console.log(`✅ Found BrowserStack JSON result in output`);
             const jsonResult = JSON.parse(jsonMatch[1]);
             // If we found valid JSON output, use it directly
             resolve({
@@ -463,6 +561,8 @@ async function runFileWithParallelism(config, startTime) {
               browserstackOutput: output
             });
             return;
+          } else {
+            console.log(`❌ No valid JSON result found in BrowserStack output`);
           }
         } catch (jsonError) {
           console.warn('⚠️ Failed to parse BrowserStack output JSON:', jsonError.message);
@@ -480,8 +580,10 @@ async function runFileWithParallelism(config, startTime) {
           let errorMessage = 'BrowserStack SDK configuration error. Please check:\n1. BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY environment variables\n2. browserstack.yml configuration file\n3. BrowserStack Node SDK installation\n4. Jest working directory and file paths';
           
           if (output.includes('No tests found') || output.includes('No files found')) {
-            errorMessage = 'BrowserStack SDK Jest configuration error. Jest cannot find test files.\nThis may be due to:\n1. Incorrect working directory\n2. Jest configuration excluding test files\n3. Missing package.json in the target directory';
+            errorMessage = 'BrowserStack SDK Jest configuration error. Jest cannot find test files.\nThis may be due to:\n1. Incorrect working directory\n2. Jest configuration excluding test files\n3. Missing package.json in the target directory\n4. TestMatch patterns not matching any files in rootDir';
           }
+          
+          console.log(`🚨 BrowserStack configuration error detected`);
           
           resolve({
             status: 'failed',
@@ -499,23 +601,47 @@ async function runFileWithParallelism(config, startTime) {
         }
       }
       
-      const parseResult = parseJestOutput(processedErrorOutput, config);
-      const testResults = parseResult.testResults || parseResult; // Handle both old and new return formats  
-      const hookInfo = parseResult.hookInfo || {};
+      console.log(`🔍 Parsing Jest output...`);
       
-      resolve({
-        status: code === 0 ? 'passed' : 'failed',
-        testResults,
-        output: processedOutput,
-        errorOutput: processedErrorOutput,
-        duration: Date.now() - startTime,
-        workerId: config.workerId,
-        filePath: config.filePath,
-        exitCode: code,
-        strategy: 'file-parallelism',
-        jestWorkers: maxWorkersForFile,
-        hookInfo: hookInfo
-      });
+      try {
+        const parseResult = parseJestOutput(processedErrorOutput, config);
+        const testResults = parseResult.testResults || parseResult; // Handle both old and new return formats  
+        const hookInfo = parseResult.hookInfo || {};
+        
+        console.log(`✅ Parsed ${testResults.length} test results`);
+        
+        resolve({
+          status: code === 0 ? 'passed' : 'failed',
+          testResults,
+          output: processedOutput,
+          errorOutput: processedErrorOutput,
+          duration: Date.now() - startTime,
+          workerId: config.workerId,
+          filePath: config.filePath,
+          exitCode: code,
+          strategy: 'file-parallelism',
+          jestWorkers: maxWorkersForFile,
+          hookInfo: hookInfo
+        });
+      } catch (parseError) {
+        console.error(`❌ Error parsing Jest output: ${parseError.message}`);
+        console.error(`📊 Parse error stack: ${parseError.stack}`);
+        
+        // Return a safe result even if parsing fails
+        resolve({
+          status: code === 0 ? 'passed' : 'failed',
+          testResults: [],
+          output: processedOutput,
+          errorOutput: processedErrorOutput,
+          duration: Date.now() - startTime,
+          workerId: config.workerId,
+          filePath: config.filePath,
+          exitCode: code,
+          strategy: 'file-parallelism-parse-error',
+          jestWorkers: maxWorkersForFile,
+          error: `Output parsing failed: ${parseError.message}`
+        });
+      }
     };
     
     worker.on('close', handleExit);
