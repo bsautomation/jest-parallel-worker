@@ -4,6 +4,7 @@ const os = require('os');
 
 class WorkerManager {
   constructor(options, logger, executionLogger) {
+    this.options = options; // Store full options for worker configuration
     this.maxWorkers = options.maxWorkers || 4;
     
     // Timeout should already be in milliseconds from config processing
@@ -778,7 +779,8 @@ class WorkerManager {
         strategy: workItem.strategy,
         maxWorkers: this.maxWorkers,
         timeout: this.timeout - 1000, // Slightly reduce timeout for worker
-        workerId
+        workerId,
+        browserstackSdk: this.options.browserstackSdk || false
       })
     ];
 

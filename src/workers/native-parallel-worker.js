@@ -124,11 +124,39 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         '--maxConcurrency', maxConcurrency.toString()
       ];
       
-      const worker = spawn('npx', ['jest', ...jestArgs], {
+      // Check if BrowserStack integration is enabled for concurrent execution
+      const browserstackEnabled = process.env.BROWSERSTACK_SDK_ENABLED === 'true' || config.browserstackSdk;
+      let command = 'npx';
+      let commandArgs = ['jest', ...jestArgs];
+      
+      // If BrowserStack is enabled, try to use browserstack-node-sdk
+      if (browserstackEnabled) {
+        try {
+          // Check if browserstack-node-sdk is available
+          require.resolve('browserstack-node-sdk');
+          
+          // Use browserstack-node-sdk to run Jest
+          command = 'npx';
+          commandArgs = ['browserstack-node-sdk', 'jest', ...jestArgs];
+          
+          console.log(`🌐 Running concurrent tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
+        } catch (error) {
+          console.warn(`⚠️ BrowserStack enabled but browserstack-node-sdk not found, falling back to regular Jest execution`);
+          // Keep original jest execution
+        }
+      }
+      
+      const worker = spawn(command, commandArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { 
           ...process.env,
-          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_OPTIONS: '--max-old-space-size=4096',
+          // Pass BrowserStack configuration to the test environment
+          ...(browserstackEnabled && {
+            BROWSERSTACK_BUILD_NAME: process.env.BUILD_NAME || config.buildName || 'Jest Parallel Build',
+            BROWSERSTACK_PROJECT_NAME: process.env.PROJECT_NAME || config.projectName || 'Jest Parallel Tests',
+            BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID,
+          })
         },
         cwd: process.cwd()
       });
@@ -309,11 +337,39 @@ async function runFileWithParallelism(config, startTime) {
       // No --runInBand to enable Jest's internal parallelism
     ];
     
-    const worker = spawn('npx', ['jest', ...jestArgs], {
+    // Check if BrowserStack integration is enabled
+    const browserstackEnabled = process.env.BROWSERSTACK_SDK_ENABLED === 'true' || config.browserstackSdk;
+    let command = 'npx';
+    let commandArgs = ['jest', ...jestArgs];
+    
+    // If BrowserStack is enabled, try to use browserstack-node-sdk
+    if (browserstackEnabled) {
+      try {
+        // Check if browserstack-node-sdk is available
+        require.resolve('browserstack-node-sdk');
+        
+        // Use browserstack-node-sdk to run Jest
+        command = 'npx';
+        commandArgs = ['browserstack-node-sdk', 'jest', ...jestArgs];
+        
+        console.log(`🌐 Running tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
+      } catch (error) {
+        console.warn(`⚠️ BrowserStack enabled but browserstack-node-sdk not found, falling back to regular Jest execution`);
+        // Keep original jest execution
+      }
+    }
+    
+    const worker = spawn(command, commandArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { 
         ...process.env,
-        NODE_OPTIONS: '--max-old-space-size=4096'
+        NODE_OPTIONS: '--max-old-space-size=4096',
+        // Pass BrowserStack configuration to the test environment
+        ...(browserstackEnabled && {
+          BROWSERSTACK_BUILD_NAME: process.env.BUILD_NAME || config.buildName || 'Jest Parallel Build',
+          BROWSERSTACK_PROJECT_NAME: process.env.PROJECT_NAME || config.projectName || 'Jest Parallel Tests',
+          BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID,
+        })
       },
       cwd: process.cwd()
     });

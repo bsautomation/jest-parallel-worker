@@ -65,6 +65,7 @@ program
   .option('--outputDir <dir>', 'Output directory for reports', 'reports')
   .option('--reporter <type>', 'Reporter type (console, html, both)', 'both')
   .option('--config <path>', 'Path to configuration file')
+  .option('--browserstack-sdk', 'Run tests through BrowserStack Node SDK', false)
   .action(async (options) => {
     try {
       // Load configuration from file
@@ -72,6 +73,15 @@ program
       
       // Merge configurations (CLI options override file config)
       const finalConfig = ConfigLoader.mergeConfigs(options, fileConfig);
+      
+      // Handle BrowserStack SDK option
+      if (options.browserstackSdk) {
+        finalConfig.browserstackSdk = true;
+        process.env.BROWSERSTACK_SDK_ENABLED = 'true';
+        console.log(chalk.blue('🌐 BrowserStack Node SDK execution enabled'));
+        console.log(chalk.gray('Tests will be executed through BrowserStack infrastructure'));
+        console.log();
+      }
       
       // Validate configuration
       const errors = ConfigLoader.validateConfig(finalConfig);
