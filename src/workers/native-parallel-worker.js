@@ -678,13 +678,13 @@ async function runFileWithParallelism(config, startTime) {
       
       // Log first and last 200 chars of output for debugging (to log file only)
       if (output.length > 0) {
-        logJestOutput(`📤 Output start: ${output}...`);
-        logJestOutput(`📤 Output end: ...${output}`);
+        console.log(`📤 Output start: ${output}...`);
+        console.log(`📤 Output end: ...${output}`);
       }
       
       if (errorOutput.length > 0) {
-        logJestOutput(`📤 Error output start: ${errorOutput}...`);
-        logJestOutput(`📤 Error output end: ...${errorOutput}`);
+        console.log(`📤 Error output start: ${errorOutput}...`);
+        console.log(`📤 Error output end: ...${errorOutput}`);
       }
       
       // Special handling for BrowserStack SDK output
