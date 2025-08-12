@@ -25,6 +25,84 @@ function logJestOutput(message) {
   }
 }
 
+// Function to read and parse BrowserStack configuration from browserstack.yml
+function loadBrowserStackConfig() {
+  const browserstackConfigPath = path.join(process.cwd(), 'browserstack.yml');
+  
+  if (!fs.existsSync(browserstackConfigPath)) {
+    console.log(`📋 No browserstack.yml found at ${browserstackConfigPath}`);
+    return null;
+  }
+  
+  try {
+    const yamlContent = fs.readFileSync(browserstackConfigPath, 'utf8');
+    
+    // Simple YAML parser for our specific use case
+    const config = {};
+    const lines = yamlContent.split('\n');
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine && !trimmedLine.startsWith('#')) {
+        const colonIndex = trimmedLine.indexOf(':');
+        if (colonIndex > 0) {
+          const key = trimmedLine.substring(0, colonIndex).trim();
+          let value = trimmedLine.substring(colonIndex + 1).trim();
+          
+          // Handle environment variable substitution like ${BUILD_NAME:-Jest Parallel Test Build}
+          if (value.includes('${') && value.includes('}')) {
+            const envVarMatch = value.match(/\$\{([^}]+)\}/);
+            if (envVarMatch) {
+              const envExpression = envVarMatch[1];
+              if (envExpression.includes(':-')) {
+                const [envVar, defaultValue] = envExpression.split(':-');
+                value = process.env[envVar] || defaultValue;
+              } else {
+                value = process.env[envExpression] || value;
+              }
+            }
+          }
+          
+          // Skip nested properties (testReporting, etc.) for now
+          if (!key.includes(' ') && key !== 'testReporting') {
+            config[key] = value;
+          }
+        }
+      }
+    }
+    
+    console.log(`📋 Loaded BrowserStack config from browserstack.yml`);
+    console.log(`📋 Config: userName=${config.userName}, buildName=${config.buildName}`);
+    
+    return config;
+  } catch (error) {
+    console.warn(`⚠️ Error parsing browserstack.yml: ${error.message}`);
+    return null;
+  }
+}
+
+// Function to check if BrowserStack should be enabled based on browserstack.yml
+function isBrowserStackEnabled(config) {
+  // First check if explicitly disabled via CLI
+  if (config.disableBrowserStack === true) {
+    return false;
+  }
+  
+  // Check if browserstack.yml exists and has valid configuration
+  const browserstackConfig = loadBrowserStackConfig();
+  if (!browserstackConfig) {
+    return false;
+  }
+  
+  // Check if required fields are present
+  if (!browserstackConfig.userName || !browserstackConfig.accessKey) {
+    console.warn(`⚠️ BrowserStack config incomplete: missing userName or accessKey`);
+    return false;
+  }
+  
+  return true;
+}
+
 // Function to detect existing Jest configuration files
 function findJestConfig() {
   const configFiles = [
@@ -296,7 +374,7 @@ async function runFileWithConcurrentTransformation(config, startTime) {
       console.log(`📁 Target temp file directory: ${path.dirname(tempFilePath)}`);
       
       // Check if BrowserStack integration is enabled for concurrent execution
-      const browserstackEnabled = process.env.BROWSERSTACK_SDK_ENABLED === 'true' || config.browserstackSdk;
+      let browserstackEnabled = isBrowserStackEnabled(config);
       let command = 'npx';
       let commandArgs = ['jest', ...jestArgs];
       
@@ -306,14 +384,18 @@ async function runFileWithConcurrentTransformation(config, startTime) {
           // Check if browserstack-node-sdk is available
           require.resolve('browserstack-node-sdk');
           
+          // Load BrowserStack configuration from browserstack.yml
+          const browserstackConfig = loadBrowserStackConfig();
+          
           // Use browserstack-node-sdk to run Jest
           command = 'npx';
           commandArgs = ['browserstack-node-sdk', 'jest', ...jestArgs];
           
           console.log(`🌐 Running concurrent tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
+          console.log(`🌐 Using BrowserStack config - User: ${browserstackConfig.userName}, Build: ${browserstackConfig.buildName}`);
         } catch (error) {
           console.warn(`⚠️ BrowserStack enabled but browserstack-node-sdk not found, falling back to regular Jest execution`);
-          // Keep original jest execution
+          browserstackEnabled = false;
         }
       }
       
@@ -322,12 +404,18 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         env: { 
           ...process.env,
           NODE_OPTIONS: '--max-old-space-size=4096',
-          // Pass BrowserStack configuration to the test environment
-          ...(browserstackEnabled && {
-            BROWSERSTACK_BUILD_NAME: process.env.BUILD_NAME || config.buildName || 'Jest Parallel Build',
-            BROWSERSTACK_PROJECT_NAME: process.env.PROJECT_NAME || config.projectName || 'Jest Parallel Tests',
-            BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID,
-          })
+          // Pass BrowserStack configuration from browserstack.yml to the test environment
+          ...(browserstackEnabled && (() => {
+            const browserstackConfig = loadBrowserStackConfig();
+            return {
+              BROWSERSTACK_USERNAME: browserstackConfig.userName,
+              BROWSERSTACK_ACCESS_KEY: browserstackConfig.accessKey,
+              BROWSERSTACK_BUILD_NAME: browserstackConfig.buildName || 'Jest Parallel Build',
+              BROWSERSTACK_PROJECT_NAME: browserstackConfig.projectName || 'Jest Parallel Tests',
+              // Keep any existing environment overrides
+              BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID || undefined,
+            };
+          })())
         },
         cwd: process.cwd()
       });
@@ -640,7 +728,7 @@ async function runFileWithParallelism(config, startTime) {
     console.log(`📁 Target file directory: ${path.dirname(config.filePath)}`);
     
     // Check if BrowserStack integration is enabled
-    const browserstackEnabled = process.env.BROWSERSTACK_SDK_ENABLED === 'true' || config.browserstackSdk;
+    let browserstackEnabled = isBrowserStackEnabled(config);
     let command = 'npx';
     let commandArgs = ['jest', ...jestArgs];
     
@@ -652,29 +740,19 @@ async function runFileWithParallelism(config, startTime) {
         
         console.log(`🌐 BrowserStack SDK detected, preparing safe execution environment...`);
         
-        // Create a BrowserStack-safe configuration by ensuring proper environment setup
-        const browserstackSafeEnv = {
-          ...process.env,
-          // Ensure required BrowserStack environment variables are properly set
-          BROWSERSTACK_USERNAME: process.env.BROWSERSTACK_USERNAME || '',
-          BROWSERSTACK_ACCESS_KEY: process.env.BROWSERSTACK_ACCESS_KEY || '',
-          // Disable BrowserStack SDK's automatic Jest configuration injection
-          BROWSERSTACK_SDK_DEBUG: 'false',
-          // Set proper Node options to avoid memory issues
-          NODE_OPTIONS: '--max-old-space-size=4096 --no-warnings',
-          // Ensure clean Jest environment
-          NODE_ENV: 'test'
-        };
+        // Load BrowserStack configuration from browserstack.yml
+        const browserstackConfig = loadBrowserStackConfig();
         
-        // Only use BrowserStack SDK if environment variables are properly configured
-        if (browserstackSafeEnv.BROWSERSTACK_USERNAME && browserstackSafeEnv.BROWSERSTACK_ACCESS_KEY) {
-          // Use browserstack-node-sdk to run Jest with safe environment
+        // Validate that we have the required configuration
+        if (browserstackConfig && browserstackConfig.userName && browserstackConfig.accessKey) {
+          // Use browserstack-node-sdk to run Jest with YAML config
           command = 'npx';
           commandArgs = ['browserstack-node-sdk', 'jest', ...jestArgs];
           
           console.log(`🌐 Running tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
+          console.log(`🌐 Using BrowserStack config - User: ${browserstackConfig.userName}, Build: ${browserstackConfig.buildName}`);
         } else {
-          console.warn(`⚠️ BrowserStack environment variables not configured, falling back to regular Jest execution`);
+          console.warn(`⚠️ BrowserStack configuration incomplete in browserstack.yml, falling back to regular Jest execution`);
           browserstackEnabled = false; // Disable BrowserStack for this execution
         }
         
@@ -687,19 +765,24 @@ async function runFileWithParallelism(config, startTime) {
     
     const worker = spawn(command, commandArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: browserstackEnabled ? {
-        ...process.env,
-        NODE_OPTIONS: '--max-old-space-size=4096 --no-warnings',
-        BROWSERSTACK_BUILD_NAME: process.env.BUILD_NAME || config.buildName || 'Jest Parallel Build',
-        BROWSERSTACK_PROJECT_NAME: process.env.PROJECT_NAME || config.projectName || 'Jest Parallel Tests',
-        BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID,
-        // Ensure BrowserStack SDK doesn't interfere with Jest's configuration
-        BROWSERSTACK_SDK_DEBUG: 'false',
-        NODE_ENV: 'test',
-        // Force aggressive cleanup for BrowserStack helpers
-        FORCE_COLOR: '0', // Disable colors to reduce handle usage
-        CI: 'true' // Make external libs think we're in CI for cleaner behavior
-      } : { 
+      env: browserstackEnabled ? (() => {
+        const browserstackConfig = loadBrowserStackConfig();
+        return {
+          ...process.env,
+          NODE_OPTIONS: '--max-old-space-size=4096 --no-warnings',
+          BROWSERSTACK_USERNAME: browserstackConfig.userName,
+          BROWSERSTACK_ACCESS_KEY: browserstackConfig.accessKey,
+          BROWSERSTACK_BUILD_NAME: browserstackConfig.buildName || 'Jest Parallel Build',
+          BROWSERSTACK_PROJECT_NAME: browserstackConfig.projectName || 'Jest Parallel Tests',
+          BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID || undefined,
+          // Ensure BrowserStack SDK doesn't interfere with Jest's configuration
+          BROWSERSTACK_SDK_DEBUG: 'false',
+          NODE_ENV: 'test',
+          // Force aggressive cleanup for BrowserStack helpers
+          FORCE_COLOR: '0', // Disable colors to reduce handle usage
+          CI: 'true' // Make external libs think we're in CI for cleaner behavior
+        };
+      })() : { 
         ...process.env,
         NODE_OPTIONS: '--max-old-space-size=4096 --no-warnings',
         NODE_ENV: 'test',

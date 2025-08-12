@@ -38,7 +38,6 @@
   },
   "homepage": "https://github.com/bsautomation/jest-parallel-worker#readme",
   "dependencies": {
-    "@playwright/test": "^1.54.2",
     "browserstack-node-sdk": "1.36.6",
     "chalk": "^4.1.2",
     "commander": "^11.0.0",
@@ -46,7 +45,8 @@
     "glob": "^10.3.3"
   },
   "peerDependencies": {
-    "jest": ">=29.0.0"
+    "jest": ">=29.0.0",
+    "@playwright/test": "^1.54.2"
   },
   "engines": {
     "node": ">=14.0.0"
