@@ -76,15 +76,31 @@ function createFallbackJestConfig() {
       verbose: true,
       forceExit: true,
       detectOpenHandles: true,
+      // More aggressive cleanup settings
+      maxWorkers: 1, // Run with single worker to avoid handle conflicts
+      resetMocks: true,
+      resetModules: true,
+      restoreMocks: true,
+      clearMocks: true,
+      // Prevent loading any setup files that might import BrowserStack helpers
+      setupFiles: [],
+      setupFilesAfterEnv: [],
       testMatch: [
         '**/__tests__/**/*.(js|jsx)',
         '**/*.(test|spec).(js|jsx)'
-      ]
+      ],
+      // Avoid any transformations that might cause issues
+      transform: {},
+      // Set timeout for aggressive cleanup
+      testTimeout: 10000
     };
     
     try {
       fs.writeFileSync(fallbackConfigPath, JSON.stringify(fallbackConfig, null, 2));
       console.log(`📋 Created fallback Jest config: jest.config.fallback.json`);
+      
+      // Also create a minimal mock for problematic modules
+      createMockSetupFile();
     } catch (error) {
       console.warn(`⚠️ Could not create fallback config: ${error.message}`);
       return null;
@@ -92,6 +108,39 @@ function createFallbackJestConfig() {
   }
   
   return fallbackConfigPath;
+}
+
+// Function to create a mock setup file that prevents problematic module loading
+function createMockSetupFile() {
+  const mockSetupPath = path.join(process.cwd(), 'jest.mock-setup.js');
+  
+  if (!fs.existsSync(mockSetupPath)) {
+    const mockSetupContent = `
+// Jest mock setup to prevent problematic modules from loading
+// This file prevents modules that create open handles from being loaded
+
+// Mock bstackautomation-helpers to prevent UDPWRAP handles
+jest.mock('bstackautomation-helpers', () => ({
+  constants: {},
+  helpers: {}
+}));
+
+// Mock hoothoot to prevent network handles
+jest.mock('hoothoot', () => ({}));
+
+// Mock any other modules that might create handles
+jest.mock('browserstack-node-sdk/src/bin/utils/logReportingAPI', () => ({}));
+
+console.log('✅ Problematic modules mocked to prevent open handles');
+`;
+    
+    try {
+      fs.writeFileSync(mockSetupPath, mockSetupContent);
+      console.log(`📋 Created mock setup file: jest.mock-setup.js`);
+    } catch (error) {
+      console.warn(`⚠️ Could not create mock setup file: ${error.message}`);
+    }
+  }
 }
 
 async function runTestsNatively(config) {
@@ -573,7 +622,7 @@ async function runFileWithParallelism(config, startTime) {
       '--passWithNoTests', // Allow exiting with code 0 when no tests found
       '--forceExit',
       '--detectOpenHandles',
-      '--maxWorkers', maxWorkersForFile.toString(),
+      '--maxWorkers', '1', // Single worker to avoid handle conflicts
       // Override testMatch to include any test files regardless of location
       '--testMatch', '**/*.test.js',
       '--testMatch', '**/*.spec.js',
@@ -583,7 +632,6 @@ async function runFileWithParallelism(config, startTime) {
       '--testPathPattern', path.basename(config.filePath),
       // Disable cache to avoid stale issues
       '--no-cache'
-      // No --runInBand to enable Jest's internal parallelism
     ];
     
     console.log(`🚀 Jest command args: ${jestArgs.join(' ')}`);
@@ -647,11 +695,19 @@ async function runFileWithParallelism(config, startTime) {
         BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID,
         // Ensure BrowserStack SDK doesn't interfere with Jest's configuration
         BROWSERSTACK_SDK_DEBUG: 'false',
-        NODE_ENV: 'test'
+        NODE_ENV: 'test',
+        // Force aggressive cleanup for BrowserStack helpers
+        FORCE_COLOR: '0', // Disable colors to reduce handle usage
+        CI: 'true' // Make external libs think we're in CI for cleaner behavior
       } : { 
         ...process.env,
         NODE_OPTIONS: '--max-old-space-size=4096 --no-warnings',
-        NODE_ENV: 'test'
+        NODE_ENV: 'test',
+        // Force aggressive cleanup for external dependencies
+        FORCE_COLOR: '0', // Disable colors to reduce handle usage
+        CI: 'true', // Make external libs think we're in CI for cleaner behavior
+        // Disable any potential network-related features
+        NO_UPDATE_NOTIFIER: '1'
       },
       cwd: process.cwd()
     });
@@ -678,13 +734,28 @@ async function runFileWithParallelism(config, startTime) {
       
       // Log first and last 200 chars of output for debugging (to log file only)
       if (output.length > 0) {
-        console.log(`📤 Output start: ${output}...`);
-        console.log(`📤 Output end: ...${output}`);
+        logJestOutput(`📤 Output start: ${output}...`);
+        logJestOutput(`📤 Output end: ...${output}`);
       }
       
       if (errorOutput.length > 0) {
-        console.log(`📤 Error output start: ${errorOutput}...`);
-        console.log(`📤 Error output end: ...${errorOutput}`);
+        logJestOutput(`📤 Error output start: ${errorOutput}...`);
+        logJestOutput(`📤 Error output end: ...${errorOutput}`);
+      }
+      
+      // Handle open handle warnings specifically
+      if (output.includes('open handle potentially keeping Jest from exiting') || 
+          errorOutput.includes('open handle potentially keeping Jest from exiting')) {
+        console.warn(`⚠️ Detected open handles - this is likely from external dependencies like BrowserStack helpers`);
+        logJestOutput(`🔧 Open handle detected: ${output.includes('UDPWRAP') ? 'UDPWRAP (network connection)' : 'unknown type'}`);
+        
+        // Extract the specific module causing the issue
+        const handleMatch = (output + errorOutput).match(/at Object\.<anonymous> \(([^)]+)\)/);
+        if (handleMatch) {
+          const problematicModule = handleMatch[1];
+          console.warn(`⚠️ Open handle caused by module: ${problematicModule}`);
+          logJestOutput(`🔧 Problematic module: ${problematicModule}`);
+        }
       }
       
       // Special handling for BrowserStack SDK output
