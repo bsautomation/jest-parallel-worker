@@ -38,8 +38,9 @@ class JestParallelRunner {
       this.logger.info('Using SimpleWorkerManager (no JSON complexity!)');
       this.workerManager = new SimpleWorkerManager({
         maxWorkers: this.options.maxWorkers,
+        timeout: this.options.timeout,
         logger: this.logger
-      });
+      }, this.logger, this.executionLogger);
     } else {
       this.logger.info('Using legacy WorkerManager (complex JSON parsing)');
       this.workerManager = new WorkerManager(this.options, this.logger, this.executionLogger);
