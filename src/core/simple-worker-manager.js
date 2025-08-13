@@ -397,6 +397,7 @@ class SimpleWorkerManager {
       this.logger.info(`${workerId} executing: ${jestCommand} ${jestArgs.join(' ')}`);
       if (useBrowserStackSDK) {
         this.logger.info(`${workerId} using BrowserStack Node SDK for test reporting`);
+        this.logger.debug(`${workerId} BrowserStack configuration will be read from browserstack.yml in user directory`);
       }
       this.logger.debug(`${workerId} working directory: ${process.cwd()}`);
       this.logger.debug(`${workerId} relative path: ${relativePath}`);
@@ -419,13 +420,10 @@ class SimpleWorkerManager {
           JEST_FORCE_EXIT: 'true',
           // BrowserStack unified build configuration - FORCE SINGLE BUILD
           BROWSERSTACK_BUILD_ID: browserstackBuildId,
-          BROWSERSTACK_BUILD_NAME: process.env.BROWSERSTACK_BUILD_NAME || process.env.BUILD_NAME || 'Jest Parallel Test Build',
-          BROWSERSTACK_PROJECT_NAME: process.env.BROWSERSTACK_PROJECT_NAME || process.env.PROJECT_NAME || 'Jest Parallel Tests',
+          // Let BrowserStack Node SDK automatically read buildName, projectName, userName, accessKey from browserstack.yml
+          // No need to override BROWSERSTACK_BUILD_NAME or BROWSERSTACK_PROJECT_NAME - SDK will use browserstack.yml
           // Enable BrowserStack SDK if configured
           BROWSERSTACK_SDK_ENABLED: this.options.browserstackSdk ? 'true' : 'false',
-          // Pass BrowserStack credentials from browserstack.yml if they exist
-          BROWSERSTACK_USERNAME: process.env.BROWSERSTACK_USERNAME,
-          BROWSERSTACK_ACCESS_KEY: process.env.BROWSERSTACK_ACCESS_KEY,
           // Worker identification for debugging
           JEST_WORKER_ID: workerId,
           JEST_PARALLEL_WORKER: 'true'
