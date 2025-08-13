@@ -439,12 +439,20 @@ class SimpleWorkerManager {
       
       child.stdout.on('data', (data) => {
         output += data.toString();
-        this.logger.debug(`${workerId} stdout chunk: ${data.toString().substring(0, 100)}...`);
+        // Log full output for better debugging in Jenkins/CI environments
+        const dataString = data.toString();
+        if (dataString.trim().length > 0) {
+          this.logger.debug(`${workerId} stdout: ${dataString}`);
+        }
       });
       
       child.stderr.on('data', (data) => {
         errorOutput += data.toString();
-        this.logger.debug(`${workerId} stderr chunk: ${data.toString().substring(0, 100)}...`);
+        // Log full error output for better debugging in Jenkins/CI environments
+        const dataString = data.toString();
+        if (dataString.trim().length > 0) {
+          this.logger.debug(`${workerId} stderr: ${dataString}`);
+        }
       });
       
       child.on('close', (code) => {
@@ -567,6 +575,9 @@ class SimpleWorkerManager {
     const lines = allOutput.split('\n');
     
     this.logger.debug(`Parsing Jest text output - ${lines.length} lines from combined stdout/stderr`);
+    
+    // Use the same parsing logic regardless of whether BrowserStack SDK is used
+    // BrowserStack Node SDK should pass through Jest output unchanged
     
     // Track error messages for failed tests
     const errorMap = new Map(); // Map test names to their error messages
@@ -815,17 +826,21 @@ class SimpleWorkerManager {
           });
         }
       } else {
-        this.logger.debug(`No Jest summary found, creating single result based on overall outcome`);
+        this.logger.warn(`No Jest summary found in output, creating single result based on overall outcome`);
+        this.logger.warn(`Output sample (first 500 chars): ${allOutput.substring(0, 500)}`);
+        this.logger.warn(`This indicates Jest output parsing failed - may be due to BrowserStack SDK output format`);
         
         // Fallback: create single result based on general success/failure indicators
         const hasFailureIndicators = allOutput.includes('FAIL') || allOutput.includes('Failed') || 
-                                    allOutput.includes('Error:') || allOutput.includes('✗');
+                                    allOutput.includes('Error:') || allOutput.includes('✗') ||
+                                    allOutput.includes('Build creation failed');
         
         const errorMessage = hasFailureIndicators ? 
           this.extractGeneralErrorMessage(allOutput) : 
           'File execution passed';
         
         const testName = 'File execution';
+        this.logger.warn(`Creating fallback test result: "${testName}" with status: ${hasFailureIndicators ? 'failed' : 'passed'}`);
         results.push({
           name: testName,
           testName: testName,
@@ -897,8 +912,9 @@ class SimpleWorkerManager {
 
   // Helper method to extract general error message when specific test parsing fails
   extractGeneralErrorMessage(output) {
-    // Look for common error patterns with more detail
+    // Look for common error patterns with more detail, including BrowserStack specific errors
     const errorPatterns = [
+      // General errors
       /Error: (.+)/,
       /TypeError: (.+)/,
       /ReferenceError: (.+)/,
@@ -930,9 +946,10 @@ class SimpleWorkerManager {
         }
       }
       
-      // Also capture lines that look like error descriptions
+      // Also capture lines that look like error descriptions (including BrowserStack errors)
       if (trimmedLine.includes('Expected') || trimmedLine.includes('Received') || 
-          trimmedLine.includes('Difference:') || trimmedLine.includes('failed')) {
+          trimmedLine.includes('Difference:') || trimmedLine.includes('failed') ||
+          trimmedLine.includes('FAIL TESTS')) {
         errorMessages.push(trimmedLine);
       }
     }
