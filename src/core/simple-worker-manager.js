@@ -49,9 +49,15 @@ class SimpleWorkerManager {
     // Generate a consistent BrowserStack build ID for all workers in this execution
     this.browserstackBuildId = this.generateBrowserStackBuildId();
     
-    this.logger.debug(`SimpleWorkerManager initialized with ${this.maxWorkers} max workers and ${this.timeout}ms timeout`);
-    if (this.browserstackBuildId) {
-      this.logger.debug(`BrowserStack Build ID for unified builds: ${this.browserstackBuildId}`);
+    // Log essential initialization info to console
+    this.logger.info(`SimpleWorkerManager initialized with ${this.maxWorkers} max workers and ${this.timeout}ms timeout`);
+    
+    // Log detailed debug information to file only
+    if (this.executionLogger) {
+      this.executionLogger.debug(`SimpleWorkerManager initialized with ${this.maxWorkers} max workers and ${this.timeout}ms timeout`);
+      if (this.browserstackBuildId) {
+        this.executionLogger.debug(`BrowserStack Build ID for unified builds: ${this.browserstackBuildId}`);
+      }
     }
   }
 
@@ -64,7 +70,9 @@ class SimpleWorkerManager {
   generateBrowserStackBuildId() {
     // Check if a build ID is already set in environment (from parent process or CI)
     if (process.env.BROWSERSTACK_BUILD_ID) {
-      this.logger.debug(`Using existing BrowserStack build ID from environment: ${process.env.BROWSERSTACK_BUILD_ID}`);
+      if (this.executionLogger) {
+        this.executionLogger.debug(`Using existing BrowserStack build ID from environment: ${process.env.BROWSERSTACK_BUILD_ID}`);
+      }
       return process.env.BROWSERSTACK_BUILD_ID;
     }
     
@@ -76,8 +84,10 @@ class SimpleWorkerManager {
     // Set the generated build ID in the environment so all subsequent processes use the same one
     process.env.BROWSERSTACK_BUILD_ID = buildId;
     
-    this.logger.debug(`Generated new BrowserStack build ID: ${buildId}`);
-    this.logger.debug(`Set BROWSERSTACK_BUILD_ID environment variable for unified builds`);
+    if (this.executionLogger) {
+      this.executionLogger.debug(`Generated new BrowserStack build ID: ${buildId}`);
+      this.executionLogger.debug(`Set BROWSERSTACK_BUILD_ID environment variable for unified builds`);
+    }
     return buildId;
   }
 
@@ -125,9 +135,11 @@ class SimpleWorkerManager {
     this.testStatus.completed = this.testStatus.passed + this.testStatus.failed + this.testStatus.skipped;
     this.testStatus.running = Math.max(0, this.testStatus.total - this.testStatus.completed);
     
-    // Debug logging for test count validation
-    this.logger.debug(`Test status update: +${newPassed} passed, +${newFailed} failed, +${newSkipped} skipped`);
-    this.logger.debug(`Cumulative: ${this.testStatus.passed} passed, ${this.testStatus.failed} failed, ${this.testStatus.skipped} skipped, ${this.testStatus.completed}/${this.testStatus.total} total`);
+    // Log detailed debug information to file only
+    if (this.executionLogger) {
+      this.executionLogger.debug(`Test status update: +${newPassed} passed, +${newFailed} failed, +${newSkipped} skipped`);
+      this.executionLogger.debug(`Cumulative: ${this.testStatus.passed} passed, ${this.testStatus.failed} failed, ${this.testStatus.skipped} skipped, ${this.testStatus.completed}/${this.testStatus.total} total`);
+    }
     
     // Always log status update on each completion for real-time progress
     this.logTestStatus('PROGRESS');
@@ -234,14 +246,20 @@ class SimpleWorkerManager {
   async processWorkQueue() {
     const promises = [];
     
-    this.logger.debug(`Starting ${Math.min(this.maxWorkers, this.workQueue.length)} workers for ${this.workQueue.length} work items`);
+    // Log detailed debug information to file only
+    if (this.executionLogger) {
+      this.executionLogger.debug(`Starting ${Math.min(this.maxWorkers, this.workQueue.length)} workers for ${this.workQueue.length} work items`);
+    }
     
     // Start workers immediately for all available work items (up to maxWorkers)
     const workersToStart = Math.min(this.maxWorkers, this.workQueue.length);
     for (let i = 0; i < workersToStart; i++) {
       const workItem = this.workQueue.shift();
       if (workItem) {
-        this.logger.debug(`Starting immediate worker ${i + 1}/${workersToStart} for ${workItem.filePath}`);
+        // Log detailed debug information to file only
+        if (this.executionLogger) {
+          this.executionLogger.debug(`Starting immediate worker ${i + 1}/${workersToStart} for ${workItem.filePath}`);
+        }
         promises.push(this.executeTestFile(workItem));
       }
     }
@@ -347,7 +365,10 @@ class SimpleWorkerManager {
     } finally {
       // Remove from active workers tracking
       this.activeWorkers.delete(workerId);
-      this.logger.debug(`${workerId} removed from active workers (${this.activeWorkers.size} remaining)`);
+      // Log detailed debug information to file only
+      if (this.executionLogger) {
+        this.executionLogger.debug(`${workerId} removed from active workers (${this.activeWorkers.size} remaining)`);
+      }
     }
   }
 
@@ -397,12 +418,18 @@ class SimpleWorkerManager {
       this.logger.info(`${workerId} executing: ${jestCommand} ${jestArgs.join(' ')}`);
       if (useBrowserStackSDK) {
         this.logger.info(`${workerId} using BrowserStack Node SDK for test reporting`);
-        this.logger.debug(`${workerId} BrowserStack configuration will be read from browserstack.yml in user directory`);
+        // Log detailed debug information to file only
+        if (this.executionLogger) {
+          this.executionLogger.debug(`${workerId} BrowserStack configuration will be read from browserstack.yml in user directory`);
+        }
       }
-      this.logger.debug(`${workerId} working directory: ${process.cwd()}`);
-      this.logger.debug(`${workerId} relative path: ${relativePath}`);
-      if (browserstackBuildId) {
-        this.logger.debug(`${workerId} using BrowserStack build ID: ${browserstackBuildId}`);
+      // Log detailed debug information to file only
+      if (this.executionLogger) {
+        this.executionLogger.debug(`${workerId} working directory: ${process.cwd()}`);
+        this.executionLogger.debug(`${workerId} relative path: ${relativePath}`);
+        if (browserstackBuildId) {
+          this.executionLogger.debug(`${workerId} using BrowserStack build ID: ${browserstackBuildId}`);
+        }
       }
       
       let output = '';
@@ -449,8 +476,8 @@ class SimpleWorkerManager {
             return trimmedLine.length > 0 && !this.isBrowserStackLogLine(trimmedLine);
           });
           
-          if (filteredLines.length > 0) {
-            this.logger.debug(`${workerId} stdout: ${filteredLines.join('\n')}`);
+          if (filteredLines.length > 0 && this.executionLogger) {
+            this.executionLogger.debug(`${workerId} stdout: ${filteredLines.join('\n')}`);
           }
         }
       });
@@ -467,8 +494,8 @@ class SimpleWorkerManager {
             return trimmedLine.length > 0 && !this.isBrowserStackLogLine(trimmedLine);
           });
           
-          if (filteredLines.length > 0) {
-            this.logger.debug(`${workerId} stderr: ${filteredLines.join('\n')}`);
+          if (filteredLines.length > 0 && this.executionLogger) {
+            this.executionLogger.debug(`${workerId} stderr: ${filteredLines.join('\n')}`);
           }
         }
       });
@@ -480,7 +507,10 @@ class SimpleWorkerManager {
           
           // For BrowserStack SDK, give extra time for cleanup even on success
           if (useBrowserStackSDK && code === 0) {
-            this.logger.debug(`${workerId} BrowserStack SDK detected, allowing 500ms for cleanup...`);
+            // Log detailed debug information to file only
+            if (this.executionLogger) {
+              this.executionLogger.debug(`${workerId} BrowserStack SDK detected, allowing 500ms for cleanup...`);
+            }
             // Add a small delay to allow BrowserStack SDK cleanup to complete
             setTimeout(() => {
               resolve({
@@ -511,7 +541,10 @@ class SimpleWorkerManager {
       const timeoutId = setTimeout(() => {
         if (!isResolved && !child.killed) {
           isResolved = true;
-          this.logger.warn(`${workerId} Jest process timeout after ${this.formatDuration(this.timeout)}, force killing...`);
+          // Log timeout warnings to file only to reduce console noise
+          if (this.executionLogger) {
+            this.executionLogger.warn(`${workerId} Jest process timeout after ${this.formatDuration(this.timeout)}, force killing...`);
+          }
           
           // More aggressive process cleanup for BrowserStack SDK
           try {
@@ -521,7 +554,9 @@ class SimpleWorkerManager {
             // Wait a moment, then force kill if still running
             setTimeout(() => {
               if (!child.killed) {
-                this.logger.warn(`${workerId} Force killing with SIGKILL after SIGTERM timeout`);
+                if (this.executionLogger) {
+                  this.executionLogger.warn(`${workerId} Force killing with SIGKILL after SIGTERM timeout`);
+                }
                 child.kill('SIGKILL');
                 
                 // Also try to kill any child processes
@@ -529,14 +564,18 @@ class SimpleWorkerManager {
                   try {
                     process.kill(-child.pid, 'SIGKILL'); // Kill process group
                   } catch (groupKillError) {
-                    this.logger.debug(`${workerId} Error killing process group: ${groupKillError.message}`);
+                    if (this.executionLogger) {
+                      this.executionLogger.debug(`${workerId} Error killing process group: ${groupKillError.message}`);
+                    }
                   }
                 }
               }
             }, 5000); // 5 second grace period for SIGTERM
             
           } catch (killError) {
-            this.logger.warn(`${workerId} Error killing process: ${killError.message}`);
+            if (this.executionLogger) {
+              this.executionLogger.warn(`${workerId} Error killing process: ${killError.message}`);
+            }
           }
           
           // Enhanced timeout logging with context
@@ -592,7 +631,10 @@ class SimpleWorkerManager {
     const allOutput = (output + '\n' + errorOutput);
     const lines = allOutput.split('\n');
     
-    this.logger.debug(`Parsing Jest text output - ${lines.length} lines from combined stdout/stderr`);
+    // Log detailed debug information to file only
+    if (this.executionLogger) {
+      this.executionLogger.debug(`Parsing Jest text output - ${lines.length} lines from combined stdout/stderr`);
+    }
     
     // Use the same parsing logic regardless of whether BrowserStack SDK is used
     // BrowserStack Node SDK should pass through Jest output unchanged
@@ -721,12 +763,15 @@ class SimpleWorkerManager {
       }
     }
     
-    this.logger.debug(`Collected ${errorMap.size} error messages for failed tests`);
-    
-    // Debug: Log all collected error keys for troubleshooting
-    if (errorMap.size > 0) {
-      const errorKeys = Array.from(errorMap.keys());
-      this.logger.debug(`Error message keys collected: ${errorKeys.join(', ')}`);
+    // Log detailed debug information to file only
+    if (this.executionLogger) {
+      this.executionLogger.debug(`Collected ${errorMap.size} error messages for failed tests`);
+      
+      // Debug: Log all collected error keys for troubleshooting
+      if (errorMap.size > 0) {
+        const errorKeys = Array.from(errorMap.keys());
+        this.executionLogger.debug(`Error message keys collected: ${errorKeys.join(', ')}`);
+      }
     }
     
     // Second pass: Parse Jest's human-readable test results
@@ -749,7 +794,10 @@ class SimpleWorkerManager {
             message: '',
             error: null
           });
-          this.logger.debug(`Found passed test: ${testName} (${duration}ms)`);
+          // Log detailed debug information to file only
+          if (this.executionLogger) {
+            this.executionLogger.debug(`Found passed test: ${testName} (${duration}ms)`);
+          }
         }
         continue;
       }
@@ -769,7 +817,10 @@ class SimpleWorkerManager {
             for (const [key, value] of errorMap.entries()) {
               if (key.includes(testName) || testName.includes(key)) {
                 errorMessage = value;
-                this.logger.debug(`Found error message via partial match: "${testName}" matched with "${key}"`);
+                // Log detailed debug information to file only
+                if (this.executionLogger) {
+                  this.executionLogger.debug(`Found error message via partial match: "${testName}" matched with "${key}"`);
+                }
                 break;
               }
             }
@@ -778,14 +829,17 @@ class SimpleWorkerManager {
           // If still no error message, try extracting from the combined output around this test
           if (!errorMessage) {
             errorMessage = this.extractTestSpecificError(allOutput, testName);
-            if (errorMessage) {
-              this.logger.debug(`Found error message via test-specific extraction for: "${testName}"`);
+            if (errorMessage && this.executionLogger) {
+              this.executionLogger.debug(`Found error message via test-specific extraction for: "${testName}"`);
             }
           }
           
           // Final fallback with debug info
           if (!errorMessage) {
-            this.logger.warn(`No error message found for failed test: "${testName}". Available error keys: [${Array.from(errorMap.keys()).join(', ')}]`);
+            // Log detailed debug information to file only
+            if (this.executionLogger) {
+              this.executionLogger.warn(`No error message found for failed test: "${testName}". Available error keys: [${Array.from(errorMap.keys()).join(', ')}]`);
+            }
             errorMessage = `Test failed: ${testName}`;
           }
           
@@ -797,7 +851,10 @@ class SimpleWorkerManager {
             message: errorMessage,
             error: errorMessage  // Add both for compatibility
           });
-          this.logger.debug(`Found failed test: ${testName} (${duration}ms) - Error captured: ${errorMessage.length} chars`);
+          // Log detailed debug information to file only
+          if (this.executionLogger) {
+            this.executionLogger.debug(`Found failed test: ${testName} (${duration}ms) - Error captured: ${errorMessage.length} chars`);
+          }
         }
         continue;
       }
@@ -816,7 +873,10 @@ class SimpleWorkerManager {
             message: 'Test skipped',
             error: null
           });
-          this.logger.debug(`Found skipped test: ${testName}`);
+          // Log detailed debug information to file only
+          if (this.executionLogger) {
+            this.executionLogger.debug(`Found skipped test: ${testName}`);
+          }
         }
         continue;
       }
@@ -824,7 +884,10 @@ class SimpleWorkerManager {
     
     // If we couldn't parse individual tests, create a summary based on file result
     if (results.length === 0) {
-      this.logger.debug(`No individual test results found, checking for summary information`);
+      // Log detailed debug information to file only
+      if (this.executionLogger) {
+        this.executionLogger.debug(`No individual test results found, checking for summary information`);
+      }
       
       // Look for Jest summary lines like "Tests: 3 passed, 2 failed, 5 total"
       const summaryMatch = allOutput.match(/Tests:\s*(\d+)\s*passed(?:,\s*(\d+)\s*failed)?(?:,\s*(\d+)\s*skipped)?(?:,\s*(\d+)\s*total)?/i);
@@ -833,7 +896,10 @@ class SimpleWorkerManager {
         const failed = parseInt(summaryMatch[2]) || 0;
         const skipped = parseInt(summaryMatch[3]) || 0;
         
-        this.logger.debug(`Found Jest summary: ${passed} passed, ${failed} failed, ${skipped} skipped`);
+        // Log detailed debug information to file only
+        if (this.executionLogger) {
+          this.executionLogger.debug(`Found Jest summary: ${passed} passed, ${failed} failed, ${skipped} skipped`);
+        }
         
         // Create generic test results based on summary
         for (let i = 0; i < passed; i++) {
@@ -870,9 +936,12 @@ class SimpleWorkerManager {
           });
         }
       } else {
-        this.logger.warn(`No Jest summary found in output, creating single result based on overall outcome`);
-        this.logger.warn(`Output sample (first 500 chars): ${allOutput.substring(0, 500)}`);
-        this.logger.warn(`This indicates Jest output parsing failed - may be due to BrowserStack SDK output format`);
+        // Log detailed debug information to file only for troubleshooting
+        if (this.executionLogger) {
+          this.executionLogger.warn(`No Jest summary found in output, creating single result based on overall outcome`);
+          this.executionLogger.warn(`Output sample (first 500 chars): ${allOutput.substring(0, 500)}`);
+          this.executionLogger.warn(`This indicates Jest output parsing failed - may be due to BrowserStack SDK output format`);
+        }
         
         // Fallback: create single result based on general success/failure indicators
         const hasFailureIndicators = allOutput.includes('FAIL') || allOutput.includes('Failed') || 
@@ -884,8 +953,10 @@ class SimpleWorkerManager {
           'File execution passed';
         
         const testName = 'File execution';
-        this.logger.warn(`Creating fallback test result: "${testName}" with status: ${hasFailureIndicators ? 'failed' : 'passed'}`);
-        results.push({
+        // Log detailed debug information to file only
+        if (this.executionLogger) {
+          this.executionLogger.warn(`Creating fallback test result: "${testName}" with status: ${hasFailureIndicators ? 'failed' : 'passed'}`);
+        }results.push({
           name: testName,
           testName: testName,
           status: hasFailureIndicators ? 'failed' : 'passed',
@@ -896,8 +967,11 @@ class SimpleWorkerManager {
       }
     }
     
-    this.logger.debug(`Parsed ${results.length} test results using text-only parsing`);
-    this.logger.debug(`Error messages captured for ${errorMap.size} failed tests`);
+    // Log detailed debug information to file only
+    if (this.executionLogger) {
+      this.executionLogger.debug(`Parsed ${results.length} test results using text-only parsing`);
+      this.executionLogger.debug(`Error messages captured for ${errorMap.size} failed tests`);
+    }
     return results;
   }
 
@@ -947,7 +1021,10 @@ class SimpleWorkerManager {
     if (errorLines.length > 0) {
       // Return the most relevant error lines (limit to avoid too much text)
       const errorMessage = errorLines.slice(0, 5).join(' | ');
-      this.logger.debug(`Extracted test-specific error for "${testName}": ${errorMessage.substring(0, 100)}...`);
+      // Log detailed debug information to file only
+      if (this.executionLogger) {
+        this.executionLogger.debug(`Extracted test-specific error for "${testName}": ${errorMessage.substring(0, 100)}...`);
+      }
       return errorMessage;
     }
     
@@ -1179,7 +1256,10 @@ class SimpleWorkerManager {
     // Kill any remaining active workers
     for (const [workerId, workerInfo] of this.activeWorkers) {
       if (workerInfo.process && !workerInfo.process.killed) {
-        this.logger.warn(`Force killing active worker: ${workerId} (PID: ${workerInfo.pid})`);
+        // Log detailed debug information to file only
+        if (this.executionLogger) {
+          this.executionLogger.warn(`Force killing active worker: ${workerId} (PID: ${workerInfo.pid})`);
+        }
         try {
           workerInfo.process.kill('SIGKILL');
           // Also try to kill process group
@@ -1187,7 +1267,10 @@ class SimpleWorkerManager {
             process.kill(-workerInfo.pid, 'SIGKILL');
           }
         } catch (error) {
-          this.logger.warn(`Error killing worker ${workerId}: ${error.message}`);
+          // Log detailed debug information to file only
+          if (this.executionLogger) {
+            this.executionLogger.warn(`Error killing worker ${workerId}: ${error.message}`);
+          }
         }
       }
     }
@@ -1204,14 +1287,23 @@ class SimpleWorkerManager {
     for (const [workerId, workerInfo] of this.activeWorkers) {
       const elapsed = now - workerInfo.startTime;
       if (elapsed > hangingThreshold) {
-        this.logger.warn(`Worker ${workerId} appears to be hanging (${this.formatDuration(elapsed)} elapsed)`);
+        // Log detailed debug information to file only
+        if (this.executionLogger) {
+          this.executionLogger.warn(`Worker ${workerId} appears to be hanging (${this.formatDuration(elapsed)} elapsed)`);
+        }
         
         if (workerInfo.process && !workerInfo.process.killed) {
-          this.logger.warn(`Force killing hanging worker: ${workerId}`);
+          // Log detailed debug information to file only
+          if (this.executionLogger) {
+            this.executionLogger.warn(`Force killing hanging worker: ${workerId}`);
+          }
           try {
             workerInfo.process.kill('SIGKILL');
           } catch (error) {
-            this.logger.warn(`Error killing hanging worker ${workerId}: ${error.message}`);
+            // Log detailed debug information to file only
+            if (this.executionLogger) {
+              this.executionLogger.warn(`Error killing hanging worker ${workerId}: ${error.message}`);
+            }
           }
         }
       }
