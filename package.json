@@ -38,7 +38,7 @@
   },
   "homepage": "https://github.com/bsautomation/jest-parallel-worker#readme",
   "dependencies": {
-    "browserstack-node-sdk": "1.36.6",
+    "browserstack-node-sdk": "1.40.7",
     "chalk": "^4.1.2",
     "commander": "^11.0.0",
     "expect": "^30.0.5",

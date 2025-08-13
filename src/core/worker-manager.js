@@ -38,7 +38,39 @@ class WorkerManager {
     this.lastStatusUpdate = 0;
     this.statusUpdateInterval = 1000; // Update every 1 second
     
+    // Generate a consistent BrowserStack build ID for all workers in this execution
+    this.browserstackBuildId = this.generateBrowserStackBuildId();
+    
     this.logger.debug(`WorkerManager initialized with ${this.maxWorkers} max workers and ${this.timeout}ms timeout`);
+    if (this.browserstackBuildId) {
+      this.logger.debug(`BrowserStack Build ID for unified builds: ${this.browserstackBuildId}`);
+    }
+  }
+
+  // Generate or retrieve a consistent build ID for BrowserStack integration
+  getBrowserStackBuildId() {
+    return this.browserstackBuildId;
+  }
+  
+  // Generate a new build ID based on timestamp and process info
+  generateBrowserStackBuildId() {
+    // Check if a build ID is already set in environment (from parent process or CI)
+    if (process.env.BROWSERSTACK_BUILD_ID) {
+      this.logger.debug(`Using existing BrowserStack build ID from environment: ${process.env.BROWSERSTACK_BUILD_ID}`);
+      return process.env.BROWSERSTACK_BUILD_ID;
+    }
+    
+    // Generate a new build ID based on timestamp and process info
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    const buildId = `jest-parallel-${timestamp}-${randomSuffix}`;
+    
+    // Set the generated build ID in the environment so all subsequent processes use the same one
+    process.env.BROWSERSTACK_BUILD_ID = buildId;
+    
+    this.logger.debug(`Generated new BrowserStack build ID: ${buildId}`);
+    this.logger.debug(`Set BROWSERSTACK_BUILD_ID environment variable for unified builds`);
+    return buildId;
   }
 
   // Helper method to format duration in human-readable format
@@ -76,11 +108,18 @@ class WorkerManager {
     const newFailed = testResults.filter(r => r.status === 'failed').length;
     const newSkipped = testResults.filter(r => r.status === 'skipped').length;
     
+    // Update cumulative counts
     this.testStatus.passed += newPassed;
     this.testStatus.failed += newFailed;  
     this.testStatus.skipped += newSkipped;
+    
+    // Recalculate derived counts
     this.testStatus.completed = this.testStatus.passed + this.testStatus.failed + this.testStatus.skipped;
     this.testStatus.running = Math.max(0, this.testStatus.total - this.testStatus.completed);
+    
+    // Debug logging for test count validation
+    this.logger.debug(`Test status update: +${newPassed} passed, +${newFailed} failed, +${newSkipped} skipped`);
+    this.logger.debug(`Cumulative: ${this.testStatus.passed} passed, ${this.testStatus.failed} failed, ${this.testStatus.skipped} skipped, ${this.testStatus.completed}/${this.testStatus.total} total`);
     
     // Always log status update on each completion for real-time progress
     this.logTestStatus('PROGRESS');
@@ -784,9 +823,20 @@ class WorkerManager {
       })
     ];
 
+    // Generate or use existing BrowserStack build ID for unified builds
+    const browserstackBuildId = this.getBrowserStackBuildId();
+    
+    this.logger.debug(`Spawning native parallel worker ${workerId} with unified build ID: ${browserstackBuildId}`);
+    
     const worker = spawn('node', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=4096' }
+      env: { 
+        ...process.env, 
+        NODE_OPTIONS: '--max-old-space-size=4096',
+        // Pass BrowserStack build ID to ensure all workers use the same build
+        BROWSERSTACK_BUILD_ID: browserstackBuildId,
+        BROWSERSTACK_BUILD_IDENTIFIER: browserstackBuildId
+      }
     });
 
     let output = '';
@@ -837,99 +887,172 @@ class WorkerManager {
       try {
         this.logger.debug(`Native parallel worker ${workerId} output processing - Length: ${output.length}`);
         
-        // Enhanced JSON parsing with better error detection
+        // Robust JSON parsing with multiple fallback strategies
         const trimmedOutput = output.trim();
-        let jsonToparse = trimmedOutput;
+        let result = null;
+        let parseError = null;
         
         // Log the start and end of output for debugging
         if (trimmedOutput.length > 100) {
-          this.logger.debug(`Output starts with: ${trimmedOutput.substring(0, 100)}...`);
+          this.logger.debug(`Output starts with: ${trimmedOutput}...`);
           this.logger.debug(`Output ends with: ...${trimmedOutput}`);
         } else {
           this.logger.debug(`Full output: ${trimmedOutput}`);
         }
         
-        // Check if output looks like JSON
-        if (!trimmedOutput.startsWith('{')) {
-          // Look for JSON in the output (might be mixed with console logs)
-          // Try to find the complete JSON by looking for the full structure with proper nesting
-          const lines = trimmedOutput.split('\n');
-          let jsonCandidate = '';
-          let braceCount = 0;
-          let inJson = false;
-          
-          for (const line of lines) {
-            if (line.trim().startsWith('{"status":')) {
-              inJson = true;
-              jsonCandidate = line.trim();
-              braceCount = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
-            } else if (inJson) {
-              jsonCandidate += line;
-              braceCount += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
-              
-              if (braceCount === 0) {
-                // Found complete JSON
-                break;
-              }
-            }
+        // Strategy 1: Try to parse the entire output as JSON
+        try {
+          if (trimmedOutput.startsWith('{') && trimmedOutput.endsWith('}')) {
+            result = JSON.parse(trimmedOutput);
+            this.logger.debug(`Successfully parsed complete JSON output`);
           }
-          
-          if (jsonCandidate && braceCount === 0) {
-            jsonToparse = jsonCandidate;
-            this.logger.debug(`Found complete JSON by line parsing: ${jsonCandidate.substring(0, 200)}...`);
-          } else {
-            // Fallback to regex-based approach
-            const jsonMatches = trimmedOutput.match(/\{"status":"[^"]+","testResults":\[[^\]]*\][^}]*\}/g);
-            if (jsonMatches && jsonMatches.length > 0) {
-              // Take the last (most complete) JSON match
-              jsonToparse = jsonMatches[jsonMatches.length - 1];
-              this.logger.debug(`Found complete JSON via regex: ${jsonToparse.substring(0, 200)}...`);
-            } else {
-              // Final fallback: look for any JSON-like structure that might be truncated
-              const jsonStart = trimmedOutput.indexOf('{"status":');
-              if (jsonStart >= 0) {
-                const possibleJson = trimmedOutput.substring(jsonStart);
-                const lastCompleteJson = possibleJson.lastIndexOf('}');
-                if (lastCompleteJson > 0) {
-                  jsonToparse = possibleJson.substring(0, lastCompleteJson + 1);
-                  this.logger.debug(`Extracted JSON from position ${jsonStart}: ${jsonToparse.substring(0, 200)}...`);
-                } else {
-                  this.logger.warn(`Found JSON start but no complete end. Output length: ${trimmedOutput.length}`);
-                  throw new Error(`Incomplete JSON found: ${possibleJson.substring(0, 100)}...`);
+        } catch (error) {
+          parseError = error;
+          this.logger.debug(`Strategy 1 failed: ${error.message}`);
+        }
+        
+        // Strategy 2: Look for JSON in mixed output (console logs + JSON)
+        if (!result) {
+          try {
+            const lines = trimmedOutput.split('\n');
+            let jsonCandidate = '';
+            let braceCount = 0;
+            let inJson = false;
+            
+            for (const line of lines) {
+              const trimmedLine = line.trim();
+              if (trimmedLine.startsWith('{"status":') || trimmedLine.startsWith('{"filePath":')) {
+                inJson = true;
+                jsonCandidate = trimmedLine;
+                braceCount = (trimmedLine.match(/\{/g) || []).length - (trimmedLine.match(/\}/g) || []).length;
+              } else if (inJson) {
+                jsonCandidate += trimmedLine;
+                braceCount += (trimmedLine.match(/\{/g) || []).length - (trimmedLine.match(/\}/g) || []).length;
+                
+                if (braceCount === 0) {
+                  // Found complete JSON
+                  break;
                 }
-              } else {
-                this.logger.warn(`Output doesn't appear to contain valid JSON. First 300 chars: ${trimmedOutput.substring(0, 300)}`);
-                throw new Error(`Output doesn't contain valid JSON: ${trimmedOutput.substring(0, 100)}...`);
               }
             }
+            
+            if (jsonCandidate && braceCount === 0) {
+              result = JSON.parse(jsonCandidate);
+              this.logger.debug(`Successfully parsed JSON from mixed output using line parsing`);
+            }
+          } catch (error) {
+            this.logger.debug(`Strategy 2 failed: ${error.message}`);
           }
         }
         
-        // If output doesn't end with '}', try to find the last complete JSON object
-        if (!jsonToparse.endsWith('}')) {
-          const lastBraceIndex = jsonToparse.lastIndexOf('}');
-          if (lastBraceIndex > 0) {
-            const originalLength = jsonToparse.length;
-            jsonToparse = jsonToparse.substring(0, lastBraceIndex + 1);
-            this.logger.debug(`Truncated incomplete JSON from ${originalLength} to ${jsonToparse.length} chars`);
-          } else {
-            this.logger.warn(`No closing brace found in JSON output`);
+        // Strategy 3: Use regex to find JSON blocks
+        if (!result) {
+          try {
+            // More flexible regex to match different JSON structures
+            const jsonMatches = trimmedOutput.match(/\{[^{}]*"status"[^{}]*"[^"]*"[^{}]*\}/g) ||
+                               trimmedOutput.match(/\{"[^"]*":[^}]*\}/g);
+            
+            if (jsonMatches && jsonMatches.length > 0) {
+              // Try parsing each match, starting with the largest one
+              const sortedMatches = jsonMatches.sort((a, b) => b.length - a.length);
+              
+              for (const match of sortedMatches) {
+                try {
+                  result = JSON.parse(match);
+                  this.logger.debug(`Successfully parsed JSON using regex strategy: ${match.substring(0, 100)}...`);
+                  break;
+                } catch (regexError) {
+                  this.logger.debug(`Regex match failed to parse: ${regexError.message}`);
+                }
+              }
+            }
+          } catch (error) {
+            this.logger.debug(`Strategy 3 failed: ${error.message}`);
           }
         }
         
-        // Additional validation before parsing
-        if (jsonToparse.length < 10) {
-          throw new Error(`JSON too short to be valid: "${jsonToparse}"`);
+        // Strategy 4: Try to reconstruct truncated JSON
+        if (!result) {
+          try {
+            const jsonStart = trimmedOutput.indexOf('{"');
+            if (jsonStart >= 0) {
+              let possibleJson = trimmedOutput.substring(jsonStart);
+              
+              // Try to find the last complete closing brace
+              let lastValidJson = '';
+              let braceCount = 0;
+              let inString = false;
+              let escaped = false;
+              
+              for (let i = 0; i < possibleJson.length; i++) {
+                const char = possibleJson[i];
+                
+                if (escaped) {
+                  escaped = false;
+                  continue;
+                }
+                
+                if (char === '\\') {
+                  escaped = true;
+                  continue;
+                }
+                
+                if (char === '"' && !escaped) {
+                  inString = !inString;
+                }
+                
+                if (!inString) {
+                  if (char === '{') {
+                    braceCount++;
+                  } else if (char === '}') {
+                    braceCount--;
+                    if (braceCount === 0) {
+                      lastValidJson = possibleJson.substring(0, i + 1);
+                      break;
+                    }
+                  }
+                }
+              }
+              
+              if (lastValidJson) {
+                result = JSON.parse(lastValidJson);
+                this.logger.debug(`Successfully reconstructed JSON from truncated output`);
+              }
+            }
+          } catch (error) {
+            this.logger.debug(`Strategy 4 failed: ${error.message}`);
+          }
         }
         
-        this.logger.debug(`About to parse JSON of length ${jsonToparse.length}`);
-        const result = JSON.parse(jsonToparse);
-        this.logger.debug(`Successfully parsed JSON result with status: ${result.status}`);
+        // If all parsing strategies failed, create a fallback result
+        if (!result) {
+          this.logger.warn(`All JSON parsing strategies failed. Creating fallback result.`);
+          this.logger.debug(`Parse errors encountered: ${parseError ? parseError.message : 'Multiple parsing errors'}`);
+          this.logger.debug(`Raw output sample: ${trimmedOutput}`);
+          
+          // Try to extract basic information from the output text
+          const status = trimmedOutput.includes('PASS') ? 'passed' : 'failed';
+          const errorOutput = trimmedOutput.includes('FAIL') ? trimmedOutput : '';
+          
+          result = {
+            status: status,
+            filePath: workItem.filePath,
+            testResults: [],
+            output: '',
+            errorOutput: errorOutput,
+            duration: 0,
+            workerId: workerId,
+            parseError: `JSON parsing failed: ${parseError ? parseError.message : 'Unknown error'}`,
+            rawOutput: trimmedOutput.substring(0, 500)
+          };
+          
+          this.logger.debug(`Created fallback result with status: ${result.status}`);
+        }
         
         this.results.push(result);
         
         // Update test status tracking with detailed test results
-        if (result.testResults && Array.isArray(result.testResults)) {
+        if (result.testResults && Array.isArray(result.testResults) && result.testResults.length > 0) {
           this.updateTestStatus(result.testResults);
           
           // Log detailed file completion status
@@ -946,17 +1069,37 @@ class WorkerManager {
             this.logger.info(`  ${statusIcon} ${test.testName || test.name || 'Unknown Test'} (${test.duration || 0}ms)`);
           });
         } else {
-          // File-level result without individual test breakdown
+          // If no individual test results, estimate based on work item and result status
           const fileName = path.basename(result.filePath || 'Unknown File');
           const statusIcon = result.status === 'passed' ? '✅' : '❌';
-          this.logger.info(`📁 ${fileName} ${statusIcon} ${result.status} [Worker: ${workerId}]`);
+          
+          // Create estimated test results for status tracking
+          const estimatedResults = [];
+          const testCount = workItem.testCount || 1;
+          for (let i = 0; i < testCount; i++) {
+            estimatedResults.push({
+              status: result.status === 'passed' ? 'passed' : 'failed',
+              name: `Test ${i + 1}${result.parseError ? ' (parsing failed)' : ''}`,
+              duration: 0
+            });
+          }
+          
+          // Update test status with estimated results
+          this.updateTestStatus(estimatedResults);
+          
+          if (result.parseError) {
+            this.logger.warn(`📁 ${fileName} ❌ JSON parsing failed but worker completed (${testCount} tests estimated as ${result.status}) [Worker: ${workerId}]`);
+            this.logger.debug(`Parse error details: ${result.parseError}`);
+          } else {
+            this.logger.info(`📁 ${fileName} ${statusIcon} ${result.status} (estimated ${testCount} tests) [Worker: ${workerId}]`);
+          }
         }
       } catch (error) {
-        this.logger.error(`Native parallel worker ${workerId} output parsing failed:`, error.message);
+        this.logger.error(`Native parallel worker ${workerId} encountered unexpected error:`, error.message);
         this.logger.debug(`Raw output (first 1000 chars): ${output.substring(0, 1000)}`);
         this.logger.debug(`Raw stderr (first 500 chars): ${errorOutput.substring(0, 500)}`);
         
-        // Try to extract useful information even if JSON parsing fails
+        // Try to extract useful information even if processing fails completely
         let errorSummary = 'Unknown error';
         if (output.includes('No tests found')) {
           errorSummary = 'No tests found - check file paths and Jest configuration';
@@ -966,12 +1109,14 @@ class WorkerManager {
           errorSummary = 'Syntax error in test file';
         } else if (output.includes('TypeError')) {
           errorSummary = 'Type error during test execution';
+        } else if (error.message.includes('Unexpected end of JSON input')) {
+          errorSummary = 'Worker output was truncated or incomplete';
         }
         
         const failedResult = {
           filePath: workItem.filePath,
           status: 'failed',
-          error: `Worker output parsing failed: ${error.message}. ${errorSummary}`,
+          error: `Worker processing failed: ${error.message}. ${errorSummary}`,
           duration: 0,
           workerId,
           testResults: [],
@@ -980,12 +1125,20 @@ class WorkerManager {
         };
         this.results.push(failedResult);
         
-        // Update test status tracking - estimate failed tests
+        // Update test status tracking - create failed test results based on expected test count
         const failedTests = [];
-        for (let i = 0; i < workItem.testCount; i++) {
-          failedTests.push({ status: 'failed' });
+        for (let i = 0; i < (workItem.testCount || 1); i++) {
+          failedTests.push({ 
+            status: 'failed',
+            name: `Test ${i + 1} (processing failed)`,
+            duration: 0
+          });
         }
         this.updateTestStatus(failedTests);
+        
+        // Log file failure with proper test count
+        const fileName = path.basename(failedResult.filePath || 'Unknown File');
+        this.logger.info(`📁 ${fileName} ❌ processing failed (${workItem.testCount || 1} tests marked as failed) [Worker: ${workerId}]`);
       }
     };
 

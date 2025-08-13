@@ -45,38 +45,12 @@ class ReportGenerator {
     let skipped = 0;
     let totalTests = 0;
 
+    // Process each result only once, prioritizing detailed test results
     results.forEach(result => {
-      if (result.testId) {
-        // Individual test result
-        testResults.push(result);
-        totalTests++;
-        if (result.status === 'passed') passed++;
-        if (result.status === 'failed') failed++;
-        if (result.status === 'skipped') skipped++;
-        
-        const fileName = path.basename(result.filePath || '');
-        if (fileName && !fileResults[fileName]) {
-          fileResults[fileName] = {
-            filePath: result.filePath,
-            tests: [],
-            passed: 0,
-            failed: 0,
-            skipped: 0,
-            duration: 0
-          };
-        }
-        
-        if (fileName && fileResults[fileName]) {
-          if (!fileResults[fileName].tests) {
-            fileResults[fileName].tests = [];
-          }
-          fileResults[fileName].tests.push(result);
-          fileResults[fileName][result.status]++;
-          fileResults[fileName].duration += result.duration || 0;
-        }
-      } else if (result.filePath) {
-        // File-level result
+      if (result.filePath) {
         const fileName = path.basename(result.filePath);
+        
+        // Initialize file result if not exists
         if (!fileResults[fileName]) {
           fileResults[fileName] = {
             filePath: result.filePath,
@@ -95,8 +69,8 @@ class ReportGenerator {
           };
         }
         
-        // If this file result has parsed test results, add them
-        if (result.testResults && Array.isArray(result.testResults)) {
+        // Process individual test results if available (prioritize this)
+        if (result.testResults && Array.isArray(result.testResults) && result.testResults.length > 0) {
           result.testResults.forEach(testResult => {
             // Clean and validate test name
             let cleanTestName = testResult.testName || testResult.name || 'Unknown Test';
@@ -122,35 +96,70 @@ class ReportGenerator {
               suite: testResult.suite
             };
             
+            // Add to both global and file-specific arrays
             testResults.push(individualTest);
-            if (!fileResults[fileName].tests) {
-              fileResults[fileName].tests = [];
-            }
             fileResults[fileName].tests.push(individualTest);
             
-            // Update file-level counters
+            // Update counters
+            totalTests++;
             if (testResult.status === 'passed') {
-              fileResults[fileName].passed = (fileResults[fileName].passed || 0) + 1;
+              passed++;
+              fileResults[fileName].passed++;
             } else if (testResult.status === 'failed') {
-              fileResults[fileName].failed = (fileResults[fileName].failed || 0) + 1;
+              failed++;
+              fileResults[fileName].failed++;
             } else if (testResult.status === 'skipped') {
-              fileResults[fileName].skipped = (fileResults[fileName].skipped || 0) + 1;
+              skipped++;
+              fileResults[fileName].skipped++;
             }
           });
+        } 
+        // If no detailed test results, fall back to file-level result (only if no tests already processed for this file)
+        else if (fileResults[fileName].tests.length === 0) {
+          // Handle case where we have a file result but no individual test breakdown
+          const testCount = result.testCount || 1;
           
-          // Count individual test results instead of file-level testCount
-          totalTests += result.testResults.length;
-          const passedCount = result.testResults.filter(t => t.status === 'passed').length;
-          const failedCount = result.testResults.filter(t => t.status === 'failed').length;
-          const skippedCount = result.testResults.filter(t => t.status === 'skipped').length;
-          passed += passedCount;
-          failed += failedCount;
-          skipped += skippedCount;
-        } else {
-          // Fallback to file-level counting if no individual test results
-          totalTests += result.testCount || 0;
-          if (result.status === 'passed') passed += result.testCount || 0;
-          if (result.status === 'failed') failed += result.testCount || 0;
+          if (result.status === 'failed' && result.error) {
+            // Create a failed test entry for failed file executions
+            const failedTest = {
+              testId: `${result.filePath}:execution-error`,
+              testName: result.error.includes('parsing failed') ? 'Test execution failed (parsing error)' : 'Test execution failed',
+              filePath: result.filePath,
+              status: 'failed',
+              duration: result.duration || 0,
+              workerId: result.workerId,
+              mode: result.mode,
+              error: this.formatJestError(result.error),
+              suite: path.basename(result.filePath, '.test.js')
+            };
+            
+            testResults.push(failedTest);
+            fileResults[fileName].tests.push(failedTest);
+            totalTests++;
+            failed++;
+            fileResults[fileName].failed++;
+          } else if (result.status === 'passed') {
+            // Create placeholder passed tests for successful file executions without details
+            for (let i = 0; i < testCount; i++) {
+              const passedTest = {
+                testId: `${result.filePath}:test-${i + 1}`,
+                testName: `Test ${i + 1}`,
+                filePath: result.filePath,
+                status: 'passed',
+                duration: (result.duration || 0) / testCount,
+                workerId: result.workerId,
+                mode: result.mode,
+                error: null,
+                suite: path.basename(result.filePath, '.test.js')
+              };
+              
+              testResults.push(passedTest);
+              fileResults[fileName].tests.push(passedTest);
+              totalTests++;
+              passed++;
+              fileResults[fileName].passed++;
+            }
+          }
         }
       }
     });

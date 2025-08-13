@@ -25,6 +25,24 @@ function logJestOutput(message) {
   }
 }
 
+// Function to generate or retrieve a consistent build ID for all parallel executions
+function getBrowserStackBuildId() {
+  // Always prioritize environment variable set by the parent WorkerManager
+  if (process.env.BROWSERSTACK_BUILD_ID) {
+    return process.env.BROWSERSTACK_BUILD_ID;
+  }
+  
+  // If no environment variable exists, generate a new one
+  // This should rarely happen since WorkerManager sets it
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  const buildId = `jest-parallel-worker-${timestamp}-${randomSuffix}`;
+  
+  console.log(`⚠️ Warning: Generated build ID in worker process: ${buildId}`);
+  console.log(`⚠️ This indicates the parent process didn't set BROWSERSTACK_BUILD_ID`);
+  return buildId;
+}
+
 // Function to read and parse BrowserStack configuration from browserstack.yml
 function loadBrowserStackConfig() {
   const browserstackConfigPath = path.join(process.cwd(), 'browserstack.yml');
@@ -71,8 +89,15 @@ function loadBrowserStackConfig() {
       }
     }
     
+    // Ensure we have a consistent build ID for all parallel executions
+    const buildId = getBrowserStackBuildId();
+    
+    // Add build-specific configuration
+    config.buildId = buildId;
+    config.buildIdentifier = buildId; // Alternative field name that some SDKs might use
+    
     console.log(`📋 Loaded BrowserStack config from browserstack.yml`);
-    console.log(`📋 Config: userName=${config.userName}, buildName=${config.buildName}`);
+    console.log(`📋 Config: userName=${config.userName}, buildName=${config.buildName}, buildId=${config.buildId}`);
     
     return config;
   } catch (error) {
@@ -83,8 +108,13 @@ function loadBrowserStackConfig() {
 
 // Function to check if BrowserStack should be enabled based on browserstack.yml
 function isBrowserStackEnabled(config) {
-  // First check if explicitly disabled via CLI
-  if (config.disableBrowserStack === true) {
+  // First check if explicitly disabled via CLI or config
+  if (config.disableBrowserStack === true || config.browserstackSdk === false) {
+    return false;
+  }
+  
+  // Only enable if explicitly requested via CLI
+  if (!config.browserstackSdk) {
     return false;
   }
   
@@ -412,8 +442,12 @@ async function runFileWithConcurrentTransformation(config, startTime) {
               BROWSERSTACK_ACCESS_KEY: browserstackConfig.accessKey,
               BROWSERSTACK_BUILD_NAME: browserstackConfig.buildName || 'Jest Parallel Build',
               BROWSERSTACK_PROJECT_NAME: browserstackConfig.projectName || 'Jest Parallel Tests',
-              // Keep any existing environment overrides
-              BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID || undefined,
+              // Use consistent build ID across all parallel executions
+              BROWSERSTACK_BUILD_ID: browserstackConfig.buildId,
+              BROWSERSTACK_BUILD_IDENTIFIER: browserstackConfig.buildIdentifier,
+              // Additional BrowserStack configuration for unified builds
+              BROWSERSTACK_SESSION_NAME: `${browserstackConfig.buildName || 'Jest Parallel Build'} - ${path.basename(config.filePath)}`,
+              BROWSERSTACK_LOCAL_IDENTIFIER: browserstackConfig.buildId, // Helps group local connections
             };
           })())
         },
@@ -774,7 +808,12 @@ async function runFileWithParallelism(config, startTime) {
           BROWSERSTACK_ACCESS_KEY: browserstackConfig.accessKey,
           BROWSERSTACK_BUILD_NAME: browserstackConfig.buildName || 'Jest Parallel Build',
           BROWSERSTACK_PROJECT_NAME: browserstackConfig.projectName || 'Jest Parallel Tests',
-          BROWSERSTACK_BUILD_ID: process.env.BROWSERSTACK_BUILD_ID || undefined,
+          // Use consistent build ID across all parallel executions
+          BROWSERSTACK_BUILD_ID: browserstackConfig.buildId,
+          BROWSERSTACK_BUILD_IDENTIFIER: browserstackConfig.buildIdentifier,
+          // Additional BrowserStack configuration for unified builds
+          BROWSERSTACK_SESSION_NAME: `${browserstackConfig.buildName || 'Jest Parallel Build'} - ${path.basename(config.filePath)}`,
+          BROWSERSTACK_LOCAL_IDENTIFIER: browserstackConfig.buildId, // Helps group local connections
           // Ensure BrowserStack SDK doesn't interfere with Jest's configuration
           BROWSERSTACK_SDK_DEBUG: 'false',
           NODE_ENV: 'test',
