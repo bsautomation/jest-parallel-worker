@@ -39,7 +39,8 @@ function getBrowserStackBuildId() {
   const buildId = `jest-parallel-worker-${timestamp}-${randomSuffix}`;
   
   console.log(`⚠️ Warning: Generated build ID in worker process: ${buildId}`);
-  console.log(`⚠️ This indicates the parent process didn't set BROWSERSTACK_BUILD_ID`);
+  logJestOutput(`⚠️ Warning: Generated build ID in worker process: ${buildId}`);
+  logJestOutput(`⚠️ This indicates the parent process didn't set BROWSERSTACK_BUILD_ID`);
   return buildId;
 }
 
@@ -48,7 +49,7 @@ function loadBrowserStackConfig() {
   const browserstackConfigPath = path.join(process.cwd(), 'browserstack.yml');
   
   if (!fs.existsSync(browserstackConfigPath)) {
-    console.log(`📋 No browserstack.yml found at ${browserstackConfigPath}`);
+    logJestOutput(`📋 No browserstack.yml found at ${browserstackConfigPath}`);
     return null;
   }
   
@@ -96,12 +97,12 @@ function loadBrowserStackConfig() {
     config.buildId = buildId;
     config.buildIdentifier = buildId; // Alternative field name that some SDKs might use
     
-    console.log(`📋 Loaded BrowserStack config from browserstack.yml`);
-    console.log(`📋 Config: userName=${config.userName}, buildName=${config.buildName}, buildId=${config.buildId}`);
+    logJestOutput(`📋 Loaded BrowserStack config from browserstack.yml`);
+    logJestOutput(`📋 Config: userName=${config.userName}, buildName=${config.buildName}, buildId=${config.buildId}`);
     
     return config;
   } catch (error) {
-    console.warn(`⚠️ Error parsing browserstack.yml: ${error.message}`);
+    logJestOutput(`⚠️ Error parsing browserstack.yml: ${error.message}`);
     return null;
   }
 }
@@ -126,7 +127,7 @@ function isBrowserStackEnabled(config) {
   
   // Check if required fields are present
   if (!browserstackConfig.userName || !browserstackConfig.accessKey) {
-    console.warn(`⚠️ BrowserStack config incomplete: missing userName or accessKey`);
+    logJestOutput(`⚠️ BrowserStack config incomplete: missing userName or accessKey`);
     return false;
   }
   
@@ -148,7 +149,7 @@ function findJestConfig() {
   for (const configFile of configFiles) {
     const configPath = path.join(process.cwd(), configFile);
     if (fs.existsSync(configPath)) {
-      console.log(`📋 Found Jest config: ${configFile}`);
+      logJestOutput(`📋 Found Jest config: ${configFile}`);
       return configPath;
     }
   }
@@ -159,15 +160,15 @@ function findJestConfig() {
     if (fs.existsSync(packageJsonPath)) {
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
       if (packageJson.jest) {
-        console.log(`📋 Found Jest config in package.json`);
+        logJestOutput(`📋 Found Jest config in package.json`);
         return null; // Jest will automatically use package.json config
       }
     }
   } catch (error) {
-    console.warn(`⚠️ Error reading package.json: ${error.message}`);
+    logJestOutput(`⚠️ Error reading package.json: ${error.message}`);
   }
   
-  console.log(`📋 No Jest config found, using Jest defaults with minimal overrides`);
+  logJestOutput(`📋 No Jest config found, using Jest defaults with minimal overrides`);
   return null;
 }
 
@@ -205,12 +206,12 @@ function createFallbackJestConfig() {
     
     try {
       fs.writeFileSync(fallbackConfigPath, JSON.stringify(fallbackConfig, null, 2));
-      console.log(`📋 Created fallback Jest config: jest.config.fallback.json`);
+      logJestOutput(`📋 Created fallback Jest config: jest.config.fallback.json`);
       
       // Also create a minimal mock for problematic modules
       createMockSetupFile();
     } catch (error) {
-      console.warn(`⚠️ Could not create fallback config: ${error.message}`);
+      logJestOutput(`⚠️ Could not create fallback config: ${error.message}`);
       return null;
     }
   }
@@ -244,9 +245,9 @@ console.log('✅ Problematic modules mocked to prevent open handles');
     
     try {
       fs.writeFileSync(mockSetupPath, mockSetupContent);
-      console.log(`📋 Created mock setup file: jest.mock-setup.js`);
+      logJestOutput(`📋 Created mock setup file: jest.mock-setup.js`);
     } catch (error) {
-      console.warn(`⚠️ Could not create mock setup file: ${error.message}`);
+      logJestOutput(`⚠️ Could not create mock setup file: ${error.message}`);
     }
   }
 }
@@ -421,10 +422,10 @@ async function runFileWithConcurrentTransformation(config, startTime) {
           command = 'npx';
           commandArgs = ['browserstack-node-sdk', 'jest', ...jestArgs];
           
-          console.log(`🌐 Running concurrent tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
-          console.log(`🌐 Using BrowserStack config - User: ${browserstackConfig.userName}, Build: ${browserstackConfig.buildName}`);
+          logJestOutput(`🌐 Running concurrent tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
+          logJestOutput(`🌐 Using BrowserStack config - User: ${browserstackConfig.userName}, Build: ${browserstackConfig.buildName}`);
         } catch (error) {
-          console.warn(`⚠️ BrowserStack enabled but browserstack-node-sdk not found, falling back to regular Jest execution`);
+          logJestOutput(`⚠️ BrowserStack enabled but browserstack-node-sdk not found, falling back to regular Jest execution`);
           browserstackEnabled = false;
         }
       }
@@ -497,7 +498,7 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         
         // Special handling for BrowserStack SDK output in concurrent mode
         if (browserstackEnabled) {
-          console.log(`🌐 BrowserStack SDK concurrent mode detected, parsing output...`);
+          logJestOutput(`🌐 BrowserStack SDK concurrent mode detected, parsing output...`);
           
           // Check if BrowserStack had configuration issues
           if (output.includes('Cannot read properties of null') || 
@@ -538,7 +539,7 @@ async function runFileWithConcurrentTransformation(config, startTime) {
                             '5. BrowserStack SDK changing the execution context or file paths';
             }
             
-            console.log(`🚨 BrowserStack concurrent configuration error detected`);
+            logJestOutput(`🚨 BrowserStack concurrent configuration error detected`);
             
             resolve({
               status: 'failed',
@@ -772,7 +773,7 @@ async function runFileWithParallelism(config, startTime) {
         // Check if browserstack-node-sdk is available
         require.resolve('browserstack-node-sdk');
         
-        console.log(`🌐 BrowserStack SDK detected, preparing safe execution environment...`);
+        logJestOutput(`🌐 BrowserStack SDK detected, preparing safe execution environment...`);
         
         // Load BrowserStack configuration from browserstack.yml
         const browserstackConfig = loadBrowserStackConfig();
@@ -783,16 +784,16 @@ async function runFileWithParallelism(config, startTime) {
           command = 'npx';
           commandArgs = ['browserstack-node-sdk', 'jest', ...jestArgs];
           
-          console.log(`🌐 Running tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
-          console.log(`🌐 Using BrowserStack config - User: ${browserstackConfig.userName}, Build: ${browserstackConfig.buildName}`);
+          logJestOutput(`🌐 Running tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
+          logJestOutput(`🌐 Using BrowserStack config - User: ${browserstackConfig.userName}, Build: ${browserstackConfig.buildName}`);
         } else {
-          console.warn(`⚠️ BrowserStack configuration incomplete in browserstack.yml, falling back to regular Jest execution`);
+          logJestOutput(`⚠️ BrowserStack configuration incomplete in browserstack.yml, falling back to regular Jest execution`);
           browserstackEnabled = false; // Disable BrowserStack for this execution
         }
         
       } catch (error) {
-        console.warn(`⚠️ BrowserStack enabled but browserstack-node-sdk not found or has errors: ${error.message}`);
-        console.warn(`⚠️ Falling back to regular Jest execution`);
+        logJestOutput(`⚠️ BrowserStack enabled but browserstack-node-sdk not found or has errors: ${error.message}`);
+        logJestOutput(`⚠️ Falling back to regular Jest execution`);
         browserstackEnabled = false; // Disable BrowserStack for this execution
       }
     }
@@ -868,14 +869,14 @@ async function runFileWithParallelism(config, startTime) {
       // Handle open handle warnings specifically
       if (output.includes('open handle potentially keeping Jest from exiting') || 
           errorOutput.includes('open handle potentially keeping Jest from exiting')) {
-        console.warn(`⚠️ Detected open handles - this is likely from external dependencies like BrowserStack helpers`);
+        logJestOutput(`⚠️ Detected open handles - this is likely from external dependencies like BrowserStack helpers`);
         logJestOutput(`🔧 Open handle detected: ${output.includes('UDPWRAP') ? 'UDPWRAP (network connection)' : 'unknown type'}`);
         
         // Extract the specific module causing the issue
         const handleMatch = (output + errorOutput).match(/at Object\.<anonymous> \(([^)]+)\)/);
         if (handleMatch) {
           const problematicModule = handleMatch[1];
-          console.warn(`⚠️ Open handle caused by module: ${problematicModule}`);
+          logJestOutput(`⚠️ Open handle caused by module: ${problematicModule}`);
           logJestOutput(`🔧 Problematic module: ${problematicModule}`);
         }
       }
@@ -885,7 +886,7 @@ async function runFileWithParallelism(config, startTime) {
       let processedErrorOutput = errorOutput;
       
       if (browserstackEnabled) {
-        console.log(`🌐 BrowserStack SDK mode detected, parsing output...`);
+        logJestOutput(`🌐 BrowserStack SDK mode detected, parsing output...`);
         
         // BrowserStack SDK adds colored logs that can interfere with Jest output parsing
         // Try to extract clean Jest output from the mixed output
@@ -893,7 +894,7 @@ async function runFileWithParallelism(config, startTime) {
           // Look for JSON result in the output
           const jsonMatch = output.match(/(\{"status":"[^"]+","testResults":\[.*?\].*?\})/);
           if (jsonMatch) {
-            console.log(`✅ Found BrowserStack JSON result in output`);
+            logJestOutput(`✅ Found BrowserStack JSON result in output`);
             const jsonResult = JSON.parse(jsonMatch[1]);
             // If we found valid JSON output, use it directly
             resolve({
@@ -908,10 +909,10 @@ async function runFileWithParallelism(config, startTime) {
             });
             return;
           } else {
-            console.log(`❌ No valid JSON result found in BrowserStack output`);
+            logJestOutput(`❌ No valid JSON result found in BrowserStack output`);
           }
         } catch (jsonError) {
-          console.warn('⚠️ Failed to parse BrowserStack output JSON:', jsonError.message);
+          logJestOutput('⚠️ Failed to parse BrowserStack output JSON:' + jsonError.message);
         }
         
         // If JSON parsing failed, check if BrowserStack had configuration issues
@@ -953,7 +954,7 @@ async function runFileWithParallelism(config, startTime) {
                           '5. BrowserStack SDK changing the execution context or file paths';
           }
           
-          console.log(`🚨 BrowserStack configuration error detected`);
+          logJestOutput(`🚨 BrowserStack configuration error detected`);
           
           resolve({
             status: 'failed',
@@ -1081,7 +1082,7 @@ function parseJestOutput(output, config, specificTestName = null) {
         message: 'beforeAll hook failed',
         errorLines: []
       };
-      console.log(`🚨 DETECTED beforeAll hook failure in suite: "${suiteName}"`);
+      logJestOutput(`🚨 DETECTED beforeAll hook failure in suite: "${suiteName}"`);
       continue;
     }
     
@@ -1089,7 +1090,7 @@ function parseJestOutput(output, config, specificTestName = null) {
     const beforeEachMatch = line.match(/●\s+(.+?)\s+›\s+beforeEach/i);
     if (beforeEachMatch) {
       const suiteName = beforeEachMatch[1].trim();
-      console.log(`🚨 DETECTED beforeEach hook failure in suite: "${suiteName}"`);
+      logJestOutput(`🚨 DETECTED beforeEach hook failure in suite: "${suiteName}"`);
       continue;
     }
     
@@ -1097,7 +1098,7 @@ function parseJestOutput(output, config, specificTestName = null) {
     const afterAllMatch = line.match(/●\s+(.+?)\s+›\s+afterAll/i);
     if (afterAllMatch) {
       const suiteName = afterAllMatch[1].trim();
-      console.log(`🚨 DETECTED afterAll hook failure in suite: "${suiteName}"`);
+      logJestOutput(`🚨 DETECTED afterAll hook failure in suite: "${suiteName}"`);
       continue;
     }
     
@@ -1105,7 +1106,7 @@ function parseJestOutput(output, config, specificTestName = null) {
     const afterEachMatch = line.match(/●\s+(.+?)\s+›\s+afterEach/i);
     if (afterEachMatch) {
       const suiteName = afterEachMatch[1].trim();
-      console.log(`🚨 DETECTED afterEach hook failure in suite: "${suiteName}"`);
+      logJestOutput(`🚨 DETECTED afterEach hook failure in suite: "${suiteName}"`);
       continue;
     }
     

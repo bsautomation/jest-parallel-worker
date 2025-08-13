@@ -439,19 +439,37 @@ class SimpleWorkerManager {
       
       child.stdout.on('data', (data) => {
         output += data.toString();
-        // Log full output for better debugging in Jenkins/CI environments
+        // Log full output for better debugging in Jenkins/CI environments, but filter BrowserStack noise
         const dataString = data.toString();
         if (dataString.trim().length > 0) {
-          this.logger.debug(`${workerId} stdout: ${dataString}`);
+          // Filter out BrowserStack SDK logs from console output
+          const lines = dataString.split('\n');
+          const filteredLines = lines.filter(line => {
+            const trimmedLine = line.trim();
+            return trimmedLine.length > 0 && !this.isBrowserStackLogLine(trimmedLine);
+          });
+          
+          if (filteredLines.length > 0) {
+            this.logger.debug(`${workerId} stdout: ${filteredLines.join('\n')}`);
+          }
         }
       });
       
       child.stderr.on('data', (data) => {
         errorOutput += data.toString();
-        // Log full error output for better debugging in Jenkins/CI environments
+        // Log full error output for better debugging in Jenkins/CI environments, but filter BrowserStack noise
         const dataString = data.toString();
         if (dataString.trim().length > 0) {
-          this.logger.debug(`${workerId} stderr: ${dataString}`);
+          // Filter out BrowserStack SDK logs from console output
+          const lines = dataString.split('\n');
+          const filteredLines = lines.filter(line => {
+            const trimmedLine = line.trim();
+            return trimmedLine.length > 0 && !this.isBrowserStackLogLine(trimmedLine);
+          });
+          
+          if (filteredLines.length > 0) {
+            this.logger.debug(`${workerId} stderr: ${filteredLines.join('\n')}`);
+          }
         }
       });
       
@@ -651,10 +669,23 @@ class SimpleWorkerManager {
             (trimmedLine.match(/^\s*✓/) && !trimmedLine.includes('at ')) ||
             (trimmedLine.match(/^\s*[✗✕×]/) && !trimmedLine.includes('at '))) {
           
-          // Save the collected error
+          // Save the collected error with filtering
           if (errorLines.length > 0) {
-            const errorMessage = errorLines.join('\n').trim();
-            errorMap.set(currentFailedTest, errorMessage);
+            // Filter out BrowserStack SDK logs from error lines
+            const filteredErrorLines = errorLines.filter(errorLine => {
+              const cleanLine = errorLine.trim();
+              return cleanLine.length > 0 && !this.isBrowserStackLogLine(cleanLine);
+            });
+            
+            if (filteredErrorLines.length > 0) {
+              // Join filtered lines and clean the resulting message
+              const rawErrorMessage = filteredErrorLines.join('\n').trim();
+              const cleanedErrorMessage = this.cleanErrorMessage(rawErrorMessage);
+              errorMap.set(currentFailedTest, cleanedErrorMessage);
+            } else {
+              // If all lines were filtered out, provide a generic message
+              errorMap.set(currentFailedTest, 'Test failed - see logs for details');
+            }
           }
           currentFailedTest = null;
           collectingError = false;
@@ -662,8 +693,8 @@ class SimpleWorkerManager {
           
           // Don't skip this line, it might be a test result
         } else {
-          // Collect error line (skip empty lines at start)
-          if (errorLines.length > 0 || trimmedLine.length > 0) {
+          // Collect error line (skip empty lines at start and BrowserStack noise)
+          if ((errorLines.length > 0 || trimmedLine.length > 0) && !this.isBrowserStackLogLine(trimmedLine)) {
             errorLines.push(line);
           }
           continue;
@@ -673,8 +704,21 @@ class SimpleWorkerManager {
     
     // Handle any remaining error collection
     if (collectingError && currentFailedTest && errorLines.length > 0) {
-      const errorMessage = errorLines.join('\n').trim();
-      errorMap.set(currentFailedTest, errorMessage);
+      // Filter out BrowserStack SDK logs from remaining error lines
+      const filteredErrorLines = errorLines.filter(errorLine => {
+        const cleanLine = errorLine.trim();
+        return cleanLine.length > 0 && !this.isBrowserStackLogLine(cleanLine);
+      });
+      
+      if (filteredErrorLines.length > 0) {
+        // Join filtered lines and clean the resulting message
+        const rawErrorMessage = filteredErrorLines.join('\n').trim();
+        const cleanedErrorMessage = this.cleanErrorMessage(rawErrorMessage);
+        errorMap.set(currentFailedTest, cleanedErrorMessage);
+      } else {
+        // If all lines were filtered out, provide a generic message
+        errorMap.set(currentFailedTest, 'Test failed - see logs for details');
+      }
     }
     
     this.logger.debug(`Collected ${errorMap.size} error messages for failed tests`);
@@ -912,7 +956,7 @@ class SimpleWorkerManager {
 
   // Helper method to extract general error message when specific test parsing fails
   extractGeneralErrorMessage(output) {
-    // Look for common error patterns with more detail, including BrowserStack specific errors
+    // Look for common error patterns with more detail, but filter out BrowserStack noise
     const errorPatterns = [
       // General errors
       /Error: (.+)/,
@@ -933,24 +977,25 @@ class SimpleWorkerManager {
     for (const line of lines) {
       const trimmedLine = line.trim();
       
-      // Skip empty lines and Jest formatting
-      if (!trimmedLine || trimmedLine.startsWith('●') || trimmedLine.startsWith('at ')) {
+      // Skip empty lines, Jest formatting, and BrowserStack noise
+      if (!trimmedLine || trimmedLine.startsWith('●') || trimmedLine.startsWith('at ') ||
+          this.isBrowserStackLogLine(trimmedLine)) {
         continue;
       }
       
       for (const pattern of errorPatterns) {
         const match = trimmedLine.match(pattern);
         if (match) {
-          errorMessages.push(match[0]); // Return the full error line
+          errorMessages.push(this.cleanErrorMessage(match[0])); // Clean the error message
           break; // Only match first pattern per line
         }
       }
       
-      // Also capture lines that look like error descriptions (including BrowserStack errors)
-      if (trimmedLine.includes('Expected') || trimmedLine.includes('Received') || 
+      // Also capture lines that look like error descriptions (but not BrowserStack errors)
+      if ((trimmedLine.includes('Expected') || trimmedLine.includes('Received') || 
           trimmedLine.includes('Difference:') || trimmedLine.includes('failed') ||
-          trimmedLine.includes('FAIL TESTS')) {
-        errorMessages.push(trimmedLine);
+          trimmedLine.includes('FAIL TESTS')) && !this.isBrowserStackLogLine(trimmedLine)) {
+        errorMessages.push(this.cleanErrorMessage(trimmedLine));
       }
     }
     
@@ -961,6 +1006,64 @@ class SimpleWorkerManager {
     }
     
     return 'File execution failed - see output for details';
+  }
+
+  // Helper method to check if a line is BrowserStack SDK logging noise
+  isBrowserStackLogLine(line) {
+    const browserstackPatterns = [
+      /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+-\s+/, // Timestamp patterns like "2025-08-13 13:00:31 - "
+      /\[31m.*?\[39m/, // ANSI color codes
+      /SDK run started with id:/, // BrowserStack SDK messages
+      /Reading configs from.*browserstack\.yml/, // BrowserStack config messages
+      /Log Directory has been set to/, // BrowserStack log messages
+      /Running SDK with args/, // BrowserStack execution messages
+      /BrowserstackCLI/, // BrowserStack CLI messages
+      /ACCESSIBILITY Build creation failed/, // BrowserStack specific errors that are not test errors
+      /Build creation failed/, // BrowserStack build errors
+      /browserstack-node-sdk/, // SDK references
+      /at new NodeError.*node:internal/, // Node.js internal errors from BrowserStack SDK
+      /at new URL.*node:internal/, // URL errors from BrowserStack SDK
+      /pactum\/src\//, // Pactum library errors (common in BrowserStack setups)
+      /node_modules\/pactum\//, // Pactum module paths
+      /BStackAutomation\//, // BrowserStack automation paths
+      /info:\s*Reading configs from/, // BrowserStack info logs about config reading
+      /Loading configurations from.*browserstack/, // BrowserStack config loading messages
+      /Starting BrowserStack/, // BrowserStack startup messages
+      /BrowserStack.*initialized/, // BrowserStack initialization messages
+      /Uploading.*to BrowserStack/, // BrowserStack upload messages
+      /BrowserStack session/, // BrowserStack session messages
+    ];
+    
+    return browserstackPatterns.some(pattern => pattern.test(line));
+  }
+
+  // Helper method to clean error messages by removing BrowserStack noise
+  cleanErrorMessage(message) {
+    let cleaned = message;
+    
+    // Remove ANSI color codes
+    cleaned = cleaned.replace(/\[\d+m/g, '');
+    
+    // Remove timestamp prefixes
+    cleaned = cleaned.replace(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+-\s+\[?\w+\]?\s*:?\s*/, '');
+    
+    // Remove "error:" prefix from BrowserStack logs
+    cleaned = cleaned.replace(/^error:\s*/, '');
+    
+    // Remove excessive whitespace
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    // If the message is too long (likely includes stack traces), truncate at reasonable point
+    if (cleaned.length > 200) {
+      const truncateAt = cleaned.indexOf('\\n at ');
+      if (truncateAt > 0 && truncateAt < 200) {
+        cleaned = cleaned.substring(0, truncateAt);
+      } else {
+        cleaned = cleaned.substring(0, 200) + '...';
+      }
+    }
+    
+    return cleaned;
   }
 
   generateSummary() {
