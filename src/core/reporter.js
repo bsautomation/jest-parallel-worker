@@ -116,14 +116,12 @@ class ReportGenerator {
         } 
         // If no detailed test results, fall back to file-level result (only if no tests already processed for this file)
         else if (fileResults[fileName].tests.length === 0) {
-          // Handle case where we have a file result but no individual test breakdown
-          const testCount = result.testCount || 1;
-          
+          // Minimal pass-through: do not fabricate placeholder passed tests
+          // Only surface a single failure entry if there was an execution error with a message
           if (result.status === 'failed' && result.error) {
-            // Create a failed test entry for failed file executions
             const failedTest = {
               testId: `${result.filePath}:execution-error`,
-              testName: result.error.includes('parsing failed') ? 'Test execution failed (parsing error)' : 'Test execution failed',
+              testName: 'Test execution failed',
               filePath: result.filePath,
               status: 'failed',
               duration: result.duration || 0,
@@ -132,33 +130,11 @@ class ReportGenerator {
               error: this.formatJestError(result.error),
               suite: path.basename(result.filePath, '.test.js')
             };
-            
             testResults.push(failedTest);
             fileResults[fileName].tests.push(failedTest);
             totalTests++;
             failed++;
             fileResults[fileName].failed++;
-          } else if (result.status === 'passed') {
-            // Create placeholder passed tests for successful file executions without details
-            for (let i = 0; i < testCount; i++) {
-              const passedTest = {
-                testId: `${result.filePath}:test-${i + 1}`,
-                testName: `Test ${i + 1}`,
-                filePath: result.filePath,
-                status: 'passed',
-                duration: (result.duration || 0) / testCount,
-                workerId: result.workerId,
-                mode: result.mode,
-                error: null,
-                suite: path.basename(result.filePath, '.test.js')
-              };
-              
-              testResults.push(passedTest);
-              fileResults[fileName].tests.push(passedTest);
-              totalTests++;
-              passed++;
-              fileResults[fileName].passed++;
-            }
           }
         }
       }

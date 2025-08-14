@@ -13,7 +13,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node bin/jest-parallel.js --testMatch 'tests/**/*.test.js' --mode native-parallel",
+    "test": "node bin/jest-parallel.js run --testMatch 'tests/**/*.test.js' --mode native-parallel",
     "test:sdk": "node -e \"const sdk = require('./src'); console.log('SDK loaded successfully:', Object.keys(sdk));\"",
     "prepublishOnly": "npm run test:sdk"
   },

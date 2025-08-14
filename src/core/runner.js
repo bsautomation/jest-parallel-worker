@@ -1,6 +1,5 @@
 const { TestParser } = require('./parser');
 const { WorkerManager } = require('./worker-manager');
-const SimpleWorkerManager = require('./simple-worker-manager'); // NEW: Simplified approach
 const { ReportGenerator } = require('./reporter');
 const { ExecutionLogger } = require('./execution-logger');
 const { Logger } = require('../utils/logger');
@@ -18,7 +17,6 @@ class JestParallelRunner {
       intraFileParallelism: true, // Default to true for native-parallel mode
       customRunner: false, // Default to false
       runnerConcurrency: 4, // Default concurrency for custom runner
-      useSimpleWorkerManager: true, // NEW: Use simplified approach by default
       ...options
     };
     
@@ -33,18 +31,9 @@ class JestParallelRunner {
     this.logger = options.logger || new Logger('jest-parallel-runner');
     this.parser = new TestParser(this.logger);
     
-    // Choose worker manager based on configuration
-    if (this.options.useSimpleWorkerManager) {
-      this.logger.info('Using SimpleWorkerManager (no JSON complexity!)');
-      this.workerManager = new SimpleWorkerManager({
-        maxWorkers: this.options.maxWorkers,
-        timeout: this.options.timeout,
-        logger: this.logger
-      }, this.logger, this.executionLogger);
-    } else {
-      this.logger.info('Using legacy WorkerManager (complex JSON parsing)');
-      this.workerManager = new WorkerManager(this.options, this.logger, this.executionLogger);
-    }
+  // Always use WorkerManager with simplified, pass-through parsing
+  this.logger.info('Using WorkerManager with simple Jest text parsing');
+  this.workerManager = new WorkerManager(this.options, this.logger, this.executionLogger);
     
     this.reportGenerator = new ReportGenerator(this.options, this.logger);
   }

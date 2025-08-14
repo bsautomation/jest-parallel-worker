@@ -219,10 +219,10 @@ class WorkerManager {
     this.initializeTestCounts(parsedFiles);
     
     const workItems = parsedFiles.map(file => ({
-      type: 'native-parallel',  // Use native-parallel-worker for better error parsing
+      type: 'jest-parallel',
       filePath: file.filePath,
       testCount: file.tests.length,
-      strategy: 'file-parallelism'  // Run entire file with Jest's parallel capabilities
+      strategy: 'file-parallelism'
     }));
 
     this.workQueue = [...workItems];
@@ -301,38 +301,14 @@ class WorkerManager {
     // Initialize test status tracking
     this.initializeTestCounts(parsedFiles);
     
-    const workItems = [];
-    
-    // Check if intra-file parallelism is enabled (default: true for native-parallel)
-    const enableIntraFileParallelism = options.intraFileParallelism !== false;
-    
-    if (enableIntraFileParallelism) {
-      // For true intra-file parallelism, we use Jest's built-in capabilities
-      // This respects beforeAll/afterAll hooks while enabling parallelism
-      await this.executionLogger.info('WORKER-MANAGER', `Enabling enhanced intra-file parallelism with Jest's internal workers`);
-      
-      workItems.push(...parsedFiles.map(file => ({
-        type: 'native-parallel',
-        filePath: file.filePath,
-        testCount: file.tests.length,
-        testNames: file.tests.map(test => test.name),
-        strategy: 'enhanced-file-parallelism', // Use Jest's internal parallelism
-        intraFileParallelism: true
-      })));
-      
-      this.logger.info(`Created ${workItems.length} enhanced file-level work items with Jest internal parallelism`);
-    } else {
-      // Original file-level parallelism  
-      workItems.push(...parsedFiles.map(file => ({
-        type: 'native-parallel',
-        filePath: file.filePath,
-        testCount: file.tests.length,
-        testNames: file.tests.map(test => test.name),
-        strategy: 'file-parallelism'
-      })));
-      
-      this.logger.info(`Created ${workItems.length} standard file-level work items`);
-    }
+    // Keep it simple: run each file via Jest directly with internal workers
+    const workItems = parsedFiles.map(file => ({
+      type: 'jest-parallel',
+      filePath: file.filePath,
+      testCount: file.tests.length,
+      strategy: options.intraFileParallelism === false ? 'file-parallelism' : 'enhanced-file-parallelism',
+      intraFileParallelism: options.intraFileParallelism !== false
+    }));
 
     this.workQueue = [...workItems];
 
@@ -375,9 +351,8 @@ class WorkerManager {
     } else if (workItem.type === 'concurrent-file') {
       workerProcess = this.spawnConcurrentFileWorker(workItem, workerId);
     } else if (workItem.type === 'native-parallel') {
-      workerProcess = this.spawnNativeParallelWorker(workItem, workerId);
-    } else if (workItem.type === 'native-parallel') {
-      workerProcess = this.spawnNativeParallelWorker(workItem, workerId);
+      // Route native-parallel through direct Jest execution for simplicity
+      workerProcess = this.spawnJestParallelWorker(workItem, workerId);
     }
 
     if (workerProcess) {
@@ -396,20 +371,24 @@ class WorkerManager {
   }
 
   spawnTestWorker(workItem, workerId) {
-    const workerScript = path.join(__dirname, '../workers/test-worker.js');
-    
-    const args = [
-      workerScript,
-      JSON.stringify({
-        filePath: workItem.filePath,
-        testName: workItem.testName,
-        testId: workItem.testId,
-        timeout: this.timeout,
-        workerId
-      })
+    // Keep it simple: run a single test via Jest with --testNamePattern and parse output
+    const useBrowserStack = this.options.browserstackSdk === true || process.env.BROWSERSTACK_SDK_ENABLED === 'true';
+    const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = `^${escapeRegex(workItem.testName)}$`;
+
+    const jestArgs = [
+      '--testMatch', `${workItem.filePath}`,
+      '--testNamePattern', pattern,
+      '--verbose',
+      '--no-coverage',
+      '--runInBand',
+      '--passWithNoTests=false'
     ];
 
-    const worker = spawn('node', args, {
+    const cmd = 'npx';
+    const cmdArgs = useBrowserStack ? ['browserstack-node-sdk', 'jest', ...jestArgs] : ['jest', ...jestArgs];
+
+    const worker = spawn(cmd, cmdArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=4096' }
     });
@@ -426,33 +405,30 @@ class WorkerManager {
     });
 
     worker.on('close', (code) => {
-      try {
-        const result = JSON.parse(output);
-        this.results.push(result);
-        
-        // Update test status tracking for individual test results
-        this.updateTestStatus([result]);
-        
-        // Log immediate test completion status
-        const statusIcon = result.status === 'passed' ? '✅' : '❌';
-        this.logger.info(`${statusIcon} ${result.testName || 'Unknown Test'} (${result.duration || 0}ms) [Worker: ${workerId}]`);
-      } catch (error) {
-        this.logger.error(`Worker ${workerId} output parsing failed:`, error.message);
-        const failedResult = {
-          testId: workItem.testId,
-          status: 'failed',
-          error: `Worker output parsing failed: ${error.message}`,
-          duration: 0,
-          workerId
-        };
-        this.results.push(failedResult);
-        
-        // Update test status tracking for failed result
-        this.updateTestStatus([failedResult]);
-        
-        // Log immediate test completion status for failed parsing
-        this.logger.error(`❌ ${workItem.testName || 'Unknown Test'} (parsing failed) [Worker: ${workerId}]`);
-      }
+      // Parse minimal Jest output and keep only the requested test
+      const combinedOutput = `${output}\n${errorOutput}`;
+      const allResults = this.parseJestOutput(combinedOutput, workItem) || [];
+      const filtered = allResults.filter(r => (r.name || '').trim() === (workItem.testName || '').trim());
+      const finalResult = filtered[0] || {
+        testId: workItem.testId,
+        name: workItem.testName,
+        status: code === 0 ? 'passed' : 'failed',
+        duration: 0,
+        error: code === 0 ? null : (combinedOutput.trim().slice(0, 1000) || 'Test failed (no parsed output)')
+      };
+
+      // Normalize fields for reporter
+      finalResult.testId = finalResult.testId || workItem.testId;
+      finalResult.testName = finalResult.name || workItem.testName;
+      finalResult.filePath = workItem.filePath;
+      finalResult.workerId = workerId;
+      finalResult.mode = 'parallel-test';
+
+      this.results.push(finalResult);
+      this.updateTestStatus([finalResult]);
+
+      const statusIcon = finalResult.status === 'passed' ? '✅' : finalResult.status === 'skipped' ? '⏭️' : '❌';
+      this.logger.info(`${statusIcon} ${finalResult.testName} (${finalResult.duration || 0}ms) [Worker: ${workerId}]`);
     });
 
     // Set timeout
@@ -525,27 +501,28 @@ class WorkerManager {
   }
 
   spawnJestParallelWorker(workItem, workerId) {
-    // Calculate maxWorkers for Jest's internal parallelism
-    // Use a reasonable number for Jest internal parallelism
-    const jestMaxWorkers = Math.min(
-      4, // Allow up to 4 Jest workers for good parallelism
-      Math.max(2, workItem.testCount), // Use at least 2, but not more than test count
-      this.maxWorkers // Don't exceed our total worker limit
-    );
-    
-    const args = [
-      '--testMatch', `**/${path.basename(workItem.filePath)}`,
-      '--testMatch', `${workItem.filePath}`, // Also try the full path
+    // Decide whether to run via BrowserStack SDK
+    const useBrowserStack = this.options.browserstackSdk === true || process.env.BROWSERSTACK_SDK_ENABLED === 'true';
+
+    const jestMaxWorkers = Math.min(4, Math.max(2, Math.min(workItem.testCount || 2, this.maxWorkers)));
+    const jestArgs = [
+      '--testMatch', `${workItem.filePath}`,
       '--verbose',
       '--no-coverage',
       '--passWithNoTests=false',
       '--maxWorkers', jestMaxWorkers.toString()
-      // Explicitly NOT using --runInBand to enable Jest's internal test parallelism
     ];
 
-    this.logger.debug(`Starting Jest with internal parallelism: ${jestMaxWorkers} workers for ${workItem.testCount} tests in ${path.basename(workItem.filePath)}`);
+  const cmd = 'npx';
+  const cmdArgs = useBrowserStack ? ['browserstack-node-sdk', 'jest', ...jestArgs] : ['jest', ...jestArgs];
 
-    const worker = spawn('npx', ['jest', ...args], {
+    if (useBrowserStack) {
+      this.logger.info(`🌐 Using BrowserStack Node SDK for ${path.basename(workItem.filePath)} (workers: ${jestMaxWorkers})`);
+    } else {
+      this.logger.debug(`Starting Jest (workers: ${jestMaxWorkers}) for ${path.basename(workItem.filePath)}`);
+    }
+
+    const worker = spawn(cmd, cmdArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },
       cwd: process.cwd()
@@ -563,10 +540,9 @@ class WorkerManager {
     });
 
     worker.on('close', (code) => {
-      // Jest sends test results to stderr, so we need to parse that instead of stdout
-      const parseResult = this.parseJestOutput(errorOutput, workItem);
-      const testResults = parseResult.testResults || parseResult; // Handle both old and new return formats
-      const hookInfo = parseResult.hookInfo || {};
+      // Parse combined stdout+stderr; only extract ✓/✗/○ lines to reflect Jest output
+      const combinedOutput = `${output}\n${errorOutput}`;
+      const testResults = this.parseJestOutput(combinedOutput, workItem);
       
       const result = {
         filePath: workItem.filePath,
@@ -579,10 +555,15 @@ class WorkerManager {
         mode: 'jest-parallel',
         hasBeforeAll: workItem.hasBeforeAll,
         hasAfterAll: workItem.hasAfterAll,
-        testResults: testResults, // Add parsed test results
-        hookInfo: hookInfo // Add hook timing information
+        testResults
       };
       
+      // If Jest failed and we couldn't parse any tests, attach a minimal error for reporting
+      if (result.status === 'failed' && (!result.testResults || result.testResults.length === 0)) {
+        const minimalError = (combinedOutput.match(/^FAIL[\s\S]*?$(?:\n[\s\S]*?)?(?=^PASS|^FAIL|^Test Suites:|^Tests:|\Z)/m) || [combinedOutput.trim()])[0];
+        result.error = minimalError.slice(0, 2000);
+      }
+
       this.results.push(result);
       
       // Log detailed file completion status for jest-parallel worker
@@ -608,8 +589,7 @@ class WorkerManager {
         this.logger.info(`📁 ${fileName} ${statusIcon} ${result.status} [Worker: ${workerId}]`);
       }
       
-      // Note: Individual test results will be processed by the reporter
-      // from the testResults array in the file result
+  // Reporter will consume result.testResults as-is
     });
 
     return worker;
@@ -1217,248 +1197,67 @@ class WorkerManager {
 
   parseJestOutput(output, workItem) {
     const testResults = [];
-    let hookInfo = {
-      beforeAll: { duration: 0, status: 'not_found' },
-      beforeEach: { duration: 0, status: 'not_found' },
-      afterAll: { duration: 0, status: 'not_found' },
-      afterEach: { duration: 0, status: 'not_found' }
-    };
-    
     try {
-      // Parse Jest output to extract individual test results and hook information
       const lines = output.split('\n');
       let currentSuite = '';
-      let currentFailedTest = null;
-      let collectingError = false;
+      let currentFailed = null;
+      let collecting = false;
       let errorLines = [];
-      let hookFailures = []; // Track hook failures
-      
-      // Extract overall test timing to calculate hook duration
-      let totalTestDuration = 0;
-      let overallSuiteDuration = 0;
-      
-      // Look for Jest timing information
-      const timeMatch = output.match(/Time:\s+(\d+(?:\.\d+)?)\s*s/);
-      if (timeMatch) {
-        overallSuiteDuration = parseFloat(timeMatch[1]) * 1000; // Convert to ms
-      }
-      
       for (const line of lines) {
-        const trimmedLine = line.trim();
-        
-        // Detect hook failures
-        const beforeAllMatch = line.match(/●\s+(.+?)\s+›\s+beforeAll/i);
-        if (beforeAllMatch) {
-          const suiteName = beforeAllMatch[1].trim();
-          hookFailures.push({
-            type: 'beforeAll',
-            suite: suiteName,
-            message: 'beforeAll hook failed'
-          });
-          this.executionLogger.logHookFailure(workItem.workerId || 0, 'beforeAll', suiteName, workItem.filePath);
-          this.logger.error(`🚨 beforeAll hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+        const t = line.trim();
+        if (!t) continue;
+
+        // Capture suite headers heuristically (non-test lines between PASS/FAIL and test markers)
+        if (!t.startsWith('✓') && !t.match(/^[✗✕×]/) && !t.startsWith('○') &&
+            !t.startsWith('PASS') && !t.startsWith('FAIL') && !t.includes('Test Suites:') && !t.includes('Tests:')) {
+          if (!line.startsWith('    ')) currentSuite = t;
+        }
+
+        const pass = line.match(/^\s*✓\s+(.+?)(?:\s*\((\d+)\s*ms\))?$/);
+        if (pass) {
+          const name = pass[1].trim();
+          const dur = pass[2] ? parseInt(pass[2]) : 0;
+          if (name) testResults.push({ name, suite: currentSuite, status: 'passed', duration: dur, error: null });
+          collecting = false; currentFailed = null; errorLines = [];
           continue;
         }
-        
-        const beforeEachMatch = line.match(/●\s+(.+?)\s+›\s+beforeEach/i);
-        if (beforeEachMatch) {
-          const suiteName = beforeEachMatch[1].trim();
-          hookFailures.push({
-            type: 'beforeEach',
-            suite: suiteName,
-            message: 'beforeEach hook failed'
-          });
-          this.executionLogger.logHookFailure(workItem.workerId || 0, 'beforeEach', suiteName, workItem.filePath);
-          this.logger.error(`🚨 beforeEach hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+
+        const fail = line.match(/^\s*[✗✕×]\s+(.+?)(?:\s*\((\d+)\s*ms\))?$/);
+        if (fail) {
+          const name = fail[1].trim();
+          const dur = fail[2] ? parseInt(fail[2]) : 0;
+          if (name) {
+            currentFailed = { name, suite: currentSuite, status: 'failed', duration: dur, error: null };
+            testResults.push(currentFailed);
+            collecting = true; errorLines = [];
+          }
           continue;
         }
-        
-        const afterAllMatch = line.match(/●\s+(.+?)\s+›\s+afterAll/i);
-        if (afterAllMatch) {
-          const suiteName = afterAllMatch[1].trim();
-          hookFailures.push({
-            type: 'afterAll',
-            suite: suiteName,
-            message: 'afterAll hook failed'
-          });
-          this.executionLogger.logHookFailure(workItem.workerId || 0, 'afterAll', suiteName, workItem.filePath);
-          this.logger.error(`🚨 afterAll hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
+
+        const skip = line.match(/^\s*○\s+(.+?)$/);
+        if (skip) {
+          const name = skip[1].trim();
+          if (name) testResults.push({ name, suite: currentSuite, status: 'skipped', duration: 0, error: null });
           continue;
         }
-        
-        const afterEachMatch = line.match(/●\s+(.+?)\s+›\s+afterEach/i);
-        if (afterEachMatch) {
-          const suiteName = afterEachMatch[1].trim();
-          hookFailures.push({
-            type: 'afterEach',
-            suite: suiteName,
-            message: 'afterEach hook failed'
-          });
-          this.executionLogger.logHookFailure(workItem.workerId || 0, 'afterEach', suiteName, workItem.filePath);
-          this.logger.error(`🚨 afterEach hook failed in suite "${suiteName}" (${path.basename(workItem.filePath)})`);
-          continue;
-        }
-        
-        // If collecting error for failed test
-        if (collectingError && currentFailedTest) {
-          if (trimmedLine.startsWith('✓') || trimmedLine.startsWith('✗') || 
-              trimmedLine.includes('Test Suites:') || trimmedLine.includes('Tests:') ||
-              trimmedLine.includes('Snapshots:') || trimmedLine.includes('Time:') ||
-              trimmedLine.includes('Ran all test suites') || trimmedLine.startsWith('PASS') ||
-              trimmedLine.startsWith('FAIL')) {
-            if (errorLines.length > 0) {
-              currentFailedTest.error = errorLines.join('\n').trim();
-            }
-            currentFailedTest = null;
-            collectingError = false;
-            errorLines = [];
+
+        if (collecting && currentFailed) {
+          // Stop on next marker/summary
+          if (t.startsWith('✓') || t.match(/^[✗✕×]/) || t.startsWith('○') || t.includes('Test Suites:') || t.includes('Tests:') || t.startsWith('PASS') || t.startsWith('FAIL')) {
+            if (errorLines.length) currentFailed.error = errorLines.join('\n').trim();
+            collecting = false; currentFailed = null; errorLines = [];
           } else {
             errorLines.push(line);
           }
         }
-        
-        // Look for test suite names (appear after PASS and before indented tests)
-        if (trimmedLine && !trimmedLine.startsWith('✓') && !trimmedLine.startsWith('✗') && 
-            !trimmedLine.includes('PASS') && !trimmedLine.includes('FAIL') && 
-            !trimmedLine.includes('Test Suites:') && !trimmedLine.includes('Tests:') &&
-            !trimmedLine.includes('Snapshots:') && !trimmedLine.includes('Time:') &&
-            !trimmedLine.includes('Ran all test suites') && !trimmedLine.startsWith('RUNS') &&
-            !trimmedLine.includes('Determining test suites') && !trimmedLine.includes('.test.js') &&
-            !trimmedLine.startsWith('at ') && !trimmedLine.includes('Error:')) {
-          
-          // Check if this looks like a describe block name (not indented test)
-          if (!line.startsWith('    ') && trimmedLine.length > 0) {
-            currentSuite = trimmedLine;
-          }
-        }
-        
-        // Look for individual test results with timing
-        const testMatch = line.match(/^\s*✓\s+(.+?)\s*\((\d+)\s*ms\)/);
-        if (testMatch) {
-          const [, testName, duration] = testMatch;
-          const cleanTestName = testName.trim();
-          const testDuration = parseInt(duration);
-          totalTestDuration += testDuration;
-          
-          if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
-            testResults.push({
-              name: cleanTestName,
-              suite: currentSuite,
-              status: 'passed',
-              duration: testDuration,
-              error: null
-            });
-          }
-        } else {
-          // Handle tests without explicit timing (usually very fast tests)
-          const quickTestMatch = line.match(/^\s*✓\s+(.+?)$/);
-          if (quickTestMatch) {
-            const [, testName] = quickTestMatch;
-            const cleanTestName = testName.trim();
-            // Only process if it doesn't contain duration info and is not empty
-            if (!testName.includes('(') && !testName.includes('ms') && 
-                cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
-              testResults.push({
-                name: cleanTestName,
-                suite: currentSuite,
-                status: 'passed',
-                duration: 0, // Very fast test, under 1ms
-                error: null
-              });
-            }
-          }
-        }
-
-        // Look for failed tests
-        const failedTestMatch = line.match(/^\s*[✗✕×]\s+(.+?)\s*(?:\((\d+)\s*ms\))?/);
-        if (failedTestMatch) {
-          const [, testName, duration] = failedTestMatch;
-          const cleanTestName = testName.trim();
-          const testDuration = duration ? parseInt(duration) : 0;
-          totalTestDuration += testDuration;
-          
-          if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
-            const failedTest = {
-              name: cleanTestName,
-              suite: currentSuite,
-              status: 'failed',
-              duration: testDuration,
-              error: null
-            };
-            testResults.push(failedTest);
-            currentFailedTest = failedTest;
-            collectingError = true;
-            errorLines = [];
-          }
-        }        // Look for skipped tests
-        const skippedTestMatch = line.match(/^\s*○\s+(.+?)$/);
-        if (skippedTestMatch) {
-          const [, testName] = skippedTestMatch;
-          const cleanTestName = testName.trim();
-          
-          if (cleanTestName && cleanTestName !== '\n' && cleanTestName.length > 0) {
-            testResults.push({
-              name: cleanTestName,
-              suite: currentSuite,
-              status: 'skipped',
-              duration: 0,
-              error: null
-            });
-          }
-        }
       }
-      
-      // Handle any remaining error collection
-      if (collectingError && currentFailedTest && errorLines.length > 0) {
-        currentFailedTest.error = errorLines.join('\n').trim();
+      if (collecting && currentFailed && errorLines.length) {
+        currentFailed.error = errorLines.join('\n').trim();
       }
-      
-      // Calculate hook duration based on timing analysis
-      if (overallSuiteDuration > 0 && totalTestDuration >= 0) {
-        // Estimate hook duration as the difference between total suite time and test execution time
-        const estimatedHookDuration = Math.max(0, overallSuiteDuration - totalTestDuration);
-        
-        // For now, attribute most hook overhead to beforeAll
-        // This is a reasonable assumption since beforeAll typically contains setup logic
-        if (estimatedHookDuration > 10) { // Only track if significant (>10ms)
-          hookInfo.beforeAll.duration = Math.round(estimatedHookDuration * 0.8); // 80% to beforeAll
-          hookInfo.beforeAll.status = 'estimated';
-          
-          // Distribute remaining time to other hooks if tests show they might exist
-          const remainingDuration = estimatedHookDuration - hookInfo.beforeAll.duration;
-          if (remainingDuration > 5 && testResults.length > 1) {
-            hookInfo.beforeEach.duration = Math.round(remainingDuration * 0.7);
-            hookInfo.beforeEach.status = 'estimated';
-            hookInfo.afterEach.duration = Math.round(remainingDuration * 0.2);
-            hookInfo.afterEach.status = 'estimated';
-            hookInfo.afterAll.duration = Math.round(remainingDuration * 0.1);
-            hookInfo.afterAll.status = 'estimated';
-          }
-        }
-      }
-      
-      // If no tests were parsed, try alternative parsing for different Jest output formats
-      if (testResults.length === 0) {
-        this.logger.debug(`No test results parsed from Jest output for ${path.basename(workItem.filePath)}`);
-        this.logger.debug(`Sample output lines: ${lines.slice(0, 10).join(' | ')}`);
-        
-        // Fallback: create placeholder results based on test count
-        for (let i = 0; i < workItem.testCount; i++) {
-          testResults.push({
-            name: `Test ${i + 1}`,
-            suite: path.basename(workItem.filePath, '.test.js'),
-            status: 'passed', // Assume passed since Jest exited with code 0
-            duration: 0,
-            error: null
-          });
-        }
-      }
-      
-    } catch (error) {
-      this.logger.error(`Error parsing Jest output for ${workItem.filePath}:`, error.message);
+    } catch (e) {
+      this.logger.debug(`parseJestOutput error for ${path.basename(workItem.filePath)}: ${e.message}`);
     }
-    
-    return { testResults, hookInfo };
+    return testResults;
   }
 
   // Detect if a timeout likely occurred during hook execution
