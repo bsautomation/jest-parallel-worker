@@ -43,6 +43,7 @@ class ReportGenerator {
     let passed = 0;
     let failed = 0;
     let skipped = 0;
+    let todo = 0;
     let totalTests = 0;
 
     // Process each result only once, prioritizing detailed test results
@@ -59,6 +60,7 @@ class ReportGenerator {
             passed: 0,
             failed: 0,
             skipped: 0,
+            todo: 0,
             duration: result.duration || 0,
             hooks: result.hookInfo || {
               beforeAll: { duration: 0, status: 'not_found' },
@@ -78,10 +80,14 @@ class ReportGenerator {
               cleanTestName = testResult.suite ? `${testResult.suite} - Test` : 'Unknown Test';
             }
             
-            // Clean and format error message for Jest-style output
+            // Enhanced error formatting with failure type classification
             let formattedError = null;
+            let errorType = 'unknown';
+            
             if (testResult.error) {
-              formattedError = this.formatJestError(testResult.error);
+              const errorResult = this.formatJestError(testResult.error, testResult.failureType);
+              formattedError = errorResult.message;
+              errorType = errorResult.type;
             }
             
             const individualTest = {
@@ -93,6 +99,8 @@ class ReportGenerator {
               workerId: result.workerId,
               mode: result.mode,
               error: formattedError,
+              errorType: errorType,
+              failureType: testResult.failureType || null,
               suite: testResult.suite
             };
             
@@ -111,6 +119,9 @@ class ReportGenerator {
             } else if (testResult.status === 'skipped') {
               skipped++;
               fileResults[fileName].skipped++;
+            } else if (testResult.status === 'todo') {
+              todo++;
+              fileResults[fileName].todo++;
             }
           });
         } 
@@ -127,7 +138,9 @@ class ReportGenerator {
               duration: result.duration || 0,
               workerId: result.workerId,
               mode: result.mode,
-              error: this.formatJestError(result.error),
+              error: this.formatJestError(result.error).message,
+              errorType: 'execution_error',
+              failureType: 'execution_failure',
               suite: path.basename(result.filePath, '.test.js')
             };
             testResults.push(failedTest);
@@ -152,13 +165,14 @@ class ReportGenerator {
         passed,
         failed,
         skipped,
-        startTime,
-        endTime,
+        todo,
+        files: Object.keys(fileResults).length,
         totalDuration,
         estimatedSequentialTime,
         timeSaved,
         timeSavedPercentage,
-        files: Object.keys(fileResults).length
+        startTime,
+        endTime
       },
       fileResults,
       testResults,
@@ -176,14 +190,36 @@ class ReportGenerator {
     }, 0);
   }
 
-  formatJestError(error) {
-    if (!error) return null;
+  formatJestError(error, failureType = null) {
+    if (!error) return { message: null, type: 'none' };
     
     // If error is already a string, clean it up
     let errorText = typeof error === 'string' ? error : error.message || String(error);
     
     // Remove excessive whitespace and normalize
     errorText = errorText.trim();
+    
+    // Classify error type based on content and provided failureType
+    let errorType = 'unknown';
+    if (failureType) {
+      errorType = failureType;
+    } else {
+      const lowerError = errorText.toLowerCase();
+      if (lowerError.includes('expect(') || lowerError.includes('expected:') || lowerError.includes('received:')) {
+        errorType = 'assertion_failure';
+      } else if (lowerError.includes('beforeall') || lowerError.includes('beforeeach') || 
+                 lowerError.includes('afterall') || lowerError.includes('aftereach')) {
+        errorType = 'hook_failure';
+      } else if (lowerError.includes('referenceerror')) {
+        errorType = 'reference_error';
+      } else if (lowerError.includes('typeerror')) {
+        errorType = 'type_error';
+      } else if (lowerError.includes('timeout')) {
+        errorType = 'timeout';
+      } else if (lowerError.includes('error:') || lowerError.includes('exception')) {
+        errorType = 'exception';
+      }
+    }
     
     // Split by lines and process
     const lines = errorText.split('\n');
@@ -204,15 +240,19 @@ class ReportGenerator {
           line.includes('Failed') ||
           line.includes('Difference:') ||
           line.match(/^\d+\s*\|/) || // Line numbers from Jest diff
+          line.includes('>') || // Jest code pointers
           processedLines.length < 10) { // Include first 10 lines regardless
         processedLines.push(line);
       }
       
-      // Stop after we have enough context (max 20 lines)
-      if (processedLines.length >= 20) break;
+      // Stop after we have enough context (max 30 lines for comprehensive error info)
+      if (processedLines.length >= 30) break;
     }
     
-    return processedLines.join('\n');
+    return {
+      message: processedLines.join('\n'),
+      type: errorType
+    };
   }
 
   getMemoryUsage() {
@@ -242,6 +282,9 @@ class ReportGenerator {
     console.log(`  Passed: ${summary.passed}`);
     console.log(`  Failed: ${summary.failed}`);
     console.log(`  Skipped: ${summary.skipped}`);
+    if (summary.todo > 0) {
+      console.log(`  Todo: ${summary.todo}`);
+    }
     console.log(`  Files: ${summary.files}`);
     
     console.log(`\nMemory Usage:`);

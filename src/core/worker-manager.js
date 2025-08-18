@@ -1201,20 +1201,20 @@ class WorkerManager {
   parseJestOutput(output, workItem) {
     const testResults = [];
     let hookInfo = {
-      beforeAll: { duration: 0, status: 'not_found' },
-      beforeEach: { duration: 0, status: 'not_found' },
-      afterAll: { duration: 0, status: 'not_found' },
-      afterEach: { duration: 0, status: 'not_found' }
+      beforeAll: { duration: 0, status: 'not_found', nested: [] },
+      beforeEach: { duration: 0, status: 'not_found', nested: [] },
+      afterAll: { duration: 0, status: 'not_found', nested: [] },
+      afterEach: { duration: 0, status: 'not_found', nested: [] }
     };
     
     try {
       // Parse Jest output to extract individual test results and hook information
       const lines = output.split('\n');
       let currentSuite = '';
-      let currentFailedTest = null;
       let collectingError = false;
       let errorLines = [];
-      let hookFailures = []; // Track hook failures
+      let errorTestReference = null;
+      let suiteFailedToRun = false;
       
       // Extract overall test timing to calculate hook duration
       let totalTestDuration = 0;
@@ -1226,78 +1226,235 @@ class WorkerManager {
         overallSuiteDuration = parseFloat(timingMatch[1]) * 1000; // Convert to ms
       }
 
-      for (const line of lines) {
-        const t = line.trim();
-        if (!t) continue;
+      // Track different test states from Jest summary
+      const summaryMatch = output.match(/Tests:\s*(.+?)$/m);
+      let expectedTestStats = { passed: 0, failed: 0, skipped: 0, todo: 0 };
+      
+      if (summaryMatch) {
+        const summaryLine = summaryMatch[1];
+        const failedMatch = summaryLine.match(/(\d+)\s+failed/);
+        const skippedMatch = summaryLine.match(/(\d+)\s+skipped/);
+        const todoMatch = summaryLine.match(/(\d+)\s+todo/);
+        const passedMatch = summaryLine.match(/(\d+)\s+passed/);
+        
+        if (failedMatch) expectedTestStats.failed = parseInt(failedMatch[1]);
+        if (skippedMatch) expectedTestStats.skipped = parseInt(skippedMatch[1]);
+        if (todoMatch) expectedTestStats.todo = parseInt(todoMatch[1]);
+        if (passedMatch) expectedTestStats.passed = parseInt(passedMatch[1]);
+      }
 
-        // Capture suite headers heuristically (non-test lines between PASS/FAIL and test markers)
-        if (!t.startsWith('✓') && !t.match(/^[✗✕×]/) && !t.startsWith('○') &&
-            !t.startsWith('PASS') && !t.startsWith('FAIL') && !t.includes('Test Suites:') && !t.includes('Tests:')) {
-          if (!line.startsWith('    ')) currentSuite = t;
+      // Check for suite-level failures
+      if (output.includes('Test suite failed to run')) {
+        suiteFailedToRun = true;
+      }
+
+      // First pass: identify test results from Jest output markers
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Detect suite names from describe blocks or error headers - also look at indentation
+        if (trimmed.includes('FAIL ') || trimmed.includes('PASS ')) {
+          // Extract filename, suite detection will happen via error headers
+          continue;
         }
 
-        // Look for hook failure patterns and provide better error messages
-        if (t.includes('beforeAll') && (t.includes('failed') || t.includes('error') || t.includes('timeout'))) {
-          hookFailures.push({
-            type: 'beforeAll',
+        // Capture suite names from Jest's nested test structure
+        if (!line.startsWith(' ') && !line.includes('●') && !line.includes('✓') && 
+            !line.includes('✕') && !line.includes('○') && 
+            !trimmed.includes('Test Suites:') && !trimmed.includes('Tests:') &&
+            !trimmed.includes('Expected:') && !trimmed.includes('Received:') &&
+            !trimmed.includes('at Object.') && trimmed.length > 0) {
+          // This could be a suite name
+          if (trimmed !== 'FAIL' && trimmed !== 'PASS' && !trimmed.includes('.test.js')) {
+            currentSuite = trimmed;
+          }
+        }
+
+        // Look for passing tests: ✓ test_name (duration)
+        const passMatch = line.match(/^\s*✓\s+(.+?)(?:\s*\((\d+)\s*ms\))?$/);
+        if (passMatch) {
+          const testName = passMatch[1].trim();
+          const duration = passMatch[2] ? parseInt(passMatch[2]) : 0;
+          totalTestDuration += duration;
+          
+          testResults.push({
+            name: testName,
             suite: currentSuite,
-            error: t
+            status: 'passed',
+            duration: duration,
+            error: null,
+            failureType: null,
+            testId: `${workItem.filePath}:${testName}`
           });
-          hookInfo.beforeAll.status = 'failed';
-        }
-
-        const pass = line.match(/^\s*✓\s+(.+?)(?:\s*\((\d+)\s*ms\))?$/);
-        if (pass) {
-          const name = pass[1].trim();
-          const dur = pass[2] ? parseInt(pass[2]) : 0;
-          totalTestDuration += dur;
-          if (name) testResults.push({ name, suite: currentSuite, status: 'passed', duration: dur, error: null });
-          collectingError = false; currentFailedTest = null; errorLines = [];
           continue;
         }
 
-        const fail = line.match(/^\s*[✗✕×]\s+(.+?)(?:\s*\((\d+)\s*ms\))?$/);
-        if (fail) {
-          const name = fail[1].trim();
-          const dur = fail[2] ? parseInt(fail[2]) : 0;
-          totalTestDuration += dur;
-          if (name) {
-            currentFailedTest = { name, suite: currentSuite, status: 'failed', duration: dur, error: null };
-            testResults.push(currentFailedTest);
-            collectingError = true; errorLines = [];
-            this.logger.debug(`Parsed failed test: "${name}" with duration: ${dur}ms`);
+        // Look for failing tests with cross mark: ✕ test_name (duration)
+        const crossFailMatch = line.match(/^\s*✕\s+(.+?)(?:\s*\((\d+)\s*ms\))?$/);
+        if (crossFailMatch) {
+          const testName = crossFailMatch[1].trim();
+          const duration = crossFailMatch[2] ? parseInt(crossFailMatch[2]) : 0;
+          totalTestDuration += duration;
+          
+          // Create a preliminary failed test - error will be attached later
+          const failedTest = {
+            name: testName,
+            suite: currentSuite,
+            status: 'failed',
+            duration: duration,
+            error: null,
+            failureType: 'test_failure',
+            testId: `${workItem.filePath}:${testName}`
+          };
+          
+          testResults.push(failedTest);
+          continue;
+        }
+
+        // Look for skipped tests: ○ test_name
+        const skipMatch = line.match(/^\s*○\s+(.+?)$/);
+        if (skipMatch) {
+          const testName = skipMatch[1].trim();
+          
+          testResults.push({
+            name: testName,
+            suite: currentSuite,
+            status: 'skipped',
+            duration: 0,
+            error: null,
+            failureType: 'skipped',
+            testId: `${workItem.filePath}:${testName}`
+          });
+          continue;
+        }
+
+        // Look for todo tests: ✎ todo test_name
+        const todoMatch = line.match(/^\s*✎\s+todo\s+(.+?)$/);
+        if (todoMatch) {
+          const testName = todoMatch[1].trim();
+          
+          testResults.push({
+            name: testName,
+            suite: currentSuite,
+            status: 'todo',
+            duration: 0,
+            error: null,
+            failureType: 'todo',
+            testId: `${workItem.filePath}:${testName}`
+          });
+          continue;
+        }
+
+        // Look for failed test markers: ● Suite › test_name
+        const errorHeaderMatch = line.match(/^\s*●\s+(.+?)\s*›\s*(.+?)$/);
+        if (errorHeaderMatch) {
+          // Save previous error if we were collecting one
+          if (collectingError && errorTestReference && errorLines.length > 0) {
+            this.attachErrorToTest(errorTestReference, errorLines, testResults, hookInfo);
           }
-          continue;
-        }
-
-        // Alternative parsing for failed tests without explicit markers
-        const altFail = line.match(/^\s*●\s+(.+?)(?:\s*›\s*(.+?))?$/);
-        if (altFail && !line.includes('at ') && !line.includes('Error:')) {
-          const suiteName = altFail[1]?.trim();
-          const testName = altFail[2]?.trim();
-          if (testName) {
-            currentFailedTest = { name: testName, suite: suiteName || currentSuite, status: 'failed', duration: 0, error: null };
-            testResults.push(currentFailedTest);
-            collectingError = true; errorLines = [];
-            this.logger.debug(`Parsed failed test from error section: "${testName}" in suite: "${suiteName || currentSuite}"`);
+          
+          const suiteName = errorHeaderMatch[1].trim();
+          const testName = errorHeaderMatch[2].trim();
+          
+          // Find existing failed test to attach error to, or create new one
+          // Try multiple matching strategies for nested suites
+          let failedTest = testResults.find(t => t.name === testName && t.status === 'failed' && t.suite === suiteName);
+          
+          if (!failedTest) {
+            // For nested suites, try to find a test that might have been parsed with a different structure
+            // Look for tests where the suite path contains our expected components
+            const suiteComponents = suiteName.split(' › ');
+            failedTest = testResults.find(t => 
+              t.name === testName && 
+              t.status === 'failed' &&
+              suiteComponents.some(component => t.suite.includes(component))
+            );
           }
-          continue;
-        }
-
-        const skip = line.match(/^\s*○\s+(.+?)$/);
-        if (skip) {
-          const name = skip[1].trim();
-          if (name) testResults.push({ name, suite: currentSuite, status: 'skipped', duration: 0, error: null });
-          continue;
-        }
-
-        if (collectingError && currentFailedTest) {
-          // Stop on next marker/summary
-          if (t.startsWith('✓') || t.match(/^[✗✕×]/) || t.startsWith('○') || t.includes('Test Suites:') || t.includes('Tests:') || t.startsWith('PASS') || t.startsWith('FAIL')) {
-            if (errorLines.length) {
-              currentFailedTest.error = this.enhanceErrorMessage(errorLines.join('\n').trim(), hookFailures);
+          
+          if (!failedTest) {
+            // Try to find and update an existing test with a similar name but no error
+            // This handles cases where Jest parsed the test differently than the error header
+            failedTest = testResults.find(t => 
+              t.name === testName && 
+              t.status === 'failed' &&
+              !t.error  // Prioritize tests without errors already attached
+            );
+            
+            if (failedTest) {
+              // Update the suite name to match the error header (more complete info)
+              failedTest.suite = suiteName;
+              this.logger.debug(`Updated existing test "${testName}" suite to "${suiteName}"`);
             }
-            collectingError = false; currentFailedTest = null; errorLines = [];
+          }
+          
+          if (!failedTest) {
+            // Last resort: create new test entry
+            failedTest = {
+              name: testName,
+              suite: suiteName,
+              status: 'failed',
+              duration: 0,
+              error: null,
+              failureType: 'test_failure',
+              testId: `${workItem.filePath}:${testName}`
+            };
+            testResults.push(failedTest);
+            this.logger.debug(`Created new failed test entry: "${testName}" in suite "${suiteName}"`);
+          } else {
+            this.logger.debug(`Found existing failed test: "${failedTest.name}" in suite "${failedTest.suite}"`);
+          }
+          
+          errorTestReference = failedTest;
+          collectingError = true;
+          errorLines = [];
+          continue;
+        }
+
+        // Look for suite failure: ● Test suite failed to run
+        if (line.match(/^\s*●\s+Test suite failed to run/)) {
+          if (collectingError && errorTestReference && errorLines.length > 0) {
+            this.attachErrorToTest(errorTestReference, errorLines, testResults, hookInfo);
+          }
+          
+          // Create a suite-level failure
+          const suiteFailure = {
+            name: 'Test suite failed to run',
+            suite: path.basename(workItem.filePath, '.test.js'),
+            status: 'failed',
+            duration: 0,
+            error: null,
+            failureType: 'suite_failure',
+            testId: `${workItem.filePath}:suite_failure`
+          };
+          
+          testResults.push(suiteFailure);
+          errorTestReference = suiteFailure;
+          collectingError = true;
+          errorLines = [];
+          continue;
+        }
+
+        // Collect error details
+        if (collectingError) {
+          // Stop collecting on next test marker or summary
+          if (line.match(/^\s*[✓○●✕]/) || 
+              line.includes('Test Suites:') || 
+              line.includes('Tests:') ||
+              line.includes('Snapshots:') ||
+              line.includes('Time:')) {
+            
+            if (errorTestReference && errorLines.length > 0) {
+              this.attachErrorToTest(errorTestReference, errorLines, testResults, hookInfo);
+            }
+            collectingError = false;
+            errorTestReference = null;
+            errorLines = [];
+            
+            // Re-process this line since it might be a new test marker
+            i--;
+            continue;
           } else {
             errorLines.push(line);
           }
@@ -1305,79 +1462,45 @@ class WorkerManager {
       }
       
       // Handle any remaining error collection
-      if (collectingError && currentFailedTest && errorLines.length > 0) {
-        currentFailedTest.error = this.enhanceErrorMessage(errorLines.join('\n').trim(), hookFailures);
+      if (collectingError && errorTestReference && errorLines.length > 0) {
+        this.attachErrorToTest(errorTestReference, errorLines, testResults, hookInfo);
+      }
+      
+      // Add todo tests if detected in summary but not in results
+      if (expectedTestStats.todo > 0) {
+        const todoPattern = /test\.todo\(['"]([^'"]+)['"]\)/g;
+        const fileContent = require('fs').readFileSync(workItem.filePath, 'utf8');
+        let todoMatch;
+        while ((todoMatch = todoPattern.exec(fileContent)) !== null) {
+          const todoName = todoMatch[1];
+          testResults.push({
+            name: todoName,
+            suite: currentSuite || path.basename(workItem.filePath, '.test.js'),
+            status: 'todo',
+            duration: 0,
+            error: null,
+            failureType: 'todo',
+            testId: `${workItem.filePath}:${todoName}`
+          });
+        }
       }
       
       // Calculate hook duration based on timing analysis
-      if (overallSuiteDuration > 0 && totalTestDuration >= 0) {
-        // Estimate hook duration as the difference between total suite time and test execution time
-        const estimatedHookDuration = Math.max(0, overallSuiteDuration - totalTestDuration);
-        
-        // For now, attribute most hook overhead to beforeAll
-        // This is a reasonable assumption since beforeAll typically contains setup logic
-        if (estimatedHookDuration > 10) { // Only track if significant (>10ms)
-          hookInfo.beforeAll.duration = Math.round(estimatedHookDuration * 0.8); // 80% to beforeAll
-          hookInfo.beforeAll.status = 'estimated';
-          
-          // Distribute remaining time to other hooks if tests show they might exist
-          const remainingDuration = estimatedHookDuration - hookInfo.beforeAll.duration;
-          if (remainingDuration > 5 && testResults.length > 1) {
-            hookInfo.beforeEach.duration = Math.round(remainingDuration * 0.7);
-            hookInfo.beforeEach.status = 'estimated';
-            hookInfo.afterEach.duration = Math.round(remainingDuration * 0.2);
-            hookInfo.afterEach.status = 'estimated';
-            hookInfo.afterAll.duration = Math.round(remainingDuration * 0.1);
-            hookInfo.afterAll.status = 'estimated';
-          }
-        }
+      this.calculateHookDurations(overallSuiteDuration, totalTestDuration, testResults, hookInfo, workItem);
+      
+      // Clean up duplicate test entries (prioritize tests with error messages)
+      this.deduplicateTestResults(testResults);
+      
+      // Debug logging for parsing results
+      this.logger.debug(`Jest output parsing completed for ${path.basename(workItem.filePath)}:`);
+      this.logger.debug(`- Found ${testResults.length} test results`);
+      this.logger.debug(`- Test breakdown: ${testResults.filter(t => t.status === 'passed').length} passed, ${testResults.filter(t => t.status === 'failed').length} failed, ${testResults.filter(t => t.status === 'skipped').length} skipped`);
+      if (testResults.length > 0) {
+        this.logger.debug(`- Sample test names: ${testResults.slice(0, 3).map(t => t.name).join(', ')}${testResults.length > 3 ? '...' : ''}`);
       }
       
-      // If no tests were parsed, try alternative parsing for different Jest output formats
-      if (testResults.length === 0) {
-        this.logger.debug(`No test results parsed from Jest output for ${path.basename(workItem.filePath)}`);
-        this.logger.debug(`Sample output lines: ${lines.slice(0, 10).join(' | ')}`);
-        
-        // Try to extract test names from error messages or other patterns
-        let foundTestNames = [];
-        for (const line of lines) {
-          // Look for test names in error descriptions
-          const errorTestMatch = line.match(/›\s+(.+?)$/);
-          if (errorTestMatch && !line.includes('at ') && !line.includes('Error:')) {
-            const testName = errorTestMatch[1].trim();
-            if (testName && !foundTestNames.includes(testName)) {
-              foundTestNames.push(testName);
-            }
-          }
-        }
-
-        if (foundTestNames.length > 0) {
-          this.logger.debug(`Found ${foundTestNames.length} test names from error parsing: ${foundTestNames.join(', ')}`);
-          foundTestNames.forEach(name => {
-            testResults.push({
-              name,
-              suite: currentSuite || path.basename(workItem.filePath, '.test.js'),
-              status: 'failed', // Since we're in the no-results case and jest failed
-              duration: 0,
-              error: null
-            });
-          });
-        } else {
-          // Last resort: create placeholder results based on test count
-          this.logger.debug(`Creating ${workItem.testCount} placeholder results`);
-          for (let i = 0; i < workItem.testCount; i++) {
-            testResults.push({
-              name: `Test ${i + 1}`,
-              suite: path.basename(workItem.filePath, '.test.js'),
-              status: 'passed', // Assume passed since Jest exited with code 0
-              duration: 0,
-              error: null
-            });
-          }
-        }
-      } else {
-        this.logger.debug(`Successfully parsed ${testResults.length} test results`);
-      }
+      // Validate and fill missing tests if needed
+      this.validateTestResults(testResults, workItem, expectedTestStats);
       
     } catch (error) {
       this.logger.error(`Error parsing Jest output for ${workItem.filePath}:`, error.message);
@@ -1386,35 +1509,435 @@ class WorkerManager {
     return { testResults, hookInfo };
   }
 
-  enhanceErrorMessage(originalError, hookFailures = []) {
-    // Check if this is a hook failure
-    const hookFailure = hookFailures.find(hf => 
-      originalError.includes(hf.type) || 
-      originalError.toLowerCase().includes('beforeall') ||
-      originalError.toLowerCase().includes('beforeeach') ||
-      originalError.toLowerCase().includes('afterall') ||
-      originalError.toLowerCase().includes('aftereach')
+  deduplicateTestResults(testResults) {
+    // Remove duplicate test entries, prioritizing those with error messages
+    const toRemove = [];
+    
+    for (let i = 0; i < testResults.length; i++) {
+      const test = testResults[i];
+      
+      // Look for other tests that might be duplicates
+      for (let j = i + 1; j < testResults.length; j++) {
+        const otherTest = testResults[j];
+        
+        if (this.areTestsDuplicates(test, otherTest)) {
+          // Decide which test to keep
+          let keepIndex = i;
+          let removeIndex = j;
+          
+          // Prioritize test with error message
+          if (otherTest.error && !test.error) {
+            keepIndex = j;
+            removeIndex = i;
+          } else if (test.error && !otherTest.error) {
+            keepIndex = i;
+            removeIndex = j;
+          } else if (otherTest.suite.length > test.suite.length) {
+            // Both have/don't have errors, prioritize more detailed suite name
+            keepIndex = j;
+            removeIndex = i;
+          } else if (test.name.length > otherTest.name.length) {
+            // Prioritize more detailed test name
+            keepIndex = i;
+            removeIndex = j;
+          }
+          
+          if (!toRemove.includes(removeIndex)) {
+            toRemove.push(removeIndex);
+            this.logger.debug(`Dedup: Removing "${testResults[removeIndex].name}" (${testResults[removeIndex].suite}), keeping "${testResults[keepIndex].name}" (${testResults[keepIndex].suite})`);
+          }
+        }
+      }
+    }
+    
+    // Remove duplicates (in reverse order to maintain indices)
+    toRemove.sort((a, b) => b - a);
+    for (const removeIndex of toRemove) {
+      if (removeIndex < testResults.length) {
+        testResults.splice(removeIndex, 1);
+      }
+    }
+    
+    if (toRemove.length > 0) {
+      this.logger.debug(`Removed ${toRemove.length} duplicate test entries`);
+    }
+  }
+  
+  areTestsDuplicates(test1, test2) {
+    // Same test name and status - obvious duplicate
+    if (test1.name === test2.name && test1.status === test2.status) {
+      return true;
+    }
+    
+    // Check if one test name is a subset of another (nested test case)
+    // e.g., "Nested Test 1" vs "Inner Suite › Nested Test 1"
+    if (test1.status === test2.status) {
+      const name1Parts = test1.name.split(' › ');
+      const name2Parts = test2.name.split(' › ');
+      const shortName1 = name1Parts[name1Parts.length - 1];  // Get the actual test name
+      const shortName2 = name2Parts[name2Parts.length - 1];  // Get the actual test name
+      
+      if (shortName1 === shortName2) {
+        // Same final test name, likely duplicates from different parsing strategies
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  attachErrorToTest(testRef, errorLines, testResults, hookInfo) {
+    if (!testRef || !errorLines.length) return;
+    
+    const errorText = errorLines.join('\n').trim();
+    
+    // Classify the error type and enhance the message, passing suite name from testRef
+    const suiteName = testRef.suite || 'unknown suite';
+    const { errorMessage, failureType, hookType } = this.classifyJestError(errorText, suiteName);
+    
+    testRef.error = errorMessage;
+    testRef.failureType = failureType;
+    
+    // Update hook info if this is a hook failure
+    if (hookType && hookInfo[hookType]) {
+      hookInfo[hookType].status = 'failed';
+    }
+    
+    this.logger.debug(`Attached error to test "${testRef.name}": ${failureType}`);
+  }
+
+  classifyJestError(errorText, suiteName = 'unknown suite') {
+    const lowerError = errorText.toLowerCase();
+    let failureType = 'test_failure';
+    let hookType = null;
+    let errorMessage = errorText;
+
+    // Detect different types of failures with more specific patterns
+    if (lowerError.includes('beforeall')) {
+      failureType = 'hook_failure';
+      hookType = 'beforeAll';
+      
+      errorMessage = `BeforeAll hook failure in "${suiteName}":\n${errorText}`;
+    } else if (lowerError.includes('beforeeach')) {
+      failureType = 'hook_failure';
+      hookType = 'beforeEach';
+      
+      errorMessage = `BeforeEach hook failure in "${suiteName}":\n${errorText}`;
+    } else if (lowerError.includes('afterall')) {
+      failureType = 'hook_failure';
+      hookType = 'afterAll';
+      
+      errorMessage = `AfterAll hook failure in "${suiteName}":\n${errorText}`;
+    } else if (lowerError.includes('aftereach')) {
+      failureType = 'hook_failure';
+      hookType = 'afterEach';
+      
+      errorMessage = `AfterEach hook failure in "${suiteName}":\n${errorText}`;
+    } else if (errorText.includes('expect(')) {
+      failureType = 'assertion_failure';
+    } else if (lowerError.includes('error:') || lowerError.includes('exception')) {
+      failureType = 'exception';
+    } else if (lowerError.includes('timeout')) {
+      failureType = 'timeout';
+    } else if (lowerError.includes('referenceerror')) {
+      failureType = 'reference_error';
+    } else if (lowerError.includes('typeerror')) {
+      failureType = 'type_error';
+    }
+
+    return { errorMessage, failureType, hookType };
+  }
+
+  calculateHookDurations(overallSuiteDuration, totalTestDuration, testResults, hookInfo, workItem) {
+    if (overallSuiteDuration > 0 && totalTestDuration >= 0) {
+      // Estimate hook duration as the difference between total suite time and test execution time
+      const estimatedHookDuration = Math.max(0, overallSuiteDuration - totalTestDuration);
+      
+      // Only track if significant (>10ms)
+      if (estimatedHookDuration > 10) {
+        // Extract nested structure from source file
+        const nestedStructure = this.extractNestedHooksFromFile(workItem.filePath);
+        
+        // Check if we have evidence of hook failures to better estimate
+        const hasHookFailures = testResults.some(t => t.failureType === 'hook_failure');
+        
+        if (hasHookFailures) {
+          // If there are hook failures, distribute time based on failure types
+          const beforeAllFailures = testResults.filter(t => t.error && t.error.includes('BeforeAll')).length;
+          const beforeEachFailures = testResults.filter(t => t.error && t.error.includes('BeforeEach')).length;
+          const afterAllFailures = testResults.filter(t => t.error && t.error.includes('AfterAll')).length;
+          const afterEachFailures = testResults.filter(t => t.error && t.error.includes('AfterEach')).length;
+          
+          if (beforeAllFailures > 0) {
+            hookInfo.beforeAll.duration = Math.round(estimatedHookDuration * 0.6);
+            hookInfo.beforeAll.status = 'failed';
+            
+            // Distribute among nested beforeAll hooks
+            this.distributeNestedHookDuration(hookInfo.beforeAll, nestedStructure, 'beforeAll');
+          }
+          if (beforeEachFailures > 0) {
+            hookInfo.beforeEach.duration = Math.round(estimatedHookDuration * 0.25);
+            hookInfo.beforeEach.status = 'failed';
+            
+            this.distributeNestedHookDuration(hookInfo.beforeEach, nestedStructure, 'beforeEach');
+          }
+          if (afterEachFailures > 0) {
+            hookInfo.afterEach.duration = Math.round(estimatedHookDuration * 0.1);
+            hookInfo.afterEach.status = 'failed';
+            
+            this.distributeNestedHookDuration(hookInfo.afterEach, nestedStructure, 'afterEach');
+          }
+          if (afterAllFailures > 0) {
+            hookInfo.afterAll.duration = Math.round(estimatedHookDuration * 0.05);
+            hookInfo.afterAll.status = 'failed';
+            
+            this.distributeNestedHookDuration(hookInfo.afterAll, nestedStructure, 'afterAll');
+          }
+        } else {
+          // No hook failures, use estimation
+          hookInfo.beforeAll.duration = Math.round(estimatedHookDuration * 0.8); // 80% to beforeAll
+          hookInfo.beforeAll.status = 'estimated';
+          
+          // Distribute among nested beforeAll hooks
+          this.distributeNestedHookDuration(hookInfo.beforeAll, nestedStructure, 'beforeAll');
+          
+          // Distribute remaining time to other hooks if tests show they might exist
+          const remainingDuration = estimatedHookDuration - hookInfo.beforeAll.duration;
+          if (remainingDuration > 5 && testResults.length > 1) {
+            hookInfo.beforeEach.duration = Math.round(remainingDuration * 0.7);
+            hookInfo.beforeEach.status = 'estimated';
+            this.distributeNestedHookDuration(hookInfo.beforeEach, nestedStructure, 'beforeEach');
+            
+            hookInfo.afterEach.duration = Math.round(remainingDuration * 0.2);
+            hookInfo.afterEach.status = 'estimated';
+            this.distributeNestedHookDuration(hookInfo.afterEach, nestedStructure, 'afterEach');
+            
+            hookInfo.afterAll.duration = Math.round(remainingDuration * 0.1);
+            hookInfo.afterAll.status = 'estimated';
+            this.distributeNestedHookDuration(hookInfo.afterAll, nestedStructure, 'afterAll');
+          }
+        }
+      }
+    }
+  }
+
+  // Distribute hook duration among nested hooks
+  distributeNestedHookDuration(hookInfo, nestedStructure, hookType) {
+    if (!nestedStructure || nestedStructure.length === 0) return;
+    
+    // Find all suites that have this hook type
+    const suitesWithHooks = nestedStructure.filter(suite => 
+      suite.hooks[hookType] && suite.hooks[hookType].length > 0
     );
+    
+    if (suitesWithHooks.length === 0) return;
+    
+    // Distribute duration among nested hooks
+    const durationPerHook = Math.round(hookInfo.duration / suitesWithHooks.length);
+    
+    suitesWithHooks.forEach(suite => {
+      suite.hooks[hookType].forEach((hook, index) => {
+        hookInfo.nested.push({
+          suite: suite.fullPath,
+          lineNumber: hook.lineNumber,
+          duration: index === 0 ? durationPerHook : Math.round(durationPerHook * 0.5), // First hook gets more time
+          status: hookInfo.status
+        });
+      });
+    });
+    
+    this.logger.debug(`Distributed ${hookType} duration (${hookInfo.duration}ms) among ${hookInfo.nested.length} nested hooks`);
+  }
 
-    if (hookFailure) {
-      return `${hookFailure.type} hook failure in ${hookFailure.suite || 'test suite'}:\n${originalError}`;
-    }
+  validateTestResults(testResults, workItem, expectedStats) {
+    // Ensure we have the minimum expected number of results
+    const currentStats = {
+      passed: testResults.filter(t => t.status === 'passed').length,
+      failed: testResults.filter(t => t.status === 'failed').length,
+      skipped: testResults.filter(t => t.status === 'skipped').length,
+      todo: testResults.filter(t => t.status === 'todo').length
+    };
 
-    // Look for common hook failure patterns in the error message itself
-    if (originalError.toLowerCase().includes('beforeall')) {
-      return `BeforeAll hook failure:\n${originalError}`;
-    }
-    if (originalError.toLowerCase().includes('beforeeach')) {
-      return `BeforeEach hook failure:\n${originalError}`;
-    }
-    if (originalError.toLowerCase().includes('afterall')) {
-      return `AfterAll hook failure:\n${originalError}`;
-    }
-    if (originalError.toLowerCase().includes('aftereach')) {
-      return `AfterEach hook failure:\n${originalError}`;
-    }
+    this.logger.debug(`Test results validation for ${path.basename(workItem.filePath)}:`);
+    this.logger.debug(`Found: ${JSON.stringify(currentStats)}`);
+    this.logger.debug(`Expected: ${JSON.stringify(expectedStats)}`);
 
-    return originalError;
+    // If we're missing tests but have a count from the parser, add placeholders carefully
+    const foundTotal = currentStats.passed + currentStats.failed + currentStats.skipped + currentStats.todo;
+    const expectedTotal = expectedStats.passed + expectedStats.failed + expectedStats.skipped + expectedStats.todo;
+    
+    if (foundTotal === 0 && workItem.testCount > 0) {
+      // Try to extract actual test names from the source file
+      const actualTestNames = this.extractTestNamesFromFile(workItem.filePath);
+      
+      if (actualTestNames.length > 0) {
+        this.logger.debug(`Creating ${actualTestNames.length} test results from source file analysis`);
+        for (const testName of actualTestNames) {
+          testResults.push({
+            name: testName,
+            suite: path.basename(workItem.filePath, '.test.js'),
+            status: 'passed', // Assume passed if Jest didn't report failures
+            duration: 0,
+            error: null,
+            failureType: null,
+            testId: `${workItem.filePath}:${testName}`
+          });
+        }
+      } else {
+        // Last resort: create placeholder results based on test count
+        this.logger.debug(`Creating ${workItem.testCount} placeholder results (could not extract test names)`);
+        for (let i = 0; i < workItem.testCount; i++) {
+          testResults.push({
+            name: `Test ${i + 1} (parsing failed)`,
+            suite: path.basename(workItem.filePath, '.test.js'),
+            status: 'passed', // Assume passed if Jest didn't report failures
+            duration: 0,
+            error: null,
+            failureType: null,
+            testId: `${workItem.filePath}:Test ${i + 1}`
+          });
+        }
+      }
+    }
+  }
+
+  // Extract actual test names from source file when Jest parsing fails
+  extractTestNamesFromFile(filePath) {
+    try {
+      const fs = require('fs');
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      const testNames = [];
+      
+      // Match various test patterns: it('name'), test('name'), it("name"), test("name")
+      const testPatterns = [
+        /(?:it|test)\s*\(\s*['"`]([^'"`]+)['"`]/g,
+        /(?:it|test)\.only\s*\(\s*['"`]([^'"`]+)['"`]/g,
+        /(?:it|test)\.skip\s*\(\s*['"`]([^'"`]+)['"`]/g,
+        /(?:it|test)\.todo\s*\(\s*['"`]([^'"`]+)['"`]/g,
+        /(?:it|test)\.concurrent\s*\(\s*['"`]([^'"`]+)['"`]/g
+      ];
+      
+      for (const pattern of testPatterns) {
+        let match;
+        while ((match = pattern.exec(fileContent)) !== null) {
+          const testName = match[1].trim();
+          if (testName && !testNames.includes(testName)) {
+            testNames.push(testName);
+          }
+        }
+      }
+      
+      this.logger.debug(`Extracted ${testNames.length} test names from ${path.basename(filePath)}: ${testNames.slice(0, 3).join(', ')}${testNames.length > 3 ? '...' : ''}`);
+      return testNames;
+      
+    } catch (error) {
+      this.logger.debug(`Failed to extract test names from ${filePath}: ${error.message}`);
+      return [];
+    }
+  }
+
+  // Extract nested describe blocks and their hooks from source file
+  extractNestedHooksFromFile(filePath) {
+    try {
+      const fs = require('fs');
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      const nestedStructure = [];
+      
+      // Parse the file to find nested describe blocks and their hooks
+      const lines = fileContent.split('\n');
+      let currentIndentation = 0;
+      let describeStack = [];
+      let braceCount = 0;
+      let inDescribe = false;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmedLine = line.trim();
+        
+        // Skip empty lines and comments
+        if (!trimmedLine || trimmedLine.startsWith('//') || trimmedLine.startsWith('/*')) {
+          continue;
+        }
+        
+        // Count braces to track nesting level
+        const openBraces = (line.match(/\{/g) || []).length;
+        const closeBraces = (line.match(/\}/g) || []).length;
+        braceCount += openBraces - closeBraces;
+        
+        // Detect describe blocks
+        const describeMatch = trimmedLine.match(/describe\s*\(\s*['"`]([^'"`]+)['"`]/);
+        if (describeMatch) {
+          const suiteName = describeMatch[1];
+          const indentLevel = line.length - line.trimStart().length;
+          
+          // Pop describe stack if we're at a lower indentation level
+          while (describeStack.length > 0 && indentLevel <= describeStack[describeStack.length - 1].indentLevel) {
+            describeStack.pop();
+          }
+          
+          const suiteInfo = {
+            name: suiteName,
+            indentLevel: indentLevel,
+            fullPath: [...describeStack.map(s => s.name), suiteName].join(' › '),
+            hooks: {
+              beforeAll: [],
+              beforeEach: [],
+              afterAll: [],
+              afterEach: []
+            },
+            lineNumber: i + 1
+          };
+          
+          describeStack.push(suiteInfo);
+          nestedStructure.push(suiteInfo);
+        }
+        
+        // Detect hooks within current describe context
+        if (describeStack.length > 0) {
+          const currentSuite = describeStack[describeStack.length - 1];
+          
+          if (trimmedLine.includes('beforeAll(')) {
+            currentSuite.hooks.beforeAll.push({
+              lineNumber: i + 1,
+              suite: currentSuite.fullPath
+            });
+          } else if (trimmedLine.includes('beforeEach(')) {
+            currentSuite.hooks.beforeEach.push({
+              lineNumber: i + 1,
+              suite: currentSuite.fullPath
+            });
+          } else if (trimmedLine.includes('afterAll(')) {
+            currentSuite.hooks.afterAll.push({
+              lineNumber: i + 1,
+              suite: currentSuite.fullPath
+            });
+          } else if (trimmedLine.includes('afterEach(')) {
+            currentSuite.hooks.afterEach.push({
+              lineNumber: i + 1,
+              suite: currentSuite.fullPath
+            });
+          }
+        }
+      }
+      
+      this.logger.debug(`Found ${nestedStructure.length} nested describe blocks in ${path.basename(filePath)}`);
+      nestedStructure.forEach(suite => {
+        const hookCounts = Object.entries(suite.hooks).map(([type, hooks]) => `${type}:${hooks.length}`).join(', ');
+        this.logger.debug(`- "${suite.fullPath}": ${hookCounts}`);
+      });
+      
+      return nestedStructure;
+      
+    } catch (error) {
+      this.logger.debug(`Failed to extract nested hooks from ${filePath}: ${error.message}`);
+      return [];
+    }
+  }
+
+  enhanceErrorMessage(originalError, hookFailures = []) {
+    // This method is kept for backward compatibility but the logic is now in classifyJestError
+    const { errorMessage } = this.classifyJestError(originalError, 'unknown suite');
+    return errorMessage;
   }
 
   // Detect if a timeout likely occurred during hook execution
@@ -1557,10 +2080,10 @@ class WorkerManager {
               startTime: null,
               endTime: null,
               hooks: {
-                beforeAll: { duration: 0, status: 'not_found' },
-                beforeEach: { duration: 0, status: 'not_found' },
-                afterAll: { duration: 0, status: 'not_found' },
-                afterEach: { duration: 0, status: 'not_found' }
+                beforeAll: { duration: 0, status: 'not_found', nested: [] },
+                beforeEach: { duration: 0, status: 'not_found', nested: [] },
+                afterAll: { duration: 0, status: 'not_found', nested: [] },
+                afterEach: { duration: 0, status: 'not_found', nested: [] }
               }
             };
           }
@@ -1580,7 +2103,12 @@ class WorkerManager {
           if (result.hookInfo) {
             Object.keys(result.hookInfo).forEach(hookType => {
               if (result.hookInfo[hookType].duration > fileMap[file].hooks[hookType].duration) {
-                fileMap[file].hooks[hookType] = { ...result.hookInfo[hookType] };
+                // Copy the hook info including nested information
+                fileMap[file].hooks[hookType] = { 
+                  duration: result.hookInfo[hookType].duration,
+                  status: result.hookInfo[hookType].status,
+                  nested: result.hookInfo[hookType].nested || []
+                };
               }
             });
           }
