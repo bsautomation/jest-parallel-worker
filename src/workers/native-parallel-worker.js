@@ -424,6 +424,7 @@ async function runFileWithConcurrentTransformation(config, startTime) {
           
           logJestOutput(`🌐 Running concurrent tests with BrowserStack Node SDK for file: ${path.basename(config.filePath)}`);
           logJestOutput(`🌐 Using BrowserStack config - User: ${browserstackConfig.userName}, Build: ${browserstackConfig.buildName}`);
+          process.env.BROWSERSTACK_BUILD_RUN_IDENTIFIER = browserstackConfig.buildIdentifier;
         } catch (error) {
           logJestOutput(`⚠️ BrowserStack enabled but browserstack-node-sdk not found, falling back to regular Jest execution`);
           browserstackEnabled = false;
@@ -434,23 +435,6 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { 
           ...process.env,
-          NODE_OPTIONS: '--max-old-space-size=4096',
-          // Pass BrowserStack configuration from browserstack.yml to the test environment
-          ...(browserstackEnabled && (() => {
-            const browserstackConfig = loadBrowserStackConfig();
-            return {
-              BROWSERSTACK_USERNAME: browserstackConfig.userName,
-              BROWSERSTACK_ACCESS_KEY: browserstackConfig.accessKey,
-              BROWSERSTACK_BUILD_NAME: browserstackConfig.buildName || 'Jest Parallel Build',
-              BROWSERSTACK_PROJECT_NAME: browserstackConfig.projectName || 'Jest Parallel Tests',
-              // Use consistent build ID across all parallel executions
-              BROWSERSTACK_BUILD_ID: browserstackConfig.buildId,
-              BROWSERSTACK_BUILD_RUN_IDENTIFIER: browserstackConfig.buildIdentifier,
-              // Additional BrowserStack configuration for unified builds
-              BROWSERSTACK_SESSION_NAME: `${browserstackConfig.buildName || 'Jest Parallel Build'} - ${path.basename(config.filePath)}`,
-              BROWSERSTACK_LOCAL_IDENTIFIER: browserstackConfig.buildId, // Helps group local connections
-            };
-          })())
         },
         cwd: process.cwd()
       });

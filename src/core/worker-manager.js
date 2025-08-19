@@ -352,7 +352,7 @@ class WorkerManager {
       workerProcess = this.spawnConcurrentFileWorker(workItem, workerId);
     } else if (workItem.type === 'native-parallel') {
       // Route native-parallel through direct Jest execution for simplicity
-      workerProcess = this.spawnJestParallelWorker(workItem, workerId);
+      workerProcess = this.spawnNativeParallelWorker(workItem, workerId);
     }
 
     if (workerProcess) {
