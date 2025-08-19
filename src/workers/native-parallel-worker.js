@@ -396,7 +396,8 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         // Add more specific patterns for the target file
         '--testPathPattern', path.basename(tempFilePath),
         // Disable cache to avoid stale issues
-        '--no-cache'
+        '--no-cache',
+        '--testTimeout', config.timeout.toString()
       ];
       
       console.log(`🚀 Jest concurrent command args: ${jestArgs.join(' ')}`);
@@ -613,8 +614,9 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         reject(error);
       });
       
-      // Set timeout
+      // Set timeout - Use config timeout if provided, otherwise fallback to 25000ms
       const timeout = config.timeout || 25000;
+      logJestOutput(`⏰ Using timeout: ${timeout}ms (config provided: ${config.timeout || 'none'})`);
       setTimeout(async () => {
         if (!worker.killed && !hasResolved) {
           worker.kill('SIGTERM');
@@ -1008,8 +1010,9 @@ async function runFileWithParallelism(config, startTime) {
       reject(error);
     });
     
-    // Set timeout
+    // Set timeout - Use config timeout if provided, otherwise fallback to 25000ms
     const timeout = config.timeout || 25000;
+    logJestOutput(`⏰ Using timeout: ${timeout}ms (config provided: ${config.timeout || 'none'})`);
     setTimeout(() => {
       if (!worker.killed && !hasResolved) {
         worker.kill('SIGTERM');

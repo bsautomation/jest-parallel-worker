@@ -352,6 +352,7 @@ class WorkerManager {
       workerProcess = this.spawnConcurrentFileWorker(workItem, workerId);
     } else if (workItem.type === 'native-parallel') {
       // Route native-parallel through direct Jest execution for simplicity
+      this.logger.warn('========Starting Native parallel worker');
       workerProcess = this.spawnNativeParallelWorker(workItem, workerId);
     }
 
@@ -382,7 +383,8 @@ class WorkerManager {
       '--verbose',
       '--no-coverage',
       '--runInBand',
-      '--passWithNoTests=false'
+      '--passWithNoTests=false',
+      '--testTimeout', this.timeout.toString()  // Add Jest timeout constraint
     ];
 
     const cmd = 'npx';
@@ -404,7 +406,17 @@ class WorkerManager {
       errorOutput += data.toString();
     });
 
+    // Set timeout for test worker
+    const testWorkerTimeoutId = setTimeout(() => {
+      if (!worker.killed) {
+        worker.kill('SIGKILL');
+        this.executionLogger.logWorkerTimeout(workerId, `Test worker exceeded ${this.formatDuration(this.timeout)} timeout limit`);
+        this.logger.warn(`Test worker ${workerId} killed due to timeout`);
+      }
+    }, this.timeout);
+
     worker.on('close', (code) => {
+      clearTimeout(testWorkerTimeoutId);
       // Parse minimal Jest output and keep only the requested test
       const combinedOutput = `${output}\n${errorOutput}`;
       const allResults = this.parseJestOutput(combinedOutput, workItem) || [];
@@ -458,6 +470,15 @@ class WorkerManager {
       cwd: process.cwd()
     });
 
+    // Set timeout for file worker
+    const fileWorkerTimeoutId = setTimeout(() => {
+      if (!worker.killed) {
+        worker.kill('SIGKILL');
+        this.executionLogger.logWorkerTimeout(workerId, `File worker exceeded ${this.formatDuration(this.timeout)} timeout limit`);
+        this.logger.warn(`File worker ${workerId} killed due to timeout`);
+      }
+    }, this.timeout);
+
     let output = '';
     let errorOutput = '';
 
@@ -470,6 +491,7 @@ class WorkerManager {
     });
 
     worker.on('close', (code) => {
+      clearTimeout(fileWorkerTimeoutId);
       const result = {
         filePath: workItem.filePath,
         status: code === 0 ? 'passed' : 'failed',
@@ -509,7 +531,8 @@ class WorkerManager {
       '--verbose',
       '--no-coverage',
       '--passWithNoTests=false',
-      '--maxWorkers', '1'
+      '--maxWorkers', '1',
+      '--testTimeout', this.timeout.toString()  // Add Jest timeout constraint
     ];
 
   const cmd = 'npx';
@@ -527,6 +550,15 @@ class WorkerManager {
       cwd: process.cwd()
     });
 
+    // Set timeout for Jest parallel worker
+    const jestWorkerTimeoutId = setTimeout(() => {
+      if (!worker.killed) {
+        worker.kill('SIGKILL');
+        this.executionLogger.logWorkerTimeout(workerId, `Jest worker exceeded ${this.formatDuration(this.timeout)} timeout limit`);
+        this.logger.warn(`Jest worker ${workerId} killed due to timeout`);
+      }
+    }, this.timeout);
+
     let output = '';
     let errorOutput = '';
 
@@ -539,6 +571,7 @@ class WorkerManager {
     });
 
     worker.on('close', (code) => {
+      clearTimeout(jestWorkerTimeoutId);
       // Parse combined stdout+stderr; only extract ✓/✗/○ lines to reflect Jest output
       const combinedOutput = `${output}\n${errorOutput}`;
       const parseResult = this.parseJestOutput(combinedOutput, workItem);
@@ -789,6 +822,7 @@ class WorkerManager {
   }
 
   spawnNativeParallelWorker(workItem, workerId) {
+    console.log('========Starting Native parallel worker')
     const workerScript = path.join(__dirname, '../workers/native-parallel-worker.js');
     
     const args = [

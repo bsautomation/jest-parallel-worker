@@ -138,6 +138,7 @@ async function runTestsAsConcurrent(config) {
       
       // Set timeout with grace period
       const timeout = config.timeout || 25000; // Default to 25s (5s less than worker timeout)
+      console.log(`⏰ Concurrent file worker using timeout: ${timeout}ms (config provided: ${config.timeout || 'none'})`);
       setTimeout(() => {
         if (!worker.killed && !hasResolved) {
           worker.kill('SIGTERM');
