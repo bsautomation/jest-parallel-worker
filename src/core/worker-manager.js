@@ -504,22 +504,21 @@ class WorkerManager {
     // Decide whether to run via BrowserStack SDK
     const useBrowserStack = this.options.browserstackSdk === true || process.env.BROWSERSTACK_SDK_ENABLED === 'true';
 
-    const jestMaxWorkers = Math.min(4, Math.max(2, Math.min(workItem.testCount || 2, this.maxWorkers)));
     const jestArgs = [
       '--testMatch', `${workItem.filePath}`,
       '--verbose',
       '--no-coverage',
       '--passWithNoTests=false',
-      '--maxWorkers', jestMaxWorkers.toString()
+      '--maxWorkers', '1'
     ];
 
   const cmd = 'npx';
   const cmdArgs = useBrowserStack ? ['browserstack-node-sdk', 'jest', ...jestArgs] : ['jest', ...jestArgs];
 
     if (useBrowserStack) {
-      this.logger.info(`🌐 Using BrowserStack Node SDK for ${path.basename(workItem.filePath)} (workers: ${jestMaxWorkers})`);
+      this.logger.info(`🌐 Using BrowserStack Node SDK for ${path.basename(workItem.filePath)} (workers: ${workerId})`);
     } else {
-      this.logger.debug(`Starting Jest (workers: ${jestMaxWorkers}) for ${path.basename(workItem.filePath)}`);
+      this.logger.debug(`Starting Jest (workers: ${workerId}) for ${path.basename(workItem.filePath)}`);
     }
 
     const worker = spawn(cmd, cmdArgs, {

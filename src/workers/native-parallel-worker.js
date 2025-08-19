@@ -445,7 +445,7 @@ async function runFileWithConcurrentTransformation(config, startTime) {
               BROWSERSTACK_PROJECT_NAME: browserstackConfig.projectName || 'Jest Parallel Tests',
               // Use consistent build ID across all parallel executions
               BROWSERSTACK_BUILD_ID: browserstackConfig.buildId,
-              BROWSERSTACK_BUILD_IDENTIFIER: browserstackConfig.buildIdentifier,
+              BROWSERSTACK_BUILD_RUN_IDENTIFIER: browserstackConfig.buildIdentifier,
               // Additional BrowserStack configuration for unified builds
               BROWSERSTACK_SESSION_NAME: `${browserstackConfig.buildName || 'Jest Parallel Build'} - ${path.basename(config.filePath)}`,
               BROWSERSTACK_LOCAL_IDENTIFIER: browserstackConfig.buildId, // Helps group local connections
