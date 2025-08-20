@@ -2,6 +2,7 @@
 const path = require('path');
 const { execSync } = require('child_process');
 const { parseJestOutput } = require('../parsers');
+const { runJestWithJson } = require('./utils/jestRunner');
 
 // Silent logger for workers to prevent stdout contamination
 const silentLogger = {
@@ -28,59 +29,62 @@ async function runSingleTest(config) {
   };
 
   try {
-    // Use Jest CLI to run a single test
+    // Use shared runner to execute a single test by name via Jest filters
     const testFilePath = path.resolve(config.filePath);
-    const testNamePattern = config.testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex
-    
-    const jestCommand = `npx jest --testMatch="**/${path.basename(testFilePath)}" --testNamePattern="${testNamePattern}" --verbose --no-coverage --runInBand`;
-    
-    const output = execSync(jestCommand, {
-      encoding: 'utf8',
-      cwd: process.cwd(),
-      timeout: config.timeout,
-      env: { ...process.env }
-    });
-    
-    result.status = 'passed';
-    result.output = output;
+    const escaped = config.testName.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&');
+    const jestArgs = [
+      testFilePath,
+      '--testNamePattern', escaped,
+      '--verbose',
+      '--no-coverage',
+      '--runInBand'
+    ];
 
+  const { status, testResults, stdout, stderr, exitCode, hookInfo } = await runJestWithJson({
+      args: jestArgs,
+      cwd: process.cwd(),
+      filePath: config.filePath,
+      timeout: config.timeout || 25000
+    });
+
+    result.status = status;
+    result.output = stdout;
+  // Attach hook info parsed from text output
+  result.hookInfo = hookInfo;
+  // Attach parsedOutput for reporter enrichment
+  const workItem = { filePath: config.filePath, workerId: config.workerId };
+  const combined = `${stderr || ''}\n${stdout || ''}`;
+  const parsed = parseJestOutput(combined, workItem, silentLogger);
+  result.parsedOutput = parsed;
+    // Try to pick this test result
+    const match = (testResults || []).find(t => t.name === config.testName || (t.testId || '').endsWith(`:${config.testName}`));
+    if (match && match.status === 'failed') {
+      result.error = match.error || 'Test failed';
+      result.errorType = 'test_failure';
+    }
+    result.testResults = testResults;
   } catch (error) {
     result.status = 'failed';
-    
-    // Use centralized Jest output parser for consistent error handling
     const jestOutput = error.stderr || error.stdout || error.toString();
-    const workItem = {
-      filePath: config.filePath,
-      workerId: config.workerId
-    };
+    const workItem = { filePath: config.filePath, workerId: config.workerId };
     const parseResult = parseJestOutput(jestOutput, workItem, silentLogger);
-    
-    // Extract error details for this specific test
     const testErrors = parseResult.parsedErrors.filter(e => 
       e.testName === config.testName || 
-      e.testName.includes(config.testName) ||
-      config.testName.includes(e.testName)
+      e.testName?.includes(config.testName) ||
+      config.testName.includes(e.testName || '')
     );
-    
     if (testErrors.length > 0) {
       result.error = testErrors[0].errorMessage;
       result.source = testErrors[0].source;
       result.errorType = testErrors[0].errorType;
     } else if (parseResult.parsedErrors.length > 0) {
-      // Fallback to first error if specific test error not found
       result.error = parseResult.parsedErrors[0].errorMessage;
       result.source = parseResult.parsedErrors[0].source;
       result.errorType = parseResult.parsedErrors[0].errorType;
     } else {
-      // Fallback to simple extraction if parser doesn't find specific errors
-      result.error = jestOutput.split('\n')
-        .find(line => line.trim() && (line.includes('Error') || line.includes('Failed') || line.includes('expect'))) 
-        || 'Test failed with no error details';
+      result.error = 'Test failed with no error details';
     }
-    
     result.output = jestOutput;
-    
-    // Enhanced result information from centralized parser
     result.parsedErrors = parseResult.parsedErrors;
     result.hasParseErrors = parseResult.hasErrors;
     result.testResults = parseResult.testResults;

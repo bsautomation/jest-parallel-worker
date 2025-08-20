@@ -107,7 +107,13 @@ class ReportGenerator {
             passed: 0,
             failed: 0,
             skipped: 0,
-            duration: 0
+            duration: 0,
+            hooks: result.hookInfo || {
+              beforeAll: { duration: 0, status: 'not_found' },
+              beforeEach: { duration: 0, status: 'not_found' },
+              afterAll: { duration: 0, status: 'not_found' },
+              afterEach: { duration: 0, status: 'not_found' }
+            }
           };
         }
         
@@ -118,6 +124,25 @@ class ReportGenerator {
           fileResults[fileName].tests.push(result);
           fileResults[fileName][result.status]++;
           fileResults[fileName].duration += result.duration || 0;
+
+          // Merge hook info from test-level result if available
+          if (result.hookInfo) {
+            const existingHooks = fileResults[fileName].hooks || {};
+            Object.keys(result.hookInfo).forEach(hookType => {
+              const incoming = result.hookInfo[hookType];
+              const current = existingHooks[hookType] || { duration: 0, status: 'not_found', errors: [] };
+              // Prefer a failed status; otherwise prefer executed; keep max duration
+              const status = current.status === 'failed' || incoming.status === 'failed'
+                ? 'failed'
+                : (current.status === 'executed' || incoming.status === 'executed')
+                  ? 'executed'
+                  : current.status !== 'not_found' ? current.status : incoming.status;
+              const duration = Math.max(current.duration || 0, incoming.duration || 0);
+              const errors = [...(current.errors || []), ...(incoming.errors || [])];
+              existingHooks[hookType] = { duration, status, errors };
+            });
+            fileResults[fileName].hooks = existingHooks;
+          }
         }
       } else if (result.filePath) {
         // File-level result

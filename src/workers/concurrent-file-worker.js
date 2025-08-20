@@ -4,6 +4,7 @@ const fs = require('fs').promises;
 const { spawn } = require('child_process');
 const os = require('os');
 const { parseJestOutput } = require('../parsers');
+const { runJestWithJson } = require('./utils/jestRunner');
 
 // Silent logger for workers to prevent stdout contamination
 const silentLogger = {
@@ -34,144 +35,39 @@ async function runTestsAsConcurrent(config) {
     
     await fs.writeFile(tempFilePath, transformedContent, 'utf8');
     
-    // Run Jest on the temporary file
-    // Use the full path relative to project root for more precise matching
-    const relativeToProject = path.relative(process.cwd(), tempFilePath);
+    // Run Jest on the temporary file using the shared JSON-first runner
     const jestArgs = [
-      '--testMatch', `**/${tempFileName}`,
+      tempFilePath,
       '--verbose',
       '--no-coverage', 
       '--passWithNoTests=false',
-      '--forceExit', // Ensure Jest exits cleanly
-      '--detectOpenHandles' // Help debug hanging processes
+      '--forceExit',
+      '--detectOpenHandles'
     ];
-    
-    // Try to find Jest - first check if it's available locally, then globally
-    let jestCommand = 'npx';
-    let jestRunArgs = ['jest', ...jestArgs];
-    
-    // Alternative: try global jest if npx fails
-    const worker = spawn(jestCommand, jestRunArgs, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { 
-        ...process.env, // This preserves ALL environment variables including PROFILE
-        NODE_OPTIONS: '--max-old-space-size=4096',
-        // Ensure Jest can find the correct config
-        PWD: process.cwd()
-      },
-      cwd: process.cwd()
+
+    const { status, testResults, stdout, stderr, exitCode, hookInfo } = await runJestWithJson({
+      args: jestArgs,
+      cwd: process.cwd(),
+      filePath: config.filePath,
+      hookFilePath: tempFilePath,
+      timeout: config.timeout || 25000
     });
-    
-    let output = '';
-    let errorOutput = '';
-    
-    worker.stdout.on('data', (data) => {
-      output += data.toString();
-    });
-    
-    worker.stderr.on('data', (data) => {
-      errorOutput += data.toString();
-    });
-    
-    // Handle worker errors (e.g., Jest not found)
-    worker.on('error', (error) => {
-      if (hasResolved) return;
-      hasResolved = true;
-      
-      // If Jest command failed, provide helpful error message
-      reject(new Error(`Jest execution failed: ${error.message}. 
-        This usually means:
-        1. Jest is not installed (run: npm install --save-dev jest)
-        2. Jest is not in PATH
-        3. Working directory is incorrect
-        
-        Current working directory: ${process.cwd()}
-        Command attempted: ${jestCommand} ${jestRunArgs.join(' ')}`));
-    });
-    
-    return new Promise((resolve, reject) => {
-      let hasResolved = false;
-      
-      const handleExit = async (code) => {
-        if (hasResolved) return;
-        hasResolved = true;
-        
-        try {
-          // Clean up temporary file
-          await fs.unlink(tempFilePath).catch(() => {}); // Ignore cleanup errors
-          
-          // If Jest failed, include stderr in the result for debugging
-          if (code !== 0) {
-            // Only log critical information for failed executions
-            console.error(`Jest execution failed with code ${code} for ${config.filePath}`);
-          }
-          
-          // Parse the Jest output using centralized parser
-          const workItem = {
-            filePath: config.filePath,
-            workerId: config.workerId
-          };
-          const parseResult = parseJestOutput(errorOutput, workItem, silentLogger);
-          
-          // Extract test results for backward compatibility
-          const testResults = parseResult.testResults;
-          
-          resolve({
-            status: code === 0 ? 'passed' : 'failed',
-            testResults,
-            output,
-            errorOutput,
-            duration: Date.now() - startTime,
-            workerId: config.workerId,
-            filePath: config.filePath,
-            exitCode: code,
-            
-            // Enhanced error information from centralized parser
-            parsedOutput: parseResult,
-            
-            // Include Jest output for debugging test count mismatch
-            debugInfo: {
-              jestStdout: output.substring(0, 500), // First 500 chars of stdout
-              jestStderr: errorOutput.substring(0, 1000), // First 1000 chars of stderr
-              testsFound: testResults.length,
-              jestExitCode: code
-            },
-            // Include more debugging info for failed executions
-            ...(code !== 0 && {
-              jestCommand: `${jestCommand} ${jestRunArgs.join(' ')}`,
-              tempFileName: tempFileName,
-              workingDirectory: process.cwd()
-            })
-          });
-        } catch (error) {
-          reject(error);
-        }
-      };
-      
-      worker.on('close', handleExit);
-      worker.on('exit', handleExit);
-      
-      worker.on('error', (error) => {
-        if (hasResolved) return;
-        hasResolved = true;
-        reject(error);
-      });
-      
-      // Set timeout with grace period
-      const timeout = config.timeout || 25000; // Default to 25s (5s less than worker timeout)
-      setTimeout(() => {
-        if (!worker.killed && !hasResolved) {
-          worker.kill('SIGTERM');
-          setTimeout(() => {
-            if (!worker.killed && !hasResolved) {
-              hasResolved = true;
-              worker.kill('SIGKILL');
-              reject(new Error('Test execution timeout - Jest process killed'));
-            }
-          }, 2000);
-        }
-      }, timeout);
-    });
+
+    // Clean up temporary file
+    await fs.unlink(tempFilePath).catch(() => {});
+
+    return {
+      status,
+      testResults,
+      output: stdout,
+      errorOutput: stderr,
+      duration: Date.now() - startTime,
+      workerId: config.workerId,
+      filePath: config.filePath,
+      exitCode,
+      hookInfo,
+      parsedOutput: parseJestOutput(`${stderr || ''}\n${stdout || ''}`, { filePath: config.filePath, workerId: config.workerId }, silentLogger)
+    };
     
   } catch (error) {
     return {

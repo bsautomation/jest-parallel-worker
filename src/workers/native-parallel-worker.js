@@ -2,7 +2,10 @@
 // Uses Jest's native capabilities for parallel execution
 const path = require('path');
 const { spawn } = require('child_process');
+const os = require('os');
+const fs = require('fs').promises;
 const { parseJestOutput, formatForConsole } = require('../parsers');
+const { runJestWithJson } = require('./utils/jestRunner');
 
 // Silent logger for workers to prevent stdout contamination
 const silentLogger = {
@@ -81,36 +84,26 @@ async function runFileWithMaxParallelism(config, startTime) {
 }
 
 async function runFileWithConcurrentTransformation(config, startTime) {
-  const fs = require('fs').promises;
   const path = require('path');
-  const os = require('os');
   
   return new Promise(async (resolve, reject) => {
     let tempFilePath = null;
-    
     try {
-      // Read the original test file
       const originalContent = await fs.readFile(config.filePath, 'utf8');
-      
-      // Transform regular test() calls to test.concurrent() calls
       const transformedContent = transformTestsToConcurrent(originalContent);
-      
-      // Create a temporary file with the transformed content
-      const tempDir = path.join(process.cwd(), 'tests'); // Use tests directory
+      const tempDir = path.join(process.cwd(), 'tests');
       const fileName = path.basename(config.filePath);
       const tempFileName = `jest-parallel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${fileName}`;
       tempFilePath = path.join(tempDir, tempFileName);
-      
       await fs.writeFile(tempFilePath, transformedContent, 'utf8');
-      
-      // Calculate optimal concurrency for this file
+
       const testCount = config.testCount || 4;
       const maxConcurrency = Math.min(
-        testCount, // One concurrent test per test if possible
-        config.maxWorkers || 4, // Don't exceed configured max
-        require('os').cpus().length // Don't exceed CPU cores
+        testCount,
+        config.maxWorkers || 4,
+        require('os').cpus().length
       );
-      
+
       const jestArgs = [
         tempFilePath,
         '--verbose',
@@ -120,141 +113,47 @@ async function runFileWithConcurrentTransformation(config, startTime) {
         '--detectOpenHandles',
         '--maxConcurrency', maxConcurrency.toString()
       ];
-      
-      const worker = spawn('npx', ['jest', ...jestArgs], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { 
-          ...process.env,
-          NODE_OPTIONS: '--max-old-space-size=4096'
-        },
-        cwd: process.cwd()
+
+  const { status, testResults, stdout, stderr, exitCode, hookInfo } = await runJestWithJson({
+        args: jestArgs,
+        cwd: process.cwd(),
+        filePath: config.filePath,
+        timeout: config.timeout || 25000
       });
-      
-      let output = '';
-      let errorOutput = '';
-      let hasResolved = false;
-      
-      worker.stdout.on('data', (data) => {
-        output += data.toString();
+
+  // Parse for hook metadata and error classification
+  const workItem = { filePath: config.filePath, workerId: config.workerId };
+  const combined = `${stderr || ''}\n${stdout || ''}`;
+  const parseResult = parseJestOutput(combined, workItem, silentLogger);
+
+      await fs.unlink(tempFilePath).catch(() => {});
+
+      resolve({
+        status,
+        testResults,
+        output: stdout,
+        errorOutput: stderr,
+        duration: Date.now() - startTime,
+        workerId: config.workerId,
+        filePath: config.filePath,
+        exitCode,
+        strategy: 'enhanced-file-parallelism-concurrent',
+        concurrency: maxConcurrency,
+        tempFile: tempFilePath,
+  hookInfo: hookInfo || parseResult.hookInfo,
+  parsedOutput: parseResult,
+        parsedErrors: parseResult.parsedErrors,
+        suiteContext: parseResult.suiteContext,
+        hasParseErrors: parseResult.hasErrors,
+        parseErrorStats: {
+          failed: parseResult.testResults?.failed?.length || 0,
+          hooks: parseResult.hookInfo?.failedHooks?.length || 0,
+          skipped: parseResult.testResults?.skipped?.length || 0,
+          passed: parseResult.testResults?.passed?.length || 0
+        }
       });
-      
-      worker.stderr.on('data', (data) => {
-        errorOutput += data.toString();
-      });
-      
-      const handleExit = async (code) => {
-        if (hasResolved) return;
-        hasResolved = true;
-        
-        // Clean up the temporary file
-        try {
-          if (tempFilePath) {
-            await fs.unlink(tempFilePath);
-          }
-        } catch (cleanupError) {
-          // Ignore cleanup errors
-        }
-        
-        // Debug output to understand what happened
-        if (code !== 0) {
-          console.error('Jest execution failed with code:', code);
-          console.error('Error output:', errorOutput);
-          console.error('Standard output:', output);
-        }
-        
-        // Parse Jest output using centralized parser
-        const workItem = {
-          filePath: config.filePath,
-          workerId: config.workerId
-        };
-        // Parse both stdout and stderr, with priority to stdout for test results
-        const outputToParse = output || errorOutput;
-        const parseResult = parseJestOutput(outputToParse, workItem, silentLogger);
-        
-        // Extract test results for backward compatibility
-        const testResults = parseResult.testResults;
-        const hookInfo = parseResult.hookInfo;
-        
-        resolve({
-          status: code === 0 ? 'passed' : 'failed',
-          testResults,
-          output,
-          errorOutput,
-          duration: Date.now() - startTime,
-          workerId: config.workerId,
-          filePath: config.filePath,
-          exitCode: code,
-          strategy: 'enhanced-file-parallelism-concurrent',
-          concurrency: maxConcurrency,
-          tempFile: tempFilePath,
-          hookInfo: hookInfo,
-          // Enhanced result information from centralized parser
-          parsedErrors: parseResult.parsedErrors,
-          suiteContext: parseResult.suiteContext,
-          hasParseErrors: parseResult.hasErrors,
-          parseErrorStats: {
-            failed: parseResult.testResults?.failed?.length || 0,
-            hooks: parseResult.hookInfo?.failedHooks?.length || 0,
-            skipped: parseResult.testResults?.skipped?.length || 0,
-            passed: parseResult.testResults?.passed?.length || 0
-          }
-        });
-      };
-      
-      worker.on('close', handleExit);
-      worker.on('exit', handleExit);
-      
-      worker.on('error', async (error) => {
-        if (hasResolved) return;
-        hasResolved = true;
-        
-        // Clean up the temporary file
-        try {
-          if (tempFilePath) {
-            await fs.unlink(tempFilePath);
-          }
-        } catch (cleanupError) {
-          // Ignore cleanup errors
-        }
-        
-        reject(error);
-      });
-      
-      // Set timeout
-      const timeout = config.timeout || 25000;
-      setTimeout(async () => {
-        if (!worker.killed && !hasResolved) {
-          worker.kill('SIGTERM');
-          setTimeout(async () => {
-            if (!worker.killed && !hasResolved) {
-              hasResolved = true;
-              worker.kill('SIGKILL');
-              
-              // Clean up the temporary file
-              try {
-                if (tempFilePath) {
-                  await fs.unlink(tempFilePath);
-                }
-              } catch (cleanupError) {
-                // Ignore cleanup errors
-              }
-              
-              reject(new Error('Test execution timeout'));
-            }
-          }, 2000);
-        }
-      }, timeout);
-      
     } catch (error) {
-      // Clean up the temporary file in case of error
-      try {
-        if (tempFilePath) {
-          await fs.unlink(tempFilePath);
-        }
-      } catch (cleanupError) {
-        // Ignore cleanup errors
-      }
-      
+      if (tempFilePath) await fs.unlink(tempFilePath).catch(() => {});
       reject(error);
     }
   });
@@ -307,80 +206,50 @@ function escapeRegExp(string) {
 }
 
 async function runFileWithParallelism(config, startTime) {
-  return new Promise((resolve, reject) => {
-    // Calculate optimal worker count for this file
-    const testCount = config.testCount || 4; // Default assumption
-    const maxWorkersForFile = Math.min(
-      Math.max(2, Math.ceil(testCount / 2)), // At least 2, but scale with test count
-      config.maxWorkers || 4 // Don't exceed configured max
-    );
-    
-    const jestArgs = [
-      // Use the full file path for more reliable test discovery
-      config.filePath,
-      '--verbose',
-      '--no-coverage',
-      '--passWithNoTests=false',
-      '--forceExit',
-      '--detectOpenHandles',
-      '--maxWorkers', maxWorkersForFile.toString(),
-      // Override testMatch to include any test files regardless of location
-      '--testMatch', '**/*.test.js',
-      '--testMatch', '**/*.spec.js'
-      // No --runInBand to enable Jest's internal parallelism
-    ];
-    
-    const worker = spawn('npx', ['jest', ...jestArgs], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { 
-        ...process.env,
-        NODE_OPTIONS: '--max-old-space-size=4096'
-      },
-      cwd: process.cwd()
-    });
-    
-    let output = '';
-    let errorOutput = '';
-    let hasResolved = false;
-    
-    worker.stdout.on('data', (data) => {
-      output += data.toString();
-    });
-    
-    worker.stderr.on('data', (data) => {
-      errorOutput += data.toString();
-    });
-    
-    const handleExit = (code) => {
-      if (hasResolved) return;
-      hasResolved = true;
-      
-      // Parse Jest output using centralized parser
-      const workItem = {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const testCount = config.testCount || 4;
+      const maxWorkersForFile = Math.min(
+        Math.max(2, Math.ceil(testCount / 2)),
+        config.maxWorkers || 4
+      );
+
+      const jestArgs = [
+        config.filePath,
+        '--verbose',
+        '--no-coverage',
+        '--passWithNoTests=false',
+        '--forceExit',
+        '--detectOpenHandles',
+        '--maxWorkers', maxWorkersForFile.toString(),
+        '--testMatch', '**/*.test.js',
+        '--testMatch', '**/*.spec.js'
+      ];
+
+  const { status, testResults, stdout, stderr, exitCode, hookInfo } = await runJestWithJson({
+        args: jestArgs,
+        cwd: process.cwd(),
         filePath: config.filePath,
-        workerId: config.workerId
-      };
-      // Parse both stdout and stderr, with priority to stdout for test results
-      const outputToParse = output || errorOutput;
-      const parseResult = parseJestOutput(outputToParse, workItem, silentLogger);
-      
-      // Extract test results for backward compatibility
-      const testResults = parseResult.testResults;
-      const hookInfo = parseResult.hookInfo;
-      
+        timeout: config.timeout || 25000
+      });
+
+  const workItem = { filePath: config.filePath, workerId: config.workerId };
+  const combined = `${stderr || ''}\n${stdout || ''}`;
+  const parseResult = parseJestOutput(combined, workItem, silentLogger);
+
       resolve({
-        status: code === 0 ? 'passed' : 'failed',
+        status,
         testResults,
-        output,
-        errorOutput,
+        output: stdout,
+        errorOutput: stderr,
         duration: Date.now() - startTime,
         workerId: config.workerId,
         filePath: config.filePath,
-        exitCode: code,
+        exitCode,
         strategy: 'file-parallelism',
         jestWorkers: maxWorkersForFile,
-        hookInfo: hookInfo,
-        // Enhanced result information from centralized parser
+  hookInfo: hookInfo || parseResult.hookInfo,
+  parsedOutput: parseResult,
         parsedErrors: parseResult.parsedErrors,
         suiteContext: parseResult.suiteContext,
         hasParseErrors: parseResult.hasErrors,
@@ -391,31 +260,9 @@ async function runFileWithParallelism(config, startTime) {
           passed: parseResult.testResults?.passed?.length || 0
         }
       });
-    };
-    
-    worker.on('close', handleExit);
-    worker.on('exit', handleExit);
-    
-    worker.on('error', (error) => {
-      if (hasResolved) return;
-      hasResolved = true;
+    } catch (error) {
       reject(error);
-    });
-    
-    // Set timeout
-    const timeout = config.timeout || 25000;
-    setTimeout(() => {
-      if (!worker.killed && !hasResolved) {
-        worker.kill('SIGTERM');
-        setTimeout(() => {
-          if (!worker.killed && !hasResolved) {
-            hasResolved = true;
-            worker.kill('SIGKILL');
-            reject(new Error('Test execution timeout'));
-          }
-        }, 2000);
-      }
-    }, timeout);
+    }
   });
 }
 
@@ -528,3 +375,5 @@ if (require.main === module) {
 }
 
 module.exports = { runTestsNatively };
+
+// Helper utilities are now centralized in ./utils/jestRunner
