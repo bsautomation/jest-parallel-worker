@@ -101,7 +101,7 @@ class JestParallelRunner {
         forceConcurrent: this.options.forceConcurrent
       };
       
-      const reportData = await this.reportGenerator.generateReports(results, summary, this.options.mode);
+      const reportData = await this.reportGenerator.generateReport(results, summary, this.options.mode);
       
       // Step 4: Generate execution summary and cleanup
       await this.executionLogger.generateExecutionSummary({

@@ -3,6 +3,16 @@ const path = require('path');
 const fs = require('fs').promises;
 const { spawn } = require('child_process');
 const os = require('os');
+const { parseJestOutput } = require('../parsers');
+
+// Silent logger for workers to prevent stdout contamination
+const silentLogger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  log: () => {}
+};
 
 async function runTestsAsConcurrent(config) {
   const startTime = Date.now();
@@ -96,8 +106,15 @@ async function runTestsAsConcurrent(config) {
             console.error(`Jest execution failed with code ${code} for ${config.filePath}`);
           }
           
-          // Parse the Jest output to extract individual test results
-          const testResults = parseJestOutput(errorOutput, config);
+          // Parse the Jest output using centralized parser
+          const workItem = {
+            filePath: config.filePath,
+            workerId: config.workerId
+          };
+          const parseResult = parseJestOutput(errorOutput, workItem, silentLogger);
+          
+          // Extract test results for backward compatibility
+          const testResults = parseResult.testResults;
           
           resolve({
             status: code === 0 ? 'passed' : 'failed',
@@ -108,6 +125,10 @@ async function runTestsAsConcurrent(config) {
             workerId: config.workerId,
             filePath: config.filePath,
             exitCode: code,
+            
+            // Enhanced error information from centralized parser
+            parsedOutput: parseResult,
+            
             // Include Jest output for debugging test count mismatch
             debugInfo: {
               jestStdout: output.substring(0, 500), // First 500 chars of stdout
@@ -169,166 +190,6 @@ async function runTestsAsConcurrent(config) {
       filePath: config.filePath
     };
   }
-}
-
-function parseJestOutput(output, config) {
-  const testResults = [];
-  const lines = output.split('\n');
-  let currentSuite = '';
-  let currentFailedTest = null;
-  let collectingError = false;
-  let errorLines = [];
-  
-  // Check for common Jest error patterns
-  const hasNoTestsError = output.includes('No tests found') || output.includes('0 passed');
-  const hasConfigError = output.includes('Cannot resolve configuration') || output.includes('Module not found');
-  const hasSyntaxError = output.includes('SyntaxError') || output.includes('Unexpected token');
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmedLine = line.trim();
-    
-    // If we're collecting error messages for a failed test
-    if (collectingError && currentFailedTest) {
-      // Stop collecting when we hit another test result or section boundary
-      if (trimmedLine.startsWith('✓') || trimmedLine.startsWith('✗') || trimmedLine.startsWith('✕') || 
-          trimmedLine.startsWith('○') || trimmedLine.includes('Test Suites:') ||
-          trimmedLine.includes('Tests:') || trimmedLine.includes('Snapshots:') ||
-          trimmedLine.includes('Time:') || trimmedLine.includes('Ran all test suites') ||
-          (trimmedLine === '' && errorLines.length > 2)) { // Stop on empty line if we have some content
-        // Finish collecting error for current failed test
-        if (errorLines.length > 0) {
-          currentFailedTest.error = errorLines.join('\n').trim();
-        }
-        currentFailedTest = null;
-        collectingError = false;
-        errorLines = [];
-      } else {
-        // Collect error line (more selective filtering)
-        if (trimmedLine.length > 0 && 
-            !trimmedLine.includes('at Object.') && 
-            !trimmedLine.includes('at TestScheduler.') &&
-            !trimmedLine.includes('at ') && // Skip stack trace lines
-            !trimmedLine.includes('node_modules') &&
-            !trimmedLine.includes('node:internal') &&
-            !trimmedLine.includes('Error:') && // Skip error type declarations
-            !trimmedLine.match(/^\d+\s*\|\s*/) && // Skip line number indicators
-            !trimmedLine.startsWith('●') && // Skip Jest markers
-            !trimmedLine.includes('FAIL') &&
-            !trimmedLine.includes('PASS') &&
-            // Include assertion errors and meaningful error content
-            (trimmedLine.includes('expect') || 
-             trimmedLine.includes('Expected') || 
-             trimmedLine.includes('Received') ||
-             trimmedLine.includes('AssertionError') ||
-             trimmedLine.includes('Error occurred') ||
-             trimmedLine.includes('ReferenceError') ||
-             trimmedLine.includes('TypeError') ||
-             errorLines.length === 0)) { // Always include first line
-          errorLines.push(trimmedLine);
-        }
-      }
-    }
-    
-    // Look for test suite names (more robust detection)
-    if (trimmedLine && !trimmedLine.startsWith('✓') && !trimmedLine.startsWith('✗') && 
-        !trimmedLine.includes('PASS') && !trimmedLine.includes('FAIL') && 
-        !trimmedLine.includes('Test Suites:') && !trimmedLine.includes('Tests:') &&
-        !trimmedLine.includes('Snapshots:') && !trimmedLine.includes('Time:') &&
-        !trimmedLine.includes('Ran all test suites') && !trimmedLine.startsWith('RUNS') &&
-        !trimmedLine.includes('Determining test suites') && !trimmedLine.includes('.test.js') &&
-        !trimmedLine.startsWith('at ') && !trimmedLine.includes('Error:') && 
-        !trimmedLine.includes('console.') && !trimmedLine.startsWith('●')) {
-      
-      if (!line.startsWith('    ') && !line.startsWith('  ●') && trimmedLine.length > 0) {
-        currentSuite = trimmedLine;
-      }
-    }
-    
-    // Enhanced test result parsing - look for multiple patterns
-    
-    // Pattern 1: ✓ test name (time) - more robust capture
-    const testMatch = line.match(/^\s*✓\s+(.+?)\s*\((\d+(?:\.\d+)?)\s*m?s\)/);
-    if (testMatch) {
-      const [, testName, duration] = testMatch;
-      testResults.push({
-        testId: `${config.filePath}:${testName.trim()}`,
-        testName: testName.trim(),
-        suite: currentSuite,
-        status: 'passed',
-        duration: parseFloat(duration),
-        error: null,
-        workerId: config.workerId,
-        filePath: config.filePath
-      });
-    } else {
-      // Pattern 2: ✓ test name (no timing) - more robust capture
-      const quickTestMatch = line.match(/^\s*✓\s+(.+?)$/);
-      if (quickTestMatch) {
-        const [, testName] = quickTestMatch;
-        // Make sure we're not capturing timing info accidentally
-        if (!testName.includes('(') && !testName.includes('ms') && testName.trim().length > 0) {
-          testResults.push({
-            testId: `${config.filePath}:${testName.trim()}`,
-            testName: testName.trim(),
-            suite: currentSuite,
-            status: 'passed',
-            duration: 0,
-            error: null,
-            workerId: config.workerId,
-            filePath: config.filePath
-          });
-        }
-      }
-    }
-    
-    // Pattern 3: ✗ or ✕ failed test (Jest uses different characters) - more robust capture
-    const failedTestMatch = line.match(/^\s*[✗✕]\s+(.+?)(?:\s*\((\d+(?:\.\d+)?)\s*m?s\))?$/);
-    if (failedTestMatch) {
-      const [, testName, duration] = failedTestMatch;
-      
-      const failedTest = {
-        testId: `${config.filePath}:${testName.trim()}`,
-        testName: testName.trim(),
-        suite: currentSuite,
-        status: 'failed',
-        duration: duration ? parseFloat(duration) : 0,
-        error: null, // Will be populated if we find error details
-        workerId: config.workerId,
-        filePath: config.filePath
-      };
-      
-      testResults.push(failedTest);
-      
-      // Start collecting error messages for this failed test
-      currentFailedTest = failedTest;
-      collectingError = true;
-      errorLines = [];
-    }
-    
-    // Pattern 4: ○ skipped test
-    const skippedTestMatch = line.match(/^\s*○\s+(.+?)(?:\s*\(skipped\))?/);
-    if (skippedTestMatch) {
-      const [, testName] = skippedTestMatch;
-      testResults.push({
-        testId: `${config.filePath}:${testName.trim()}`,
-        testName: testName.trim(),
-        suite: currentSuite,
-        status: 'skipped',
-        duration: 0,
-        error: null,
-        workerId: config.workerId,
-        filePath: config.filePath
-      });
-    }
-  }
-  
-  // Handle case where we were collecting error for the last failed test
-  if (collectingError && currentFailedTest && errorLines.length > 0) {
-    currentFailedTest.error = errorLines.join('\n').trim();
-  }
-  
-  return testResults;
 }
 
 // Main execution

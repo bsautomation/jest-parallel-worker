@@ -1,72 +1,16 @@
 // Test worker for running individual tests in isolation
 const path = require('path');
 const { execSync } = require('child_process');
+const { parseJestOutput } = require('../parsers');
 
-function extractCleanErrorMessage(jestOutput) {
-  if (!jestOutput) return 'Test failed with no error details';
-
-  const lines = jestOutput.split('\n');
-  const errorLines = [];
-  let foundError = false;
-  let errorStartIdx = -1;
-
-  // 1. Find the first error-like line and its index
-  for (let i = 0; i < lines.length; i++) {
-    const trimmedLine = lines[i].trim();
-    if (
-      trimmedLine.startsWith('Error:') ||
-      trimmedLine.includes('AssertionError') ||
-      /timed out|timeout|Timeout/i.test(trimmedLine) ||
-      trimmedLine.startsWith('expect(') ||
-      trimmedLine.startsWith('Expected:') ||
-      trimmedLine.startsWith('Received:') ||
-      trimmedLine.includes('- Expected') ||
-      trimmedLine.includes('+ Received') ||
-      /threw|thrown|Exception|ReferenceError|TypeError|RangeError|SyntaxError/i.test(trimmedLine)
-    ) {
-      errorStartIdx = i;
-      foundError = true;
-      break;
-    }
-  }
-
-  // 2. If found, collect a few lines of context after the error line
-  if (foundError && errorStartIdx !== -1) {
-    for (let j = errorStartIdx; j < Math.min(lines.length, errorStartIdx + 6); j++) {
-      const l = lines[j].trim();
-      if (l && !errorLines.includes(l)) errorLines.push(l);
-      // Stop at stack trace or next test
-      if (l.startsWith('at ') || l.startsWith('Test Suites:')) break;
-    }
-  }
-
-  // 3. If nothing found, fallback to first non-empty error-like line
-  if (!foundError) {
-    for (let i = 0; i < lines.length; i++) {
-      const trimmedLine = lines[i].trim();
-      if (trimmedLine && (trimmedLine.toLowerCase().includes('error') || trimmedLine.toLowerCase().includes('fail') || trimmedLine.toLowerCase().includes('timeout'))) {
-        errorLines.push(trimmedLine);
-        foundError = true;
-        break;
-      }
-    }
-  }
-
-  // 4. If still nothing, fallback to first non-empty line
-  if (!foundError) {
-    for (let i = 0; i < lines.length; i++) {
-      const trimmedLine = lines[i].trim();
-      if (trimmedLine) {
-        errorLines.push(trimmedLine);
-        break;
-      }
-    }
-  }
-
-  // Remove duplicate lines
-  const uniqueLines = [...new Set(errorLines)];
-  return uniqueLines.join('\n').trim() || 'Test assertion failed';
-}
+// Silent logger for workers to prevent stdout contamination
+const silentLogger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  log: () => {}
+};
 
 async function runSingleTest(config) {
   const startTime = Date.now();
@@ -103,10 +47,44 @@ async function runSingleTest(config) {
   } catch (error) {
     result.status = 'failed';
     
-    // Extract clean error message from Jest output instead of using the full command error
+    // Use centralized Jest output parser for consistent error handling
     const jestOutput = error.stderr || error.stdout || error.toString();
-    result.error = extractCleanErrorMessage(jestOutput);
+    const workItem = {
+      filePath: config.filePath,
+      workerId: config.workerId
+    };
+    const parseResult = parseJestOutput(jestOutput, workItem, silentLogger);
+    
+    // Extract error details for this specific test
+    const testErrors = parseResult.parsedErrors.filter(e => 
+      e.testName === config.testName || 
+      e.testName.includes(config.testName) ||
+      config.testName.includes(e.testName)
+    );
+    
+    if (testErrors.length > 0) {
+      result.error = testErrors[0].errorMessage;
+      result.source = testErrors[0].source;
+      result.errorType = testErrors[0].errorType;
+    } else if (parseResult.parsedErrors.length > 0) {
+      // Fallback to first error if specific test error not found
+      result.error = parseResult.parsedErrors[0].errorMessage;
+      result.source = parseResult.parsedErrors[0].source;
+      result.errorType = parseResult.parsedErrors[0].errorType;
+    } else {
+      // Fallback to simple extraction if parser doesn't find specific errors
+      result.error = jestOutput.split('\n')
+        .find(line => line.trim() && (line.includes('Error') || line.includes('Failed') || line.includes('expect'))) 
+        || 'Test failed with no error details';
+    }
+    
     result.output = jestOutput;
+    
+    // Enhanced result information from centralized parser
+    result.parsedErrors = parseResult.parsedErrors;
+    result.hasParseErrors = parseResult.hasErrors;
+    result.testResults = parseResult.testResults;
+    result.hookInfo = parseResult.hookInfo;
   } finally {
     result.endTime = Date.now();
     result.duration = result.endTime - result.startTime;

@@ -2,6 +2,16 @@
 const path = require('path');
 const fs = require('fs').promises;
 const vm = require('vm');
+const { parseJestOutput } = require('../parsers');
+
+// Silent logger for workers to prevent stdout contamination
+const silentLogger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  log: () => {}
+};
 
 async function runTestsConcurrently(config) {
   const startTime = Date.now();
@@ -38,12 +48,35 @@ async function runTestsConcurrently(config) {
               error: null
             });
           } catch (error) {
-            resolve({
+            // Enhanced error handling with more details
+            const errorInfo = {
               name,
               status: 'failed',
               duration: Date.now() - testStartTime,
-              error: error.message
-            });
+              error: error.message,
+              errorType: error.constructor.name,
+              stack: error.stack
+            };
+            
+            // Try to extract source location from stack if available
+            if (error.stack) {
+              const stackLines = error.stack.split('\n');
+              const testFileStackLine = stackLines.find(line => 
+                line.includes(config.filePath) || line.includes(path.basename(config.filePath))
+              );
+              if (testFileStackLine) {
+                const locationMatch = testFileStackLine.match(/:(\d+):(\d+)/);
+                if (locationMatch) {
+                  errorInfo.source = {
+                    line: parseInt(locationMatch[1], 10),
+                    column: parseInt(locationMatch[2], 10),
+                    file: config.filePath
+                  };
+                }
+              }
+            }
+            
+            resolve(errorInfo);
           }
         });
         testPromises.push(testPromise);
@@ -155,15 +188,38 @@ async function runTestsConcurrently(config) {
     return finalTestResults;
     
   } catch (error) {
-    return [{
-      testId: `${config.filePath}:error`,
+    // Enhanced error handling for execution errors
+    const errorDetails = {
+      testId: `${config.filePath}:execution-error`,
       filePath: config.filePath,
-      testName: 'Execution Error',
+      testName: 'File Execution Error',
       status: 'failed',
       duration: Date.now() - startTime,
       error: error.message,
+      errorType: error.constructor.name,
       workerId: config.workerId
-    }];
+    };
+    
+    // Try to parse stack trace for better error location
+    if (error.stack) {
+      const stackLines = error.stack.split('\n');
+      const relevantLine = stackLines.find(line => 
+        line.includes(config.filePath) || line.includes('vm.js') || line.includes('runInContext')
+      );
+      if (relevantLine) {
+        const locationMatch = relevantLine.match(/:(\d+):(\d+)/);
+        if (locationMatch) {
+          errorDetails.source = {
+            line: parseInt(locationMatch[1], 10),
+            column: parseInt(locationMatch[2], 10),
+            file: config.filePath
+          };
+        }
+      }
+      errorDetails.stack = error.stack;
+    }
+    
+    return [errorDetails];
   }
 }
 

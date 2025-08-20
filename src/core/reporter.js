@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
+const { formatForHTML, formatForConsole, classifyErrors } = require('../parsers');
 
 class ReportGenerator {
   constructor(options, logger) {
@@ -8,10 +9,54 @@ class ReportGenerator {
     this.logger = logger;
   }
 
-  async generateReports(results, summary, mode) {
+  /**
+   * Enhance report data with centralized parser information
+   * @param {Array} results - Raw test results
+   * @returns {Array} Enhanced results with better error handling
+   */
+  enhanceResultsWithParser(results) {
+    return results.map(result => {
+      // If we have parsedOutput from centralized parser, use it
+      if (result.parsedOutput) {
+        const enhanced = formatForHTML(result.parsedOutput, {
+          includeStackTraces: true,
+          showTimings: true
+        });
+
+        // Merge enhanced data back into result
+        return {
+          ...result,
+          enhancedTestResults: enhanced.testResults,
+          enhancedHookInfo: enhanced.hookInfo,
+          enhancedErrors: enhanced.generalErrors,
+          errorClassification: classifyErrors(result.parsedOutput),
+          testResults: result.testResults || enhanced.testResults.map(t => ({
+            testId: t.testId || `${result.filePath}:${t.name}`,
+            testName: t.name,
+            filePath: result.filePath,
+            status: t.status,
+            duration: t.duration,
+            workerId: result.workerId,
+            mode: result.mode,
+            error: t.error ? t.error.message : null,
+            suite: t.suite,
+            failureType: t.error ? t.error.type : null,
+            stackTrace: t.error ? t.error.stackTrace : null
+          }))
+        };
+      }
+
+      // Return original result if no enhancement available
+      return result;
+    });
+  }
+
+  async generateReport(results, summary, mode) {
+    // Enhance results with centralized parser data
+    const enhancedResults = this.enhanceResultsWithParser(results);
     await this.ensureOutputDir();
     
-    const reportData = this.processResults(results, summary, mode);
+    const reportData = this.processResults(enhancedResults, summary, mode);
     
     if (this.reportType === 'console' || this.reportType === 'both') {
       this.generateConsoleReport(reportData);
@@ -191,6 +236,55 @@ class ReportGenerator {
     }, 0);
   }
 
+  /**
+   * Generate enhanced error HTML with classification and stack traces
+   * @param {Object} test - Test object with error information
+   * @returns {string} HTML for error display
+   */
+  generateErrorHTML(test) {
+    if (!test.error) return '';
+
+    let errorHTML = '<div class="error-message">';
+    
+    // Add error type classification if available
+    if (test.failureType) {
+      const typeClass = this.getErrorTypeClass(test.failureType);
+      const displayType = test.failureType.replace(/_/g, ' ').toUpperCase();
+      errorHTML += `<div class="error-type ${typeClass}">${this.escapeHtml(displayType)}</div>`;
+    }
+    
+    // Add main error message
+    errorHTML += `<pre>${this.escapeHtml(test.error)}</pre>`;
+    
+    // Add stack trace if available
+    if (test.stackTrace && test.stackTrace.length > 0) {
+      errorHTML += '<details class="stack-trace"><summary>Stack Trace</summary><pre>';
+      test.stackTrace.forEach(line => {
+        errorHTML += this.escapeHtml(line) + '\n';
+      });
+      errorHTML += '</pre></details>';
+    }
+    
+    errorHTML += '</div>';
+    return errorHTML;
+  }
+
+  /**
+   * Get CSS class for error type
+   * @param {string} errorType - Error type from parser
+   * @returns {string} CSS class name
+   */
+  getErrorTypeClass(errorType) {
+    if (errorType.includes('assertion')) return 'error-assertion';
+    if (errorType.includes('timeout')) return 'error-timeout';
+    if (errorType.includes('reference')) return 'error-reference';
+    if (errorType.includes('type')) return 'error-type';
+    if (errorType.includes('syntax')) return 'error-syntax';
+    if (errorType.includes('race')) return 'error-race';
+    if (errorType.includes('hook')) return 'error-hook';
+    return 'error-general';
+  }
+
   formatJestError(error) {
     if (!error) return null;
     
@@ -347,7 +441,44 @@ class ReportGenerator {
         .tab-content.active { display: block; }
         .no-results { text-align: center; padding: 50px; color: #95a5a6; font-size: 1.2em; }
         .test-name { font-weight: 500; color: #2c3e50; }
-        .error-message { color: #e74c3c; font-size: 0.9em; font-style: italic; margin-top: 5px; }
+        .error-message { color: #e74c3c; font-size: 0.9em; margin-top: 5px; }
+        .error-type {
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 0.8em;
+          font-weight: 600;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+        }
+        .error-assertion { background: #ffebee; color: #c62828; }
+        .error-timeout { background: #fff3e0; color: #e65100; }
+        .error-reference { background: #f3e5f5; color: #6a1b9a; }
+        .error-type { background: #e8f5e8; color: #2e7d32; }
+        .error-syntax { background: #ffebee; color: #c62828; }
+        .error-race { background: #e3f2fd; color: #1976d2; }
+        .error-hook { background: #fff8e1; color: #f57c00; }
+        .error-general { background: #f5f5f5; color: #555; }
+        .stack-trace {
+          margin-top: 10px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+        }
+        .stack-trace summary {
+          padding: 8px 12px;
+          background: #f8f9fa;
+          cursor: pointer;
+          border-bottom: 1px solid #ddd;
+          font-weight: 500;
+        }
+        .stack-trace pre {
+          padding: 12px;
+          margin: 0;
+          font-size: 0.85em;
+          line-height: 1.4;
+          background: white;
+          overflow-x: auto;
+        }
         .source-info { 
           color: #6c757d; 
           font-size: 0.8em; 
@@ -470,7 +601,7 @@ class ReportGenerator {
                                 <td><span class="status-icon">${test.status === 'passed' ? '✅' : test.status === 'skipped' ? '⏭️' : '❌'}</span></td>
                                 <td>
                                     <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
-                                    ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
+                                    ${this.generateErrorHTML(test)}
                                     ${test.source ? `<div class="source-info">📍 ${this.escapeHtml(test.source.location)}</div>` : ''}
                                 </td>
                                 <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
@@ -502,7 +633,7 @@ class ReportGenerator {
                                 <td><span class="status-icon">❌</span></td>
                                 <td>
                                     <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
-                                    ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
+                                    ${this.generateErrorHTML(test)}
                                     ${test.source ? `<div class="source-info">📍 ${this.escapeHtml(test.source.location)}</div>` : ''}
                                 </td>
                                 <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
@@ -565,7 +696,7 @@ class ReportGenerator {
                                 <td><span class="status-icon">${test.status === 'passed' ? '✅' : test.status === 'skipped' ? '⏭️' : '❌'}</span></td>
                                 <td>
                                     <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
-                                    ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
+                                    ${this.generateErrorHTML(test)}
                                     ${test.source ? `<div class="source-info">📍 ${this.escapeHtml(test.source.location)}</div>` : ''}
                                 </td>
                                 <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
@@ -597,7 +728,7 @@ class ReportGenerator {
                                 <td><span class="status-icon">${test.status === 'passed' ? '✅' : test.status === 'skipped' ? '⏭️' : '❌'}</span></td>
                                 <td>
                                     <div class="test-name">${this.escapeHtml(test.testName || 'Unknown Test')}</div>
-                                    ${test.error ? `<div class="error-message"><pre>${this.escapeHtml(test.error)}</pre></div>` : ''}
+                                    ${this.generateErrorHTML(test)}
                                     ${test.source ? `<div class="source-info">📍 ${this.escapeHtml(test.source.location)}</div>` : ''}
                                 </td>
                                 <td><code>${test.filePath ? path.basename(test.filePath) : ''}</code></td>
