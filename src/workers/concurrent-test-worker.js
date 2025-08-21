@@ -1,8 +1,8 @@
 // Enhanced test worker that can run regular tests concurrently
 const path = require('path');
 const fs = require('fs').promises;
-const vm = require('vm');
 const { parseJestOutput } = require('../parsers');
+const { runJestWithJson } = require('./utils/jestRunner');
 
 // Silent logger for workers to prevent stdout contamination
 const silentLogger = {
@@ -18,173 +18,47 @@ async function runTestsConcurrently(config) {
   const results = [];
   
   try {
-    // Read the test file content
-    const testFileContent = await fs.readFile(config.filePath, 'utf8');
-    
-    // Create a sandbox environment for running tests
-    const testPromises = [];
-    
-    // Mock Jest environment
-    const mockJestEnv = {
-      describe: (name, fn) => {
-        // Execute the describe block to collect tests
-        fn();
-      },
-      test: (name, testFn) => {
-        // Convert regular test to promise for concurrent execution
-        const testPromise = new Promise(async (resolve, reject) => {
-          const testStartTime = Date.now();
-          try {
-            // If test function is async, await it; otherwise run it
-            if (testFn.constructor.name === 'AsyncFunction') {
-              await testFn();
-            } else {
-              testFn();
-            }
-            resolve({
-              name,
-              status: 'passed',
-              duration: Date.now() - testStartTime,
-              error: null
-            });
-          } catch (error) {
-            // Enhanced error handling with more details
-            const errorInfo = {
-              name,
-              status: 'failed',
-              duration: Date.now() - testStartTime,
-              error: error.message,
-              errorType: error.constructor.name,
-              stack: error.stack
-            };
-            
-            // Try to extract source location from stack if available
-            if (error.stack) {
-              const stackLines = error.stack.split('\n');
-              const testFileStackLine = stackLines.find(line => 
-                line.includes(config.filePath) || line.includes(path.basename(config.filePath))
-              );
-              if (testFileStackLine) {
-                const locationMatch = testFileStackLine.match(/:(\d+):(\d+)/);
-                if (locationMatch) {
-                  errorInfo.source = {
-                    line: parseInt(locationMatch[1], 10),
-                    column: parseInt(locationMatch[2], 10),
-                    file: config.filePath
-                  };
-                }
-              }
-            }
-            
-            resolve(errorInfo);
-          }
-        });
-        testPromises.push(testPromise);
-      },
-      it: null, // Will be set to test
-      expect: require('jest-extended').expect || global.expect || require('@jest/globals').expect,
-      beforeAll: (fn) => {
-        // Store beforeAll functions to run before tests
-        if (!mockJestEnv._beforeAll) mockJestEnv._beforeAll = [];
-        mockJestEnv._beforeAll.push(fn);
-      },
-      afterAll: (fn) => {
-        // Store afterAll functions to run after tests
-        if (!mockJestEnv._afterAll) mockJestEnv._afterAll = [];
-        mockJestEnv._afterAll.push(fn);
-      },
-      beforeEach: (fn) => {
-        // Store beforeEach functions
-        if (!mockJestEnv._beforeEach) mockJestEnv._beforeEach = [];
-        mockJestEnv._beforeEach.push(fn);
-      },
-      afterEach: (fn) => {
-        // Store afterEach functions
-        if (!mockJestEnv._afterEach) mockJestEnv._afterEach = [];
-        mockJestEnv._afterEach.push(fn);
-      }
-    };
-    
-    // Set it as alias for test
-    mockJestEnv.it = mockJestEnv.test;
-    
-    // Create a VM context with the mock environment
-    const context = vm.createContext({
-      ...mockJestEnv,
-      console,
-      require,
-      process,
-      global,
-      Buffer,
-      setTimeout,
-      setInterval,
-      clearTimeout,
-      clearInterval,
-      Date,
-      Promise
+    // Read and transform the test file to concurrent style
+    const originalContent = await fs.readFile(config.filePath, 'utf8');
+    const transformedContent = originalContent
+      .replace(/\btest\s*\(/g, 'test.concurrent(')
+      .replace(/\bit\s*\(/g, 'test.concurrent(');
+
+    // Write to a temporary file in the same folder to preserve relative imports
+    const originalDir = path.dirname(config.filePath);
+    const tempFileName = `.jest-parallel-concurrent-${path.basename(config.filePath, '.test.js')}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.test.js`;
+    const tempFilePath = path.join(originalDir, tempFileName);
+    await fs.writeFile(tempFilePath, transformedContent, 'utf8');
+
+    // Run the temp file via the shared JSON-first runner
+    const jestArgs = [
+      tempFilePath,
+      '--verbose',
+      '--no-coverage',
+      '--passWithNoTests=false',
+      '--forceExit',
+      '--detectOpenHandles'
+    ];
+
+    const { testResults, stdout, stderr, hookInfo } = await runJestWithJson({
+      args: jestArgs,
+      cwd: process.cwd(),
+      filePath: config.filePath,
+      hookFilePath: tempFilePath,
+      timeout: config.timeout || 25000
     });
-    
-    // Execute the test file in the context to collect all tests
-    vm.runInContext(testFileContent, context, {
-      filename: config.filePath
-    });
-    
-    // Run beforeAll hooks
-    if (context._beforeAll) {
-      for (const beforeAllFn of context._beforeAll) {
-        if (beforeAllFn.constructor.name === 'AsyncFunction') {
-          await beforeAllFn();
-        } else {
-          beforeAllFn();
-        }
-      }
-    }
-    
-    // Run all tests concurrently
-    const finalTestResults = await Promise.all(testPromises.map(async (testPromise, index) => {
-      // Run beforeEach hooks for each test
-      if (context._beforeEach) {
-        for (const beforeEachFn of context._beforeEach) {
-          if (beforeEachFn.constructor.name === 'AsyncFunction') {
-            await beforeEachFn();
-          } else {
-            beforeEachFn();
-          }
-        }
-      }
-      
-      const result = await testPromise;
-      
-      // Run afterEach hooks for each test
-      if (context._afterEach) {
-        for (const afterEachFn of context._afterEach) {
-          if (afterEachFn.constructor.name === 'AsyncFunction') {
-            await afterEachFn();
-          } else {
-            afterEachFn();
-          }
-        }
-      }
-      
-      return {
-        ...result,
-        testId: `${config.filePath}:${result.name}`,
-        filePath: config.filePath,
-        workerId: config.workerId
-      };
+
+    // Clean up temp file
+    await fs.unlink(tempFilePath).catch(() => {});
+
+    // Map to prior shape (array of tests)
+    const finalTestResults = (testResults || []).map(t => ({
+      ...t,
+      testId: t.testId || `${config.filePath}:${t.name}`,
+      filePath: config.filePath,
+      workerId: config.workerId
     }));
-    
-    // Run afterAll hooks
-    if (context._afterAll) {
-      for (const afterAllFn of context._afterAll) {
-        if (afterAllFn.constructor.name === 'AsyncFunction') {
-          await afterAllFn();
-        } else {
-          afterAllFn();
-        }
-      }
-    }
-    
+
     return finalTestResults;
     
   } catch (error) {
@@ -219,7 +93,7 @@ async function runTestsConcurrently(config) {
       errorDetails.stack = error.stack;
     }
     
-    return [errorDetails];
+  return [errorDetails];
   }
 }
 

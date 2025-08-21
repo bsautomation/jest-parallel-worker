@@ -337,8 +337,6 @@ class WorkerManager {
       workerProcess = this.spawnConcurrentFileWorker(workItem, workerId);
     } else if (workItem.type === 'native-parallel') {
       workerProcess = this.spawnNativeParallelWorker(workItem, workerId);
-    } else if (workItem.type === 'native-parallel') {
-      workerProcess = this.spawnNativeParallelWorker(workItem, workerId);
     }
 
     if (workerProcess) {

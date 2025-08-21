@@ -149,6 +149,56 @@ async function findUserSetupFiles(cwd) {
   return unique;
 }
 
+async function detectBrowserStackUsage(cwd) {
+  // Check if BrowserStack SDK should be used
+  if (process.env.BROWSERSTACK_SDK_ENABLED === 'true') {
+    return true;
+  }
+  
+  // Check for BrowserStack credentials
+  const hasCreds = !!(process.env.BROWSERSTACK_USERNAME && process.env.BROWSERSTACK_ACCESS_KEY);
+  if (hasCreds) return true;
+
+  // Check for BrowserStack config files
+  const candidates = ['browserstack.yml', 'browserstack.json', 'bsconfig.json'];
+  for (const file of candidates) {
+    try {
+      const p = path.join(cwd, file);
+      await fs.access(p);
+      return true;
+    } catch (_) {}
+  }
+
+  // Check package.json for browserstack configuration
+  try {
+    const pkgPath = path.join(cwd, 'package.json');
+    const raw = await fs.readFile(pkgPath, 'utf8').catch(() => null);
+    if (raw) {
+      const pkg = JSON.parse(raw);
+      if (pkg.browserstack || (pkg.config && pkg.config.browserstack)) return true;
+    }
+  } catch (_) {}
+
+  return false;
+}
+
+async function generateBrowserStackBuildId() {
+  // Check if a build ID is already set in environment (from parent process or CI)
+  if (process.env.BROWSERSTACK_BUILD_ID) {
+    return process.env.BROWSERSTACK_BUILD_ID;
+  }
+  
+  // Generate a new build ID based on timestamp and process info
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  const buildId = `jest-parallel-${timestamp}-${randomSuffix}`;
+  
+  // Set the generated build ID in the environment so all subsequent processes use the same one
+  process.env.BROWSERSTACK_BUILD_ID = buildId;
+  
+  return buildId;
+}
+
 async function runJestWithJson({ args = [], cwd = process.cwd(), filePath = null, hookFilePath = null, timeout = 25000 }) {
   const jsonOutputPath = path.join(
     os.tmpdir(),
@@ -159,9 +209,16 @@ async function runJestWithJson({ args = [], cwd = process.cwd(), filePath = null
     `jest-parallel-hooks-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   );
 
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), `jest-bstack-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`));
+
+  // Detect BrowserStack usage
+  const useBrowserStack = await detectBrowserStackUsage(cwd);
+  const browserstackBuildId = useBrowserStack ? await generateBrowserStackBuildId() : null;
+
   // Ensure JSON output args are present
   const userSetupFiles = await findUserSetupFiles(cwd);
   const setupArgs = [];
+  
   // include user's setupFilesAfterEnv entries
   for (const s of userSetupFiles) {
     setupArgs.push('--setupFilesAfterEnv', s);
@@ -171,12 +228,21 @@ async function runJestWithJson({ args = [], cwd = process.cwd(), filePath = null
 
   const fullArgs = [...args, '--json', '--outputFile', jsonOutputPath, ...setupArgs];
 
-  const worker = spawn('npx', ['jest', ...fullArgs], {
+  // Choose command based on BrowserStack usage
+  const cmd = 'npx';
+  const cmdArgs = useBrowserStack ? ['browserstack-node-sdk', 'jest', ...fullArgs] : ['jest', ...fullArgs];
+
+  const worker = spawn(cmd, cmdArgs, {
     stdio: ['pipe', 'pipe', 'pipe'],
     env: { 
       ...process.env, 
       NODE_OPTIONS: ((process.env.NODE_OPTIONS ? process.env.NODE_OPTIONS + ' ' : '') + '--max-old-space-size=4096').trim(),
-      JEST_PARALLEL_HOOKS_DIR: hooksOutputDir 
+      JEST_PARALLEL_HOOKS_DIR: hooksOutputDir,
+      // Pass BrowserStack build ID to ensure all workers use the same build
+      ...(browserstackBuildId && {
+        BROWSERSTACK_BUILD_ID: browserstackBuildId,
+        BROWSERSTACK_BUILD_IDENTIFIER: browserstackBuildId
+      })
     },
     cwd
   });
@@ -193,8 +259,8 @@ async function runJestWithJson({ args = [], cwd = process.cwd(), filePath = null
       if (hasResolved) return;
       hasResolved = true;
 
-  let testResults = [];
-  let hookInfo = undefined;
+      let testResults = [];
+      let hookInfo = undefined;
 
       // Prefer JSON parsing
       try {
@@ -210,9 +276,9 @@ async function runJestWithJson({ args = [], cwd = process.cwd(), filePath = null
       }
 
       // Always parse text for hook metadata; also fallback tests if JSON empty
-  const workItem = { filePath, workerId: undefined };
-  const combined = `${stderr || ''}\n${stdout || ''}`;
-  const parsed = parseJestOutput(combined, workItem, silentLogger);
+      const workItem = { filePath, workerId: undefined };
+      const combined = `${stderr || ''}\n${stdout || ''}`;
+      const parsed = parseJestOutput(combined, workItem, silentLogger);
       hookInfo = parsed.hookInfo;
       if (!testResults || testResults.length === 0) {
         testResults = parsed.testResults;
@@ -220,8 +286,8 @@ async function runJestWithJson({ args = [], cwd = process.cwd(), filePath = null
 
       // Merge precise hook timings from setup files if present (per test file)
       try {
-  const targetPath = hookFilePath || filePath;
-  const fileSafe = targetPath ? Buffer.from(targetPath).toString('base64url') : null;
+        const targetPath = hookFilePath || filePath;
+        const fileSafe = targetPath ? Buffer.from(targetPath).toString('base64url') : null;
         if (fileSafe) {
           const fileJson = path.join(hooksOutputDir, `${fileSafe}.json`);
           const raw = await fs.readFile(fileJson, 'utf8').catch(() => null);
@@ -260,13 +326,17 @@ async function runJestWithJson({ args = [], cwd = process.cwd(), filePath = null
         }
       }
 
+      try {
+        await fs.rm(tmpDir, { recursive: true, force: true });
+      } catch (_) {}
+
       resolve({
         exitCode: code,
         status: code === 0 ? 'passed' : 'failed',
         testResults,
         stdout,
         stderr,
-  hookInfo
+        hookInfo
       });
     };
 
@@ -298,5 +368,7 @@ async function runJestWithJson({ args = [], cwd = process.cwd(), filePath = null
 module.exports = {
   runJestWithJson,
   extractTestResultsFromJestJson,
-  mapJestStatus
+  mapJestStatus,
+  detectBrowserStackUsage,
+  generateBrowserStackBuildId
 };
