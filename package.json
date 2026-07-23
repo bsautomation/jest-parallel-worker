@@ -45,7 +45,7 @@
   },
   "peerDependencies": {
     "jest": ">=29.0.0",
-    "browserstack-node-sdk": "1.40.7",
+    "browserstack-node-sdk": ">=1.40.7",
     "@playwright/test": "^1.54.2"
   },
   "engines": {
